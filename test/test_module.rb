@@ -7,15 +7,6 @@ require 'enumerator'
 require 'utilrb/module'
 
 class TC_Module < Test::Unit::TestCase
-    def test_instance_method_p
-	assert(TC_Module.instance_method?(:test_instance_method_p))
-	assert(!TC_Module.instance_method?(:does_not_exist))
-
-	obj = 5
-	assert(obj.method?(:upto))
-	assert(!obj.method?(:does_not_exist))
-    end
-
     def test_define_method_with_block
 	FlexMock.use do |mock|
 	    mock.should_receive(:called).once
