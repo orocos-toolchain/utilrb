@@ -9,6 +9,7 @@ class TC_Hash < Test::Unit::TestCase
     def test_slice
 	test = { :a => 1, :b => 2, :c => 3 }
 	assert_equal({:a => 1, :c => 3}, test.slice(:a, :c))
+	assert_equal({:a => 1, :c => 3}, test.slice(:a, :c, :d))
     end
 end
 
