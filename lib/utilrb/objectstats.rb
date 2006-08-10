@@ -3,6 +3,8 @@ module ObjectStats
     def self.count
         count = 0
         ObjectSpace.each_object { |obj| count += 1}
+
+	count
     end
 
     # Allocates 1 Hash, which is included in the count
