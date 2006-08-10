@@ -1,3 +1,4 @@
+require 'utilrb/common'
 require 'enumerator'
 require 'set'
 
@@ -39,16 +40,17 @@ class Object
     end
 end
 
-module Enumerable
-    def each_uniq(&iterator)
-	seen = Set.new
-	each do |obj|
-	    if !seen.include?(obj)
-		seen << obj
-		yield(obj)
+unless_faster do
+    module Enumerable
+	def each_uniq(&iterator)
+	    seen = Set.new
+	    each do |obj|
+		if !seen.include?(obj)
+		    seen << obj
+		    yield(obj)
+		end
 	    end
 	end
     end
 end
-
 

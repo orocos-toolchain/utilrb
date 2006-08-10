@@ -11,7 +11,10 @@ Rake::RDocTask.new("rdoc") do |rdoc|
 end
 
 task :test do
-    system("testrb", "test")
+    ENV['UTILRB_FASTER_MODE'] = 'no'
+    system("testrb test/")
+    ENV['UTILRB_FASTER_MODE'] = 'yes'
+    system("testrb test/")
 end
 
 task :test_rcov do
