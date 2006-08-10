@@ -7,11 +7,13 @@ class UniqEnumerator < Enumerable::Enumerator
     def initialize(root, enum_with, args, key = nil)
 	super(root, enum_with, *args)
 	@key = key
+	@result = Hash.new
     end
 
     def each
 	if block_given?
-	    result = Hash.new
+	    @result.clear
+	    result = @result
 	    super() do |v|
 		k = @key ? @key.call(v) : v
 
