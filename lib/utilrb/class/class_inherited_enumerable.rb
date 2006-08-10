@@ -26,20 +26,20 @@ class Class
 
         if options[:map]
             singleton_class.class_eval <<-EOF
-            def each_#{name}(key = nil, uniq = true, &iterator)
+            def each_#{name}(key = nil, uniq = true)
 		if key
 		    if #{attribute_name}.has_key?(key)
-			iterator[#{attribute_name}[key]] 
+			yield(#{attribute_name}[key])
 			return self if uniq
 		    end
 		elsif uniq
-		    enum_uniq(:each_#{name}, nil, false) { |k, v| k }.
-			each(&iterator)
+		    @enum_#{name}_uniq ||= enum_uniq(:each_#{name}, nil, false) { |k, v| k }
+		    @enum_#{name}_uniq.each { |el| yield(el) }
 		    return self
 		else
-                    #{attribute_name}.#{options[:enum_with]}(&iterator)
+                    #{attribute_name}.#{options[:enum_with]} { |el| yield(el) }
 		end
-		superclass_call(:each_#{name}, key, uniq, &iterator)
+		superclass_call(:each_#{name}, key, uniq) { |el| yield(el) }
                 self
             end
             def has_#{name}?(key)
