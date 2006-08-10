@@ -9,7 +9,6 @@ class TC_Enumerable < Test::Unit::TestCase
         # Test the enum_uniq enumerator
         assert_equal([:a, :b, :c], [:a, :b, :a, :c].enum_uniq { |k| k }.to_a)
         assert_equal([:a, :b, :c], [:a, :b, :a, :c].enum_uniq.to_a)
-        assert_equal([:a, :b, :c], [:a, :b, :a, :c].enum_for(:each_uniq).to_a)
 	enum = [:a, :b, :a, :c].enum_uniq
 	assert_equal(enum, enum.each)
 	
@@ -33,6 +32,10 @@ class TC_Enumerable < Test::Unit::TestCase
         a, b, c, d = *test
         assert_equal([a, c, d], [a, b, c, d].enum_uniq { |v| v.x }.to_a)
         assert_equal([a, b, d], [a, b, c, d].enum_uniq { |v| v.y }.to_a)
+    end
+    
+    def test_each_uniq
+        assert_equal([:a, :b, :c], [:a, :b, :a, :c].enum_for(:each_uniq).to_a)
     end
 
     def test_enum_sequence
