@@ -14,9 +14,10 @@ else
 		instance = self
 		klass.class_eval do
 		    @singleton_instance = instance
+		    @superclass = instance.class
 		    class << self
+			attr_reader :superclass
 			attr_reader :singleton_instance
-			#def name; @singleton_instance.class.name end
 		    end
 		end
 
