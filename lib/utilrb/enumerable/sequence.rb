@@ -1,7 +1,5 @@
 class SequenceEnumerator
-    extend Forwardable
     def initialize; @sequence = Array.new end
-
     def <<(object); @sequence << object; self end
 
     def each
