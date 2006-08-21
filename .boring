@@ -34,3 +34,6 @@
 (^|/)Thumbs\.db$
 (^|/)autom4te\.cache($|/)
 ^rcov
+\.so$
+^ext/Makefile$
+-stamp$
