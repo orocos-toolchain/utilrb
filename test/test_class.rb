@@ -12,24 +12,6 @@ class TC_Class < Test::Unit::TestCase
 	assert_equal(object, object.singleton_class.singleton_instance)
     end
 
-    def test_superclass_call
-	base    = Class.new do
-	    class << self
-		attr_accessor :attribute
-		def read_attribute
-		    [attribute, superclass_call(:read_attribute)]
-		end
-	    end
-	end
-	derived = Class.new(base)
-	object  = derived.new
-
-	base.attribute	    = 10
-	derived.attribute   = 20
-	object.singleton_class.attribute = 30
-	assert_equal([30, [20, [10, nil]]], object.singleton_class.read_attribute)
-    end
-
     def test_inherited_enumerable
 	a = Class.new do
 	    class_inherited_enumerable(:signature, :signatures) { Array.new }

@@ -39,19 +39,19 @@ class Class
 		else
                     #{attribute_name}.#{options[:enum_with]} { |el| yield(el) }
 		end
-		superclass_call(:each_#{name}, key, uniq) { |el| yield(el) }
+		superclass.each_#{name}(key, uniq) { |el| yield(el) } if superclass.respond_to?(:each_#{name})
                 self
             end
             def has_#{name}?(key)
                 return true if #{attribute_name}[key]
-		superclass_call(:has_#{name}, key)
+		superclass.has_#{name}?(key)
             end
             EOF
         else
             singleton_class.class_eval <<-EOF
             def each_#{name}(&iterator)
                 #{attribute_name}.#{options[:enum_with]}(&iterator) if #{attribute_name}
-		superclass_call(:each_#{name}, &iterator)
+		superclass.each_#{name}(&iterator) if superclass.respond_to?(:each_#{name})
                 self
             end
             EOF
