@@ -17,31 +17,37 @@ class Object
             name = attr_def
         end
 
-        iv_name = "@#{name}"
-        define_method("#{name}_attribute_init") do
-            newval = defval || (instance_eval(&init) if init)
-            self.send("#{name}=", newval)
-        end
-
-        class_eval <<-EOF
-        def #{name}
-            if defined? @#{name}
-                @#{name}
-            else
-                #{name}_attribute_init
-            end
-        end
-        attr_writer :#{name}
-        EOF
+	class_eval { attr_writer name }
+	define_method(name) do
+	    singleton_class.class_eval { attr_reader name }
+	    instance_variable_set("@#{name}", defval || (instance_eval(&init) if init))
+	end
     end
    
     # Define an attribute on the singleton class
     # See Object::attribute for the definition of
     # default values
     def class_attribute(attr_def, &init)
+        if Hash === attr_def
+            name, defval = attr_def.to_a.flatten
+        else
+            name = attr_def
+        end
+
 	singleton_class.class_eval do
-	    attribute(attr_def, &init)
+	    attr_writer name
+	    define_method("#{name}_defval") do
+		defval || (instance_eval(&init) if init)
+	    end
 	end
+
+	singleton_class.class_eval <<-EOD
+	def #{name}
+	    if defined? @#{name} then @#{name}
+	    else @#{name} = #{name}_defval
+	    end
+	end
+	EOD
     end
 end
 
