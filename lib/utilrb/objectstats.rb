@@ -1,3 +1,5 @@
+require 'utilrb/gc/force'
+
 module ObjectStats
     # Allocates no object
     def self.count
@@ -17,12 +19,15 @@ module ObjectStats
         by_class
     end
 
-    def self.profile
-        enabled = !GC.disable
+    # Profiles the memory allocation in the block
+    # If alive is true, then only non-gcable objects
+    # are returned.
+    def self.profile(alive = false)
+        already_disabled = GC.disable
         before = count_by_class
         yield
         after  = count_by_class
-        GC.enable if enabled
+        GC.enable unless already_disabled
 
         after[Hash] -= 1 # Correction for the call of count_by_class
         profile = before.

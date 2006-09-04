@@ -1,10 +1,10 @@
 module GC
     # Forcefully starts the GC even when GC.disable has been called
     def self.force
-	disabled_gc = GC.enable
+	already_enabled = !GC.enable
 	GC.start
     ensure
-	GC.disable if disabled_gc
+	GC.disable unless already_enabled
     end
 end
 
