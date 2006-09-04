@@ -21,15 +21,15 @@ class TC_Object < Test::Unit::TestCase
 	assert(Hash === hash_attribute)
 	assert(Array === block_attribute)
 
-	new_hash = Hash.new
+	new_value = Time.now
 
 	assert_same(hash_attribute, object.as_hash)
-	object.as_hash = new_hash
-	assert_same(new_hash, object.as_hash)
+	object.as_hash = new_value
+	assert_same(new_value, object.as_hash)
 
 	assert_same(block_attribute, object.block)
-	object.block = new_hash
-	assert_same(object.block, new_hash)
+	object.block = new_value
+	assert_same(object.block, new_value)
     end
     def test_attribute
 	klass = Class.new do
@@ -39,8 +39,9 @@ class TC_Object < Test::Unit::TestCase
 	    class_attribute(:block) { Array.new }
 	end
 
-	check_attribute(klass.new)
-	check_attribute(klass)
+	obj1, obj2 = klass.new, klass.new
+	check_attribute(obj1)
+	check_attribute(obj2)
 
 	obj1, obj2 = klass.new, klass.new
 	assert_same(obj1.as_hash, obj2.as_hash)
