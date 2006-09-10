@@ -9,7 +9,10 @@ class TC_Class < Test::Unit::TestCase
     def test_singleton_class
 	klass	= Class.new
 	object	= klass.new
+	assert(! object.has_singleton?)
 	assert_equal(object, object.singleton_class.singleton_instance)
+	assert(object.has_singleton?)
+	assert_equal(klass, object.singleton_class.superclass)
     end
 
     def test_inherited_enumerable
