@@ -1,3 +1,4 @@
+require 'utilrb/object/address'
 if RUBY_VERSION >= "1.9"
     class Object
 	def singleton_class
@@ -18,6 +19,9 @@ else
 		    class << self
 			attr_reader :superclass
 			attr_reader :singleton_instance
+			def name
+			    "#{@superclass.name}!0x#{@singleton_instance.address.to_s(16)}"
+			end
 		    end
 		end
 
