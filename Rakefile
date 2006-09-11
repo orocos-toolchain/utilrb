@@ -3,7 +3,7 @@ require 'rake/rdoctask'
 Rake::RDocTask.new("rdoc") do |rdoc|
   rdoc.options << "--inline-source"
   rdoc.rdoc_dir = 'html'
-  rdoc.title    = "Genom.rb"
+  rdoc.title    = "Utilrb"
   rdoc.options << '--main' << 'README'
   rdoc.rdoc_files.include('README')
   rdoc.rdoc_files.include('lib/**/*.rb', 'doc/**/*.rdoc')
