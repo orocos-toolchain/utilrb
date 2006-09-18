@@ -57,6 +57,27 @@ static VALUE value_set_union(VALUE vself, VALUE vother)
 	    std::inserter(result, result.end()));
     return vresult;
 }
+
+/* call-seq:
+ *  set.merge(other)		=> set
+ *
+ * Merges the elements of +other+ into +self+. If +other+ is a ValueSet, the operation is O(N + M)
+ */
+static VALUE value_set_merge(VALUE vself, VALUE vother)
+{
+    ValueSet& self  = get_wrapped_set(vself);
+    ValueSet const& other = get_wrapped_set(rb_funcall(vother, id_to_value_set, 0));
+    
+    self.insert(other.begin(), other.end());
+    return vself;
+}
+
+/* call-seq:
+ *   set.intersection(other)	=> intersection_set
+ *   set & other		=> intersection_set
+ *
+ * Computes the intersection of +set+ and +other+
+ */
 static VALUE value_set_intersection(VALUE vself, VALUE vother)
 {
     ValueSet const& self  = get_wrapped_set(vself);
@@ -154,6 +175,7 @@ extern "C" void Init_faster()
     rb_define_method(cValueSet, "intersection", RUBY_METHOD_FUNC(value_set_intersection), 1);
     rb_define_method(cValueSet, "difference", RUBY_METHOD_FUNC(value_set_difference), 1);
     rb_define_method(cValueSet, "insert", RUBY_METHOD_FUNC(value_set_insert), 1);
+    rb_define_method(cValueSet, "merge", RUBY_METHOD_FUNC(value_set_merge), 1);
     rb_define_method(cValueSet, "delete", RUBY_METHOD_FUNC(value_set_delete), 1);
     rb_define_method(cValueSet, "to_value_set", RUBY_METHOD_FUNC(value_set_to_value_set), 0);
 }
