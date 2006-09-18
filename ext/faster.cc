@@ -14,14 +14,13 @@ static ID id_to_value_set;
 typedef std::set<VALUE> ValueSet;
 static ValueSet& get_wrapped_set(VALUE self)
 {
-    void* object = 0;
-    Data_Get_Struct(self, void, object);
-    return *reinterpret_cast<ValueSet*>(object);
+    ValueSet* object = 0;
+    Data_Get_Struct(self, ValueSet, object);
+    return *object;
 }
-static void value_set_mark(ValueSet const* set)
-{ std::for_each(set->begin(), set->end(), rb_gc_mark); }
-static void value_set_free(ValueSet const* set)
-{ delete set; }
+
+static void value_set_mark(ValueSet const* set) { std::for_each(set->begin(), set->end(), rb_gc_mark); }
+static void value_set_free(ValueSet const* set) { delete set; }
 static VALUE value_set_alloc(VALUE klass)
 {
     ValueSet* cxx_set = new ValueSet;
