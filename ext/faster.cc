@@ -27,18 +27,36 @@ static VALUE value_set_alloc(VALUE klass)
     ValueSet* cxx_set = new ValueSet;
     return Data_Wrap_Struct(klass, value_set_mark, value_set_free, cxx_set);
 }
+/* call-seq:
+ *  set.each { |obj| ... }	    => set
+ */
 static VALUE value_set_each(VALUE self)
 {
     ValueSet& set = get_wrapped_set(self);
     for_each(set.begin(), set.end(), rb_yield);
     return self;
 }
+/* call-seq:
+ *  set.include?(value)	    => true or false
+ *
+ * Checks if +value+ is in +set+
+ */
 static VALUE value_set_include_p(VALUE vself, VALUE vother)
 {
     ValueSet const& self  = get_wrapped_set(vself);
     return self.find(vother) == self.end() ? Qfalse : Qtrue;
 }
+
+/* call-seq:
+ *  set.to_value_set		    => set
+ */
 static VALUE value_set_to_value_set(VALUE self) { return self; }
+
+/* call-seq:
+ *  set.include_all?(other)		=> true or false
+ *
+ * Checks if all elements of +other+ are in +set+
+ */
 static VALUE value_set_include_all_p(VALUE vself, VALUE vother)
 {
     ValueSet const& self  = get_wrapped_set(vself);
@@ -46,6 +64,12 @@ static VALUE value_set_include_all_p(VALUE vself, VALUE vother)
     return std::includes(self.begin(), self.end(), other.begin(), other.end()) ? Qtrue : Qfalse;
 }
 
+/* call-seq:
+ *  set.union(other)		=> union_set
+ *  set | other			=> union_set
+ *
+ * Computes the union of +set+ and +other+
+ */
 static VALUE value_set_union(VALUE vself, VALUE vother)
 {
     ValueSet const& self  = get_wrapped_set(vself);
@@ -89,6 +113,12 @@ static VALUE value_set_intersection(VALUE vself, VALUE vother)
 	    std::inserter(result, result.end()));
     return vresult;
 }
+/* call-seq:
+ *   set.difference(other)	=> intersection_set
+ *   set - other		=> intersection_set
+ *
+ * Computes the set of all elements of +set+ not in +other+
+ */
 static VALUE value_set_difference(VALUE vself, VALUE vother)
 {
     ValueSet const& self  = get_wrapped_set(vself);
@@ -101,6 +131,12 @@ static VALUE value_set_difference(VALUE vself, VALUE vother)
     return vresult;
 }
 
+/* call-seq:
+ *  set.insert(value)		=> true or false
+ * 
+ * Inserts +value+ into +set+. Returns true if the value did not exist
+ * in the set yet (it has actually been inserted), and false otherwise.
+ */
 static VALUE value_set_insert(VALUE vself, VALUE v)
 {
     ValueSet& self  = get_wrapped_set(vself);
@@ -108,6 +144,12 @@ static VALUE value_set_insert(VALUE vself, VALUE v)
     tie(tuples::ignore, exists) = self.insert(v);
     return exists ? Qtrue : Qfalse;
 }
+/* call-seq:
+ *  set.delete(value)		=> true or false
+ * 
+ * Removes +value+ from +set+. Returns true if the value did exist
+ * in the set yet (it has actually been removed), and false otherwise.
+ */
 static VALUE value_set_delete(VALUE vself, VALUE v)
 {
     ValueSet& self  = get_wrapped_set(vself);
@@ -140,6 +182,11 @@ static VALUE enumerable_to_value_set_i(VALUE i, VALUE* memo)
     result.insert(i);
     return Qnil;
 }
+/* call-seq:
+ *  enum.to_value_set		=> value_set
+ *
+ * Builds a value_set object from this enumerable
+ */
 static VALUE enumerable_to_value_set(VALUE self)
 {
     VALUE vresult = rb_funcall(cValueSet, id_new, 0);
@@ -162,6 +209,11 @@ static VALUE enumerable_each_uniq_i(VALUE i, VALUE* memo)
 
 }
 
+/* call-seq:
+ *  enum.each_uniq { |obj| ... }
+ *
+ * Yields all unique values found in +enum+
+ */
 static VALUE enumerable_each_uniq(VALUE self)
 {
     set<VALUE> seen;
