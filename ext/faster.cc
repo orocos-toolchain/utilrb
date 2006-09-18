@@ -115,6 +115,18 @@ static VALUE value_set_delete(VALUE vself, VALUE v)
     return count > 0 ? Qtrue : Qfalse;
 }
 
+/* call-seq:
+ *  set == other		=> true or false
+ *
+ * Equality
+ */
+static VALUE value_set_equal(VALUE vself, VALUE vother)
+{
+    ValueSet const& self  = get_wrapped_set(vself);
+    ValueSet const& other = get_wrapped_set(rb_funcall(vother, id_to_value_set, 0));
+    return (self == other) ? Qtrue : Qfalse;
+}
+
 
 
 
@@ -177,6 +189,7 @@ extern "C" void Init_faster()
     rb_define_method(cValueSet, "insert", RUBY_METHOD_FUNC(value_set_insert), 1);
     rb_define_method(cValueSet, "merge", RUBY_METHOD_FUNC(value_set_merge), 1);
     rb_define_method(cValueSet, "delete", RUBY_METHOD_FUNC(value_set_delete), 1);
+    rb_define_method(cValueSet, "==", RUBY_METHOD_FUNC(value_set_equal), 1);
     rb_define_method(cValueSet, "to_value_set", RUBY_METHOD_FUNC(value_set_to_value_set), 0);
 }
 
