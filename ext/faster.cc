@@ -9,7 +9,6 @@ using namespace std;
 
 static VALUE cValueSet;
 static ID id_new;
-//static ID id_enum_args;
 static ID id_to_value_set;
 
 typedef std::set<VALUE> ValueSet;
@@ -138,18 +137,9 @@ static VALUE enumerable_each_uniq(VALUE self)
     return self;
 }
 
-static VALUE enumerator_args_get(VALUE self)
-{ return rb_ivar_get(self, id_enum_args); }
-static VALUE enumerator_args_set(VALUE self, VALUE args)
-{
-    rb_ivar_set(self, id_enum_args, args);
-    return args;
-}
-
 
 extern "C" void Init_faster()
 {
-    VALUE rb_cEnumerator = rb_define_class_under(rb_mEnumerable, "Enumerator", rb_cObject);
     rb_define_method(rb_mEnumerable, "each_uniq", RUBY_METHOD_FUNC(enumerable_each_uniq), 0);
     rb_define_method(rb_mEnumerable, "to_value_set", RUBY_METHOD_FUNC(enumerable_to_value_set), 0);
 
@@ -166,9 +156,5 @@ extern "C" void Init_faster()
     rb_define_method(cValueSet, "insert", RUBY_METHOD_FUNC(value_set_insert), 1);
     rb_define_method(cValueSet, "delete", RUBY_METHOD_FUNC(value_set_delete), 1);
     rb_define_method(cValueSet, "to_value_set", RUBY_METHOD_FUNC(value_set_to_value_set), 0);
-
-    //id_enum_args	= rb_intern("enum_args");
-    //rb_define_method(rb_cEnumerator, "args", RUBY_METHOD_FUNC(enumerator_args_get), 0);
-    //rb_define_method(rb_cEnumerator, "args=", RUBY_METHOD_FUNC(enumerator_args_set), 1);
 }
 
