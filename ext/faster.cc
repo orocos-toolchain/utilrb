@@ -27,6 +27,17 @@ static VALUE value_set_alloc(VALUE klass)
     return Data_Wrap_Struct(klass, value_set_mark, value_set_free, cxx_set);
 }
 /* call-seq:
+ *  set.empty?			    => true or false
+ *
+ * Checks if this set is empty
+ */
+static VALUE value_set_empty_p(VALUE self)
+{ 
+    ValueSet& set = get_wrapped_set(self);
+    return set.empty() ? Qtrue : Qfalse;
+}
+
+/* call-seq:
  *  set.each { |obj| ... }	    => set
  */
 static VALUE value_set_each(VALUE self)
@@ -242,5 +253,6 @@ extern "C" void Init_faster()
     rb_define_method(cValueSet, "delete", RUBY_METHOD_FUNC(value_set_delete), 1);
     rb_define_method(cValueSet, "==", RUBY_METHOD_FUNC(value_set_equal), 1);
     rb_define_method(cValueSet, "to_value_set", RUBY_METHOD_FUNC(value_set_to_value_set), 0);
+    rb_define_method(cValueSet, "empty?", RUBY_METHOD_FUNC(value_set_empty_p), 0);
 }
 

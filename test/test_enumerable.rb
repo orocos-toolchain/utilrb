@@ -63,6 +63,8 @@ class TC_Enumerable < Test::Unit::TestCase
 	assert(! a.include?(1))
 	a.merge(b);
 	assert_equal([1, 2, 3, 4, 6, 8, 11].to_value_set, a)
+
+	assert([].to_value_set.empty?)
     end
 end
 
