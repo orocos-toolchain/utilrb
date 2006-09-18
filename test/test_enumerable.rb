@@ -53,12 +53,16 @@ class TC_Enumerable < Test::Unit::TestCase
 	assert(a.include_all?([4, 1, 8]))
 	assert(!a.include_all?(b))
 
+	assert(a.object_id == a.to_value_set.object_id)
+
         assert_equal([1, 2, 3, 4, 6, 8, 11], (a.union(b)).to_a)
         assert_equal([1, 3, 4], (a.intersection(b)).to_a)
         assert_equal([6, 8], (a.difference(b)).to_a)
 
 	a.delete(1)
 	assert(! a.include?(1))
+	a.merge(b);
+	assert_equal([1, 2, 3, 4, 6, 8, 11].to_value_set, a)
     end
 end
 
