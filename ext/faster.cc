@@ -2,73 +2,98 @@
 #include <set>
 #include <algorithm>
 
+#include <boost/tuple/tuple.hpp>
+
+using namespace boost;
 using namespace std;
-// static VALUE cFasterSet;
-// static ID id_new;
- static ID id_enum_args;
-// 
-// typedef std::set<VALUE> ValueSet;
-// static ValueSet& get_wrapped_set(VALUE self)
-// {
-//     void* object = 0;
-//     Data_Get_Struct(self, void, object);
-//     return *reinterpret_cast<ValueSet*>(object);
-// }
-// static void faster_set_mark(ValueSet const* set)
-// { std::for_each(set->begin(), set->end(), rb_gc_mark); }
-// static void faster_set_free(ValueSet const* set)
-// { delete set; }
-// static VALUE faster_set_alloc(VALUE klass)
-// {
-//     ValueSet* cxx_set = new ValueSet;
-//     return Data_Wrap_Struct(klass, faster_set_mark, faster_set_free, cxx_set);
-// }
-// static VALUE faster_set_each(VALUE self)
-// {
-//     ValueSet& set = get_wrapped_set(self);
-//     for (ValueSet::const_iterator it = set.begin(); it != set.end(); ++it)
-// 	rb_yield_values(1, *it);
-//     return self;
-// }
-// static VALUE faster_set_include_p(VALUE vself, VALUE vother)
-// {
-//     ValueSet const& self  = get_wrapped_set(vself);
-//     ValueSet const& other = get_wrapped_set(vother);
-//     return std::includes(self.begin(), self.end(), other.begin(), other.end()) ? Qtrue : Qfalse;
-// }
-// static VALUE faster_set_union(VALUE vself, VALUE vother)
-// {
-//     ValueSet const& self  = get_wrapped_set(vself);
-//     ValueSet const& other = get_wrapped_set(vother);
-//     
-//     VALUE vresult = rb_funcall(cFasterSet, id_new, 0);
-//     ValueSet& result = get_wrapped_set(vresult);
-//     std::set_union(self.begin(), self.end(), other.begin(), other.end(), 
-// 	    std::inserter(result, result.end()));
-//     return vresult;
-// }
-// static VALUE faster_set_intersection(VALUE vself, VALUE vother)
-// {
-//     ValueSet const& self  = get_wrapped_set(vself);
-//     ValueSet const& other = get_wrapped_set(vother);
-//     
-//     VALUE vresult = rb_funcall(cFasterSet, id_new, 0);
-//     ValueSet& result = get_wrapped_set(vresult);
-//     std::set_intersection(self.begin(), self.end(), other.begin(), other.end(), 
-// 	    std::inserter(result, result.end()));
-//     return vresult;
-// }
-// static VALUE faster_set_difference(VALUE vself, VALUE vother)
-// {
-//     ValueSet const& self  = get_wrapped_set(vself);
-//     ValueSet const& other = get_wrapped_set(vother);
-//     
-//     VALUE vresult = rb_funcall(cFasterSet, id_new, 0);
-//     ValueSet& result = get_wrapped_set(vresult);
-//     std::set_difference(self.begin(), self.end(), other.begin(), other.end(), 
-// 	    std::inserter(result, result.end()));
-//     return vresult;
-// }
+
+static VALUE cValueSet;
+static ID id_new;
+//static ID id_enum_args;
+static ID id_to_value_set;
+
+typedef std::set<VALUE> ValueSet;
+static ValueSet& get_wrapped_set(VALUE self)
+{
+    void* object = 0;
+    Data_Get_Struct(self, void, object);
+    return *reinterpret_cast<ValueSet*>(object);
+}
+static void value_set_mark(ValueSet const* set)
+{ std::for_each(set->begin(), set->end(), rb_gc_mark); }
+static void value_set_free(ValueSet const* set)
+{ delete set; }
+static VALUE value_set_alloc(VALUE klass)
+{
+    ValueSet* cxx_set = new ValueSet;
+    return Data_Wrap_Struct(klass, value_set_mark, value_set_free, cxx_set);
+}
+static VALUE value_set_each(VALUE self)
+{
+    ValueSet& set = get_wrapped_set(self);
+    for_each(set.begin(), set.end(), rb_yield);
+    return self;
+}
+static VALUE value_set_include_p(VALUE vself, VALUE vother)
+{
+    ValueSet const& self  = get_wrapped_set(vself);
+    return self.find(vother) == self.end() ? Qfalse : Qtrue;
+}
+static VALUE value_set_to_value_set(VALUE self) { return self; }
+static VALUE value_set_include_all_p(VALUE vself, VALUE vother)
+{
+    ValueSet const& self  = get_wrapped_set(vself);
+    ValueSet const& other = get_wrapped_set(rb_funcall(vother, id_to_value_set, 0));
+    return std::includes(self.begin(), self.end(), other.begin(), other.end()) ? Qtrue : Qfalse;
+}
+
+static VALUE value_set_union(VALUE vself, VALUE vother)
+{
+    ValueSet const& self  = get_wrapped_set(vself);
+    ValueSet const& other = get_wrapped_set(vother);
+    
+    VALUE vresult = rb_funcall(cValueSet, id_new, 0);
+    ValueSet& result = get_wrapped_set(vresult);
+    std::set_union(self.begin(), self.end(), other.begin(), other.end(), 
+	    std::inserter(result, result.end()));
+    return vresult;
+}
+static VALUE value_set_intersection(VALUE vself, VALUE vother)
+{
+    ValueSet const& self  = get_wrapped_set(vself);
+    ValueSet const& other = get_wrapped_set(vother);
+    
+    VALUE vresult = rb_funcall(cValueSet, id_new, 0);
+    ValueSet& result = get_wrapped_set(vresult);
+    std::set_intersection(self.begin(), self.end(), other.begin(), other.end(), 
+	    std::inserter(result, result.end()));
+    return vresult;
+}
+static VALUE value_set_difference(VALUE vself, VALUE vother)
+{
+    ValueSet const& self  = get_wrapped_set(vself);
+    ValueSet const& other = get_wrapped_set(vother);
+    
+    VALUE vresult = rb_funcall(cValueSet, id_new, 0);
+    ValueSet& result = get_wrapped_set(vresult);
+    std::set_difference(self.begin(), self.end(), other.begin(), other.end(), 
+	    std::inserter(result, result.end()));
+    return vresult;
+}
+
+static VALUE value_set_insert(VALUE vself, VALUE v)
+{
+    ValueSet& self  = get_wrapped_set(vself);
+    bool exists;
+    tie(tuples::ignore, exists) = self.insert(v);
+    return exists ? Qtrue : Qfalse;
+}
+static VALUE value_set_delete(VALUE vself, VALUE v)
+{
+    ValueSet& self  = get_wrapped_set(vself);
+    size_t count = self.erase(v);
+    return count > 0 ? Qtrue : Qfalse;
+}
 
 
 
@@ -77,20 +102,20 @@ using namespace std;
 
 
 
-// static VALUE enumerable_to_faster_set_i(VALUE i, VALUE* memo)
-// {
-//     ValueSet& result = *reinterpret_cast<ValueSet*>(memo);
-//     result.insert(i);
-//     return Qnil;
-// }
-// static VALUE enumerable_to_faster_set(VALUE self)
-// {
-//     VALUE vresult = rb_funcall(cFasterSet, id_new, 0);
-//     ValueSet& result = get_wrapped_set(vresult);
-//     rb_iterate(rb_each, self, 
-// 	    RUBY_METHOD_FUNC(enumerable_to_faster_set_i), (VALUE)&result);
-//     return vresult;
-// }
+static VALUE enumerable_to_value_set_i(VALUE i, VALUE* memo)
+{
+    ValueSet& result = *reinterpret_cast<ValueSet*>(memo);
+    result.insert(i);
+    return Qnil;
+}
+static VALUE enumerable_to_value_set(VALUE self)
+{
+    VALUE vresult = rb_funcall(cValueSet, id_new, 0);
+    ValueSet& result = get_wrapped_set(vresult);
+
+    rb_iterate(rb_each, self, RUBY_METHOD_FUNC(enumerable_to_value_set_i), reinterpret_cast<VALUE>(&result));
+    return vresult;
+}
 
 static VALUE enumerable_each_uniq_i(VALUE i, VALUE* memo)
 { 
@@ -126,17 +151,24 @@ extern "C" void Init_faster()
 {
     VALUE rb_cEnumerator = rb_define_class_under(rb_mEnumerable, "Enumerator", rb_cObject);
     rb_define_method(rb_mEnumerable, "each_uniq", RUBY_METHOD_FUNC(enumerable_each_uniq), 0);
-    // rb_define_method(rb_mEnumerable, "to_faster_set", RUBY_METHOD_FUNC(enumerable_to_faster_set), 0);
+    rb_define_method(rb_mEnumerable, "to_value_set", RUBY_METHOD_FUNC(enumerable_to_value_set), 0);
 
-    //cFasterSet = rb_define_class("FasterSet", rb_cObject);
-    //rb_define_alloc_func(cFasterSet, faster_set_alloc);
-    //rb_define_method(cFasterSet, "each", RUBY_METHOD_FUNC(faster_set_each), 0);
-    //rb_define_method(cFasterSet, "include?", RUBY_METHOD_FUNC(faster_set_include_p), 1);
-    //rb_define_method(cFasterSet, "union", RUBY_METHOD_FUNC(faster_set_union), 1);
-    //rb_define_method(cFasterSet, "intersection", RUBY_METHOD_FUNC(faster_set_intersection), 1);
+    cValueSet = rb_define_class("ValueSet", rb_cObject);
+    id_new = rb_intern("new");
+    id_to_value_set = rb_intern("to_value_set");
+    rb_define_alloc_func(cValueSet, value_set_alloc);
+    rb_define_method(cValueSet, "each", RUBY_METHOD_FUNC(value_set_each), 0);
+    rb_define_method(cValueSet, "include?", RUBY_METHOD_FUNC(value_set_include_p), 1);
+    rb_define_method(cValueSet, "include_all?", RUBY_METHOD_FUNC(value_set_include_all_p), 1);
+    rb_define_method(cValueSet, "union", RUBY_METHOD_FUNC(value_set_union), 1);
+    rb_define_method(cValueSet, "intersection", RUBY_METHOD_FUNC(value_set_intersection), 1);
+    rb_define_method(cValueSet, "difference", RUBY_METHOD_FUNC(value_set_difference), 1);
+    rb_define_method(cValueSet, "insert", RUBY_METHOD_FUNC(value_set_insert), 1);
+    rb_define_method(cValueSet, "delete", RUBY_METHOD_FUNC(value_set_delete), 1);
+    rb_define_method(cValueSet, "to_value_set", RUBY_METHOD_FUNC(value_set_to_value_set), 0);
 
-    id_enum_args	= rb_intern("enum_args");
-    rb_define_method(rb_cEnumerator, "args", RUBY_METHOD_FUNC(enumerator_args_get), 0);
-    rb_define_method(rb_cEnumerator, "args=", RUBY_METHOD_FUNC(enumerator_args_set), 1);
+    //id_enum_args	= rb_intern("enum_args");
+    //rb_define_method(rb_cEnumerator, "args", RUBY_METHOD_FUNC(enumerator_args_get), 0);
+    //rb_define_method(rb_cEnumerator, "args=", RUBY_METHOD_FUNC(enumerator_args_set), 1);
 }
 
