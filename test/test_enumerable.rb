@@ -47,8 +47,10 @@ class TC_Enumerable < Test::Unit::TestCase
     end
 
     def test_value_set
-        a = [1, 3, 4, 6, 8].to_value_set
-        b = [1, 2, 4, 3, 11].to_value_set
+        a = [1, 3, 3, 4, 6, 8].to_value_set
+        b = [1, 2, 4, 3, 11, 11].to_value_set
+	assert_equal(5, a.size)
+	assert_equal([1, 3, 4, 6, 8], a.to_a)
 	assert(a.include?(1))
 	assert(a.include_all?([4, 1, 8]))
 	assert(!a.include_all?(b))

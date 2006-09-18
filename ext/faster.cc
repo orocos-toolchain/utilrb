@@ -38,6 +38,18 @@ static VALUE value_set_empty_p(VALUE self)
 }
 
 /* call-seq:
+ *  set.size			    => size
+ *
+ * Returns this set size
+ */
+static VALUE value_set_size(VALUE self)
+{ 
+    ValueSet& set = get_wrapped_set(self);
+    return INT2NUM(set.size());
+}
+
+
+/* call-seq:
  *  set.each { |obj| ... }	    => set
  */
 static VALUE value_set_each(VALUE self)
@@ -254,5 +266,6 @@ extern "C" void Init_faster()
     rb_define_method(cValueSet, "==", RUBY_METHOD_FUNC(value_set_equal), 1);
     rb_define_method(cValueSet, "to_value_set", RUBY_METHOD_FUNC(value_set_to_value_set), 0);
     rb_define_method(cValueSet, "empty?", RUBY_METHOD_FUNC(value_set_empty_p), 0);
+    rb_define_method(cValueSet, "size", RUBY_METHOD_FUNC(value_set_size), 0);
 }
 
