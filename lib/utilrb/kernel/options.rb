@@ -30,7 +30,7 @@ module Kernel
 
         not_valid = options.keys - known_options.keys
         not_valid = not_valid.map { |m| "'#{m}'" }.join(" ")
-        raise ArgumentError, "unknown options #{not_valid}" if !not_valid.empty?
+        raise ArgumentError, "unknown options #{not_valid}", caller(1) if !not_valid.empty?
 
         # Set default values defined in 'known_options'
         known_options.each_key do |k| 
