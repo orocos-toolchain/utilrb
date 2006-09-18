@@ -81,7 +81,7 @@ static VALUE value_set_merge(VALUE vself, VALUE vother)
 static VALUE value_set_intersection(VALUE vself, VALUE vother)
 {
     ValueSet const& self  = get_wrapped_set(vself);
-    ValueSet const& other = get_wrapped_set(vother);
+    ValueSet const& other = get_wrapped_set(rb_funcall(vother, id_to_value_set, 0));
     
     VALUE vresult = rb_funcall(cValueSet, id_new, 0);
     ValueSet& result = get_wrapped_set(vresult);
@@ -92,7 +92,7 @@ static VALUE value_set_intersection(VALUE vself, VALUE vother)
 static VALUE value_set_difference(VALUE vself, VALUE vother)
 {
     ValueSet const& self  = get_wrapped_set(vself);
-    ValueSet const& other = get_wrapped_set(vother);
+    ValueSet const& other = get_wrapped_set(rb_funcall(vother, id_to_value_set, 0));
     
     VALUE vresult = rb_funcall(cValueSet, id_new, 0);
     ValueSet& result = get_wrapped_set(vresult);
