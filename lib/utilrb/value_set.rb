@@ -7,5 +7,14 @@ Utilrb.require_faster("ValueSet") do
 	alias :& :intersection
 	alias :- :difference
 	include Enumerable
+
+	def to_s
+	    base = super[0..-2]
+	    "#{base} { #{to_a.map { |o| o.to_s }.join(", ")} }"
+	end
+	def inspect 
+	    base = super[0..-2]
+	    "#{base} { #{to_a.map { |o| o.inspect }.join(", ")} }"
+	end
     end
 end
