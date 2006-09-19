@@ -1,21 +1,16 @@
 module Kernel
     # Validates an option hash, with default value support
     # 
-    # :call-seq:
+    # call-seq:
     #   validate_options(option, hash)       -> options
-    #   validate_options(option, array)
-    #   validate_options(nil, known_options)
+    #   validate_options(option, array)	     -> options
+    #   validate_options(nil, known_options) -> options
     #
     # In the first form, +option_hash+ should contain keys which are also 
     # in known_hash. The non-nil values of +known_hash+ are used as default
-    # values
-    #
-    # In the second form, +known_array+ is an array of option
-    # keys. +option_hash+ keys shall be in +known_array+
-    #
-    # +nil+ is treated as an empty option hash
-    #
-    # All option keys are converted into symbols
+    # values. In the second form, +known_array+ is an array of option
+    # keys. +option_hash+ keys shall be in +known_array+. +nil+ is treated 
+    # as an empty option hash, all keys are converted into symbols.
     #
     def validate_options(options, known_options)
         options = Hash.new unless options
@@ -43,6 +38,15 @@ module Kernel
         options
     end
 
+    # call-seq:
+    #	validate_option(options, name, required, message) { |v| ... }
+    #	validate_option(options, name, required, message)
+    #
+    # Validates option +name+ in the +options+ hash. If required is true,
+    # raises ArgumentError if the option is not present. Otherwise, yields
+    # its value to an optional block, which should return if the value is
+    # valid, or false otherwise. If the value is invalid, raises ArgumentError
+    # with +message+ or a standard message.
     def validate_option(options, name, required, message = nil)
         if required && !options.has_key?(name)
             raise ArgumentError, "missing required option #{name}"

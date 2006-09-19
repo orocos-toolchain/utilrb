@@ -3,7 +3,7 @@ require 'enumerator'
 require 'set'
 
 # Enumerator object which removes duplicate entries. See
-# Object#each_uniq
+# Kernel#each_uniq
 class UniqEnumerator < Enumerable::Enumerator
     def initialize(root, enum_with, args, key = nil)
 	super(root, enum_with, *args)
@@ -42,6 +42,11 @@ end
 
 unless_faster do
     module Enumerable
+	# call-seq:
+	#  enum.each_uniq { |obj| ... }
+	# 
+	# Yields all unique values found in +enum+
+	# 
 	def each_uniq(&iterator)
 	    seen = Set.new
 	    each do |obj|

@@ -19,9 +19,16 @@ unless defined? UTILRB_FASTER_MODE
 end
 
 module Kernel
-    def unless_faster
+    # Yields if the faster extension is not present
+    # This is used by Utilrb libraries to provide a 
+    # Ruby version if the C extension is not loaded
+    def unless_faster # :yield:
 	return yield unless UTILRB_FASTER_MODE
     end
+
+    # Yields if the faster extension is present, and 
+    # issue a warning otherwise. This is used for Ruby
+    # code which depends on methods in the C extension
     def require_faster(name)
 	if UTILRB_FASTER_MODE
 	    yield

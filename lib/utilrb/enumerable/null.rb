@@ -6,7 +6,7 @@ class NullEnumerator
 end
 
 module Kernel
-    # returns always the same null enumerator, to avoid creating enumeration. 
+    # returns always the same null enumerator, to avoid creating objects. 
     # It can be used as a seed to #inject:
     #
     #   enumerators.inject(null_enum) { |a, b| a + b }.each do |element|

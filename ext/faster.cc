@@ -51,6 +51,7 @@ static VALUE value_set_size(VALUE self)
 
 /* call-seq:
  *  set.each { |obj| ... }	    => set
+ *
  */
 static VALUE value_set_each(VALUE self)
 {
@@ -90,7 +91,8 @@ static VALUE value_set_include_all_p(VALUE vself, VALUE vother)
  *  set.union(other)		=> union_set
  *  set | other			=> union_set
  *
- * Computes the union of +set+ and +other+
+ * Computes the union of +set+ and +other+. This operation is O(N + M)
+ * is +other+ is a ValueSet
  */
 static VALUE value_set_union(VALUE vself, VALUE vother)
 {
@@ -122,7 +124,8 @@ static VALUE value_set_merge(VALUE vself, VALUE vother)
  *   set.intersection(other)	=> intersection_set
  *   set & other		=> intersection_set
  *
- * Computes the intersection of +set+ and +other+
+ * Computes the intersection of +set+ and +other+. This operation
+ * is O(N + M) if +other+ is a ValueSet
  */
 static VALUE value_set_intersection(VALUE vself, VALUE vother)
 {
@@ -136,10 +139,11 @@ static VALUE value_set_intersection(VALUE vself, VALUE vother)
     return vresult;
 }
 /* call-seq:
- *   set.difference(other)	=> intersection_set
- *   set - other		=> intersection_set
+ *   set.difference(other)	=> difference_set
+ *   set - other		=> difference_set
  *
- * Computes the set of all elements of +set+ not in +other+
+ * Computes the set of all elements of +set+ not in +other+. This operation
+ * is O(N + M) if +other+ is a ValueSet
  */
 static VALUE value_set_difference(VALUE vself, VALUE vother)
 {
@@ -158,6 +162,7 @@ static VALUE value_set_difference(VALUE vself, VALUE vother)
  * 
  * Inserts +value+ into +set+. Returns true if the value did not exist
  * in the set yet (it has actually been inserted), and false otherwise.
+ * This operation is O(log N)
  */
 static VALUE value_set_insert(VALUE vself, VALUE v)
 {
@@ -207,7 +212,7 @@ static VALUE enumerable_to_value_set_i(VALUE i, VALUE* memo)
 /* call-seq:
  *  enum.to_value_set		=> value_set
  *
- * Builds a value_set object from this enumerable
+ * Builds a ValueSet object from this enumerable
  */
 static VALUE enumerable_to_value_set(VALUE self)
 {
@@ -231,11 +236,7 @@ static VALUE enumerable_each_uniq_i(VALUE i, VALUE* memo)
 
 }
 
-/* call-seq:
- *  enum.each_uniq { |obj| ... }
- *
- * Yields all unique values found in +enum+
- */
+/* :nodoc: */
 static VALUE enumerable_each_uniq(VALUE self)
 {
     set<VALUE> seen;
@@ -244,6 +245,15 @@ static VALUE enumerable_each_uniq(VALUE self)
     return self;
 }
 
+
+/*
+ * Document-class: ValueSet
+ *
+ * ValueSet is a wrapper around the C++ set<> template. set<> is an ordered container,
+ * for which union(), intersection() and difference() is done in linear time. For performance
+ * reasons, in the case of ValueSet, the values are ordered by their VALUE, which roughly is
+ * their object_id.
+ */
 
 extern "C" void Init_faster()
 {
