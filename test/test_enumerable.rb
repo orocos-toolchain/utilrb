@@ -46,27 +46,29 @@ class TC_Enumerable < Test::Unit::TestCase
 	assert_equal([:a, :b, :c, :d, :e, :f], [c1, c2].inject(null_enum) { |a, b| a + b }.to_a)
     end
 
-    def test_value_set
-        a = [1, 3, 3, 4, 6, 8].to_value_set
-        b = [1, 2, 4, 3, 11, 11].to_value_set
-	assert_equal(5, a.size)
-	assert_equal([1, 3, 4, 6, 8], a.to_a)
-	assert(a.include?(1))
-	assert(a.include_all?([4, 1, 8]))
-	assert(!a.include_all?(b))
+    Utilrb.require_faster('test_value_set') do
+	def test_value_set
+	    a = [1, 3, 3, 4, 6, 8].to_value_set
+	    b = [1, 2, 4, 3, 11, 11].to_value_set
+	    assert_equal(5, a.size)
+	    assert_equal([1, 3, 4, 6, 8], a.to_a)
+	    assert(a.include?(1))
+	    assert(a.include_all?([4, 1, 8]))
+	    assert(!a.include_all?(b))
 
-	assert(a.object_id == a.to_value_set.object_id)
+	    assert(a.object_id == a.to_value_set.object_id)
 
-        assert_equal([1, 2, 3, 4, 6, 8, 11], (a.union(b)).to_a)
-        assert_equal([1, 3, 4], (a.intersection(b)).to_a)
-        assert_equal([6, 8], (a.difference(b)).to_a)
+	    assert_equal([1, 2, 3, 4, 6, 8, 11], (a.union(b)).to_a)
+	    assert_equal([1, 3, 4], (a.intersection(b)).to_a)
+	    assert_equal([6, 8], (a.difference(b)).to_a)
 
-	a.delete(1)
-	assert(! a.include?(1))
-	a.merge(b);
-	assert_equal([1, 2, 3, 4, 6, 8, 11].to_value_set, a)
+	    a.delete(1)
+	    assert(! a.include?(1))
+	    a.merge(b);
+	    assert_equal([1, 2, 3, 4, 6, 8, 11].to_value_set, a)
 
-	assert([].to_value_set.empty?)
+	    assert([].to_value_set.empty?)
+	end
     end
 end
 
