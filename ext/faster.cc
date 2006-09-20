@@ -196,6 +196,17 @@ static VALUE value_set_equal(VALUE vself, VALUE vother)
     return (self == other) ? Qtrue : Qfalse;
 }
 
+/* call-seq:
+ *  set.clear			=> set
+ *
+ * Remove all elements of this set
+ */
+static VALUE value_set_clear(VALUE self)
+{
+    get_wrapped_set(self).clear();
+    return self;
+}
+
 
 
 
@@ -277,5 +288,6 @@ extern "C" void Init_faster()
     rb_define_method(cValueSet, "to_value_set", RUBY_METHOD_FUNC(value_set_to_value_set), 0);
     rb_define_method(cValueSet, "empty?", RUBY_METHOD_FUNC(value_set_empty_p), 0);
     rb_define_method(cValueSet, "size", RUBY_METHOD_FUNC(value_set_size), 0);
+    rb_define_method(cValueSet, "clear", RUBY_METHOD_FUNC(value_set_clear), 0);
 }
 

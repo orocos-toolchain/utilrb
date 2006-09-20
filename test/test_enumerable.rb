@@ -68,6 +68,8 @@ class TC_Enumerable < Test::Unit::TestCase
 	    assert_equal([1, 2, 3, 4, 6, 8, 11].to_value_set, a)
 
 	    assert([].to_value_set.empty?)
+
+	    assert([1, 2, 4, 3].to_value_set.clear.empty?)
 	end
     end
 end
