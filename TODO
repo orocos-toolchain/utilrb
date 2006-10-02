@@ -1,0 +1,7 @@
+* put the +block+ argument in front in Module#define_method_with_block. This
+  would allow to do 
+
+    define_method_with_block(:bla) do |block, *args| 
+    end
+
+
