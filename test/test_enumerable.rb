@@ -46,6 +46,16 @@ class TC_Enumerable < Test::Unit::TestCase
 	assert_equal([:a, :b, :c, :d, :e, :f], [c1, c2].inject(null_enum) { |a, b| a + b }.to_a)
     end
 
+    def test_random_element
+	set = (1..100).to_a
+	100.times { set.delete(set.random_element) }
+	assert(set.empty?)
+
+	set = Hash[*(1..100).map { |i| [(?a + i).to_s, i] }.flatten]
+	100.times { set.delete(set.random_element.first) }
+	assert(set.empty?)
+    end
+
     Utilrb.require_faster('test_value_set') do
 	def test_value_set
 	    a = [1, 3, 3, 4, 6, 8].to_value_set
