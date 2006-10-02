@@ -207,6 +207,13 @@ static VALUE value_set_clear(VALUE self)
     return self;
 }
 
+static VALUE value_set_initialize_copy(VALUE vself, VALUE vother)
+{
+    ValueSet const& other = get_wrapped_set(rb_funcall(vother, id_to_value_set, 0));
+    set<VALUE> new_set(other.begin(), other.end());
+    get_wrapped_set(vself).swap(new_set);
+    return vself;
+}
 
 
 
@@ -289,5 +296,6 @@ extern "C" void Init_faster()
     rb_define_method(cValueSet, "empty?", RUBY_METHOD_FUNC(value_set_empty_p), 0);
     rb_define_method(cValueSet, "size", RUBY_METHOD_FUNC(value_set_size), 0);
     rb_define_method(cValueSet, "clear", RUBY_METHOD_FUNC(value_set_clear), 0);
+    rb_define_method(cValueSet, "initialize_copy", RUBY_METHOD_FUNC(value_set_initialize_copy), 1);
 }
 
