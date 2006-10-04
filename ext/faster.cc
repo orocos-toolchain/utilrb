@@ -26,13 +26,13 @@ static VALUE enumerable_each_uniq(VALUE self)
 }
 
 extern "C" void Init_value_set();
-extern "C" void Init_replace();
+extern "C" void Init_swap();
 
 extern "C" void Init_faster()
 {
     rb_define_method(rb_mEnumerable, "each_uniq", RUBY_METHOD_FUNC(enumerable_each_uniq), 0);
 
     Init_value_set();
-    Init_replace();
+    Init_swap();
 }
 

@@ -35,34 +35,27 @@ typedef struct RVALUE {
 static const size_t SLOT_SIZE = sizeof(RVALUE);
 
 /*
- * Kernel.replace!(object, klass, *args)
+ * Kernel.swap!(obj1, obj2, *args)
  *
- * Replaces +object+ by a new object of class +klass+. klass::new is called
- * with the provided arguments
+ * Swaps the object which are being hold by obj1 and obj2.
  *
- * WARNING: I don't know if this can be called in a method of +object+
+ * WARNING: I don't know if this can be called in a method of +obj1+ or +obj2+
  */
-static VALUE kernel_replace_bang(int argc, VALUE* argv, VALUE self)
+static VALUE kernel_swap_bang(VALUE self, VALUE obj1, VALUE obj2)
 {
-    VALUE obj;
-    VALUE klass;
-    rb_scan_args(argc, argv, "2*", &obj, &klass);
-
-    // Create the new object
-    VALUE newobj = rb_funcall2(klass, rb_intern("new"), argc - 2, argv + 2);
     // Save the definition of the old object
     RVALUE old_obj;
-    memcpy(&old_obj, reinterpret_cast<void*>(newobj), SLOT_SIZE);
+    memcpy(&old_obj, reinterpret_cast<void*>(obj1), SLOT_SIZE);
     // Place the definition of the new object in the slot of the old one
-    memcpy(reinterpret_cast<void*>(obj), reinterpret_cast<void*>(newobj), SLOT_SIZE);
+    memcpy(reinterpret_cast<void*>(obj1), reinterpret_cast<void*>(obj2), SLOT_SIZE);
     // Place the definition of the old object in the slot of the new one
-    memcpy(reinterpret_cast<void*>(newobj), &old_obj, SLOT_SIZE);
+    memcpy(reinterpret_cast<void*>(obj2), &old_obj, SLOT_SIZE);
 
-    return obj;
+    return Qnil;
 }
 
-extern "C" void Init_replace()
+extern "C" void Init_swap()
 {
-    rb_define_singleton_method(rb_mKernel, "replace!", RUBY_METHOD_FUNC(kernel_replace_bang), -1);
+    rb_define_singleton_method(rb_mKernel, "swap!", RUBY_METHOD_FUNC(kernel_swap_bang), 2);
 }
 

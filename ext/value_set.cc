@@ -232,6 +232,7 @@ static VALUE enumerable_to_value_set_i(VALUE i, VALUE* memo)
     result.insert(i);
     return Qnil;
 }
+
 /* call-seq:
  *  enum.to_value_set		=> value_set
  *

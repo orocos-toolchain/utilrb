@@ -3,7 +3,7 @@ require 'test_config'
 
 require 'utilrb/kernel/options'
 require 'utilrb/kernel/arity'
-require 'utilrb/kernel/replace'
+require 'utilrb/kernel/swap'
 
 class TC_Kernel < Test::Unit::TestCase
     def test_validate_options
@@ -46,14 +46,13 @@ class TC_Kernel < Test::Unit::TestCase
 	assert_nothing_raised { check_arity(object.method(:arity_1_more), 2) }
     end
 
-    Utilrb.require_faster('test_replace') do
-	def test_replace
+    Utilrb.require_faster('test_swap') do
+	def test_swap
 	    obj = Array.new
-	    myobj = Object.new
-	    obj << myobj
-
-	    Kernel.replace!(obj, Hash)
+	    Kernel.swap!(obj, Hash.new)
 	    assert_instance_of Hash, obj
+
+	    GC.start
 	end
     end
 end
