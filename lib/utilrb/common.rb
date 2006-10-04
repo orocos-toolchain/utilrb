@@ -23,7 +23,9 @@ module Utilrb
     # This is used by Utilrb libraries to provide a 
     # Ruby version if the C extension is not loaded
     def self.unless_faster # :yield:
-	return yield unless UTILRB_FASTER_MODE
+	unless UTILRB_FASTER_MODE
+	    return yield if block_given?
+	end
     end
 
     # Yields if the faster extension is present, and 
@@ -31,7 +33,7 @@ module Utilrb
     # code which depends on methods in the C extension
     def self.require_faster(name)
 	if UTILRB_FASTER_MODE
-	    yield
+	    yield if block_given?
 	else
 	    STDERR.puts "Utilrb: not loading #{name} since the C extension is not available"
 	end
