@@ -207,6 +207,11 @@ static VALUE value_set_clear(VALUE self)
     return self;
 }
 
+/* call-seq:
+ *  set.initialize_copy(other)  => set
+ *
+ * Initializes +set+ with the values in +other+. Needed by #dup
+ */
 static VALUE value_set_initialize_copy(VALUE vself, VALUE vother)
 {
     ValueSet const& other = get_wrapped_set(rb_funcall(vother, id_to_value_set, 0));
