@@ -11,5 +11,9 @@ class TC_Hash < Test::Unit::TestCase
 	assert_equal({:a => 1, :c => 3}, test.slice(:a, :c))
 	assert_equal({:a => 1, :c => 3}, test.slice(:a, :c, :d))
     end
+
+    def test_to_s
+	assert_equal("1 => 2, 2 => 3", { 1 => 2, 2 => 3 }.to_s)
+    end
 end
 
