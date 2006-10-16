@@ -56,7 +56,13 @@ static VALUE value_set_size(VALUE self)
 static VALUE value_set_each(VALUE self)
 {
     ValueSet& set = get_wrapped_set(self);
-    for_each(set.begin(), set.end(), rb_yield);
+    for (ValueSet::iterator it = set.begin(); it != set.end();)
+    {
+	// Increment before calling yield() so that 
+	// the current element can be deleted safely
+	ValueSet::iterator this_it = it++;
+	rb_yield(*this_it);
+    }
     return self;
 }
 /* call-seq:
