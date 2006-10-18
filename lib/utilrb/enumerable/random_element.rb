@@ -7,6 +7,7 @@ module Enumerable
 	elsif respond_to?(:size)
 	    element = rand(size)
 	    each_with_index { |e, i| return e if i == element }
+	    nil
 	elsif respond_to?(:to_a)
 	    to_a.random_element
 	end

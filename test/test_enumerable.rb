@@ -47,13 +47,17 @@ class TC_Enumerable < Test::Unit::TestCase
     end
 
     def test_random_element
+	# Test on arrays
 	set = (1..100).to_a
 	100.times { set.delete(set.random_element) }
 	assert(set.empty?)
+	assert_equal(nil, [].random_element)
 
+	# Test on non-empty collection which defines #size
 	set = Hash[*(1..100).map { |i| [(?a + i).to_s, i] }.flatten]
 	100.times { set.delete(set.random_element.first) }
 	assert(set.empty?)
+	assert_equal(nil, {}.random_element)
     end
 
     Utilrb.require_faster('test_value_set') do
