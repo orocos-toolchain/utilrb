@@ -1,11 +1,34 @@
+require 'utilrb/hash/slice'
 module Kernel
-    # Validates an option hash, with default value support
-    # 
-    # call-seq:
-    #   validate_options(option, hash)       -> options
-    #   validate_options(option, array)	     -> options
-    #   validate_options(nil, known_options) -> options
+    # Partitions an option hash between known arguments and unknown
+    # arguments, with default value support. All option keys are
+    # converted to symbols for consistency.
     #
+    # call-seq:
+    #   filter_options(option, hash)       -> known, unknown
+    #   filter_options(option, array)	   -> known, unknown
+    #   filter_options(nil, known_options) -> default_options, {}
+    #
+    def filter_options(options, option_spec)
+        options     = (options || Hash.new).inject({}) { |h, (k, v)| h[k.to_sym] = v; h }
+	option_spec = option_spec.inject({}) { |h, (k, v)| h[k.to_sym] = v; h }
+
+	unknown_options = options.slice(*(options.keys - option_spec.keys))
+	known_options   = options.slice(*option_spec.keys)
+
+        # Set default values defined in the spec
+        option_spec.each_key do |k| 
+            value = option_spec[k]
+	    if !known_options.has_key?(k) && !value.nil?
+		known_options[k] ||= value
+	    end
+        end
+
+        return *[known_options, unknown_options]
+    end
+
+    # Validates an option hash, with default value support. See #filter_options
+    # 
     # In the first form, +option_hash+ should contain keys which are also 
     # in known_hash. The non-nil values of +known_hash+ are used as default
     # values. In the second form, +known_array+ is an array of option
@@ -13,29 +36,13 @@ module Kernel
     # as an empty option hash, all keys are converted into symbols.
     #
     def validate_options(options, known_options)
-        options = Hash.new unless options
-       
-        if Array === known_options
-            # Build a hash with all values to nil
-            known_options = known_options.inject({}) { |h, k| h[k.to_sym] = nil; h }
-        end
+	opt, unknown = filter_options(options, known_options)
+	unless unknown.empty?
+	    not_valid = unknown.keys.map { |m| "'#{m}'" }.join(" ")
+	    raise ArgumentError, "unknown options #{not_valid}", caller(1)
+	end
 
-        options        = options.inject({}) { |h, (k, v)| h[k.to_sym] = v; h }
-        known_options  = known_options.inject({}) { |h, (k, v)| h[k.to_sym] = v; h }
-
-        not_valid = options.keys - known_options.keys
-        not_valid = not_valid.map { |m| "'#{m}'" }.join(" ")
-        raise ArgumentError, "unknown options #{not_valid}", caller(1) if !not_valid.empty?
-
-        # Set default values defined in 'known_options'
-        known_options.each_key do |k| 
-            value = known_options[k]
-	    if !options.has_key?(k) && !value.nil?
-		options[k] ||= value
-	    end
-        end
-
-        options
+	opt
     end
 
     # call-seq:
