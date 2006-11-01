@@ -1,3 +1,4 @@
+require 'utilrb/hash/to_sym_keys'
 require 'utilrb/hash/slice'
 module Kernel
     # Partitions an option hash between known arguments and unknown
@@ -10,7 +11,8 @@ module Kernel
     #   filter_options(nil, known_options) -> default_options, {}
     #
     def filter_options(options, option_spec)
-        options     = (options || Hash.new).inject({}) { |h, (k, v)| h[k.to_sym] = v; h }
+        options     = (options || Hash.new).to_sym_keys
+	# cannot use #to_sym_keys as option_spec can be an array
 	option_spec = option_spec.inject({}) { |h, (k, v)| h[k.to_sym] = v; h }
 
 	unknown_options = options.slice(*(options.keys - option_spec.keys))
