@@ -12,7 +12,7 @@ class TC_Module < Test::Unit::TestCase
 	    mock.should_receive(:called).once
 	    block_obj = lambda { mock.called }
 	    test_obj = self
-	    method = lambda do |a, b, block|
+	    method = lambda do |block, a, b|
 		test_obj.assert_equal(a, 1)
 		test_obj.assert_equal(b, 2)
 		test_obj.assert_equal(block, block_obj)

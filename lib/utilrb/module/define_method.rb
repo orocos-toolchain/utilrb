@@ -8,15 +8,20 @@ class Module
     #   end
     #
     # Is written as
-    #	define_method_with_block('my_method') do |a, block|
+    #	define_method_with_block('my_method') do |block, a|
+    #	end
+    #
+    # The block is given first to allow the following construct:
+    #
+    #	define_method_with_block('my_method') do |block, *args|
     #	end
     #
     # +block+ is +nil+ if no block is given on the method call
+    #
     def define_method_with_block(name, &mdef)
 	class_eval <<-EOD
 	    def #{name}(*args, &block)
-		args << block
-		dmwb_#{name}_user_definition(*args) 
+		dmwb_#{name}_user_definition(block, *args) 
 	    end
 	EOD
 	define_method("dmwb_#{name}_user_definition", &mdef)
