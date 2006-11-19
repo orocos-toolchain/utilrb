@@ -5,7 +5,7 @@ Rake::RDocTask.new("rdoc") do |rdoc|
   rdoc.options << "--inline-source"
   rdoc.rdoc_dir = 'html'
   rdoc.title    = "Utilrb"
-  rdoc.rdoc_files.include('README', 'ext/faster.cc', 'lib/**/*.rb', 'doc/**/*.rdoc')
+  rdoc.rdoc_files.include('README', 'ext/*.cc', 'lib/**/*.rb', 'doc/**/*.rdoc')
   rdoc.rdoc_files.exclude('doc/**/*_attrs.rdoc')
 end
 
