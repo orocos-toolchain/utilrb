@@ -6,6 +6,23 @@ require 'enumerator'
 require 'utilrb/module'
 
 class TC_Module < Test::Unit::TestCase
+    def test_include
+	class_extension = Module.new do
+	    def tag; end
+	end
+
+	m = Module.new do
+	    const_set(:ClassExtension, class_extension)
+	end
+	
+	m2 = Module.new { include m }
+	assert(m2::ClassExtension.method_defined?(:tag))
+	k = Class.new do
+	    include m2
+	end
+	assert(k.respond_to?(:tag))
+    end
+
     def test_define_method_with_block
 	FlexMock.use do |mock|
 	    mock.should_receive(:called).once
