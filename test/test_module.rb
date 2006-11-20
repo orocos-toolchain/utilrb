@@ -59,6 +59,8 @@ class TC_Module < Test::Unit::TestCase
 	    inherited_enumerable(:mapped, :map, :map => true) { Hash.new }
 	end
 	b = Class.new(a) do
+	    include Module.new # include an empty module between a and b to check that the module
+			       # is skipped transparently
 	    inherited_enumerable(:child_attribute) { Array.new }
 	end
 	check_inherited_enumerable(a, b)
