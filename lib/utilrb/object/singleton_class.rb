@@ -3,7 +3,20 @@ if RUBY_VERSION >= "1.9"
     class Object
 	def has_singleton?; defined? @singleton_class end
 	def singleton_class
-	    @singleton_class = (class << self; self end)
+	    if defined? @singleton_class
+		return @singleton_class
+	    else
+		@singleton_class = class << self
+		    class << self
+			alias __ancestors__ ancestors
+			def ancestors; __ancestors__.unshift(self) end
+		    end
+		    
+		    self 
+		end
+
+		@singleton_class
+	    end
 	end
     end
 else
@@ -26,6 +39,9 @@ else
 			def name
 			    "#{@superclass.name}!0x#{@singleton_instance.address.to_s(16)}"
 			end
+
+			alias __ancestors__ ancestors
+			def ancestors; __ancestors__.unshift(self) end
 		    end
 		end
 
@@ -34,5 +50,4 @@ else
 	end
     end
 end
-
 

@@ -51,5 +51,15 @@ class TC_Object < Test::Unit::TestCase
 	obj1.block = obj2.block
 	assert_same(obj1.block, obj2.block)
     end
+
+    def test_singleton_class
+	klass	= Class.new
+	object	= klass.new
+	assert(! object.has_singleton?)
+	assert_equal(object, object.singleton_class.singleton_instance)
+	assert(object.has_singleton?)
+	assert_equal(klass, object.singleton_class.superclass)
+	assert_equal([object.singleton_class, klass, Object, Kernel], object.singleton_class.ancestors)
+    end
 end
 
