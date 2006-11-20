@@ -36,5 +36,73 @@ class TC_Module < Test::Unit::TestCase
 	assert_equal( [[:a, [10, 20]], [:b, 10]].to_set, obj.enum_for(:each_mapped).to_set )
 	assert_equal( [10, 20], obj.enum_for(:each_mapped, :a).to_a )
     end
+
+    def test_inherited_enumerable_module
+	m = Module.new do
+	    inherited_enumerable(:signature, :signatures) { Array.new }
+	end
+	k = Class.new do
+	    include m
+	    inherited_enumerable(:child_attribute) { Array.new }
+	end
+
+	# Add another attribute *after* k has been defined
+	m.class_eval do
+	    inherited_enumerable(:mapped, :map, :map => true) { Hash.new }
+	end
+	check_inherited_enumerable(m, k)
+    end
+
+    def test_inherited_enumerable_class
+	a = Class.new do
+	    inherited_enumerable(:signature, :signatures) { Array.new }
+	    inherited_enumerable(:mapped, :map, :map => true) { Hash.new }
+	end
+	b = Class.new(a) do
+	    inherited_enumerable(:child_attribute) { Array.new }
+	end
+	check_inherited_enumerable(a, b)
+	
+	# Test for singleton class support
+	object = b.new
+	assert(object.singleton_class.respond_to?(:signatures))
+	object.singleton_class.signatures << :in_singleton
+	assert_equal([:in_singleton], object.singleton_class.signatures)
+        assert_equal([:in_singleton, :in_derived, :in_base], object.singleton_class.enum_for(:each_signature).to_a)
+    end
+
+    def check_inherited_enumerable(base, derived)
+	assert(base.respond_to?(:each_signature))
+	assert(base.respond_to?(:signatures))
+	assert(!base.respond_to?(:has_signature?))
+	assert(!base.respond_to?(:find_signatures))
+
+	assert(base.respond_to?(:each_mapped))
+	assert(base.respond_to?(:map))
+	assert(base.respond_to?(:has_mapped?))
+
+        base.signatures << :in_base
+        base.map[:base] = 10
+        base.map[:overriden] = 20
+        assert_equal([:in_base], base.enum_for(:each_signature).to_a)
+        assert_equal([10].to_set, base.enum_for(:each_mapped, :base, false).to_set)
+
+	assert(!base.respond_to?(:child_attribute))
+	assert(!base.respond_to?(:each_child_attribute))
+	assert(derived.respond_to?(:child_attribute))
+	assert(derived.respond_to?(:each_child_attribute))
+
+        derived.signatures << :in_derived
+
+        derived.map[:overriden] = 15
+        derived.map[:derived] = 25
+
+        assert_equal([:in_derived, :in_base], derived.enum_for(:each_signature).to_a)
+        assert_equal([20, 15].to_set, derived.enum_for(:each_mapped, :overriden, false).to_set)
+        assert_equal([15].to_set, derived.enum_for(:each_mapped, :overriden, true).to_set)
+        assert_equal([25].to_set, derived.enum_for(:each_mapped, :derived).to_set)
+        assert_equal([[:base, 10], [:overriden, 20], [:overriden, 15], [:derived, 25]].to_set, derived.enum_for(:each_mapped, nil, false).to_set)
+        assert_equal([[:base, 10], [:overriden, 15], [:derived, 25]].to_set, derived.enum_for(:each_mapped, nil, true).to_set)
+    end
 end
 
