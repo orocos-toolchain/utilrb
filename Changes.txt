@@ -1,3 +1,10 @@
+== Version 0.2.1
+ * new features:
+    - is_singleton?
+    - module_inherited_enumerable
+    - attribute() can be used in singleton classes (previously we had to 
+      call class_attribute() in the class itself)
+
 == Version 0.2
  * Initial release
 
