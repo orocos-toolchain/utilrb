@@ -25,12 +25,22 @@ static VALUE enumerable_each_uniq(VALUE self)
     return self;
 }
 
+/* Returns true if +self+ is a singleton class */
+static VALUE kernel_is_singleton_p(VALUE self)
+{
+    if (BUILTIN_TYPE(self) == T_CLASS && FL_TEST(self, FL_SINGLETON))
+	return Qtrue;
+    else
+	return Qfalse;
+}
+
 extern "C" void Init_value_set();
 extern "C" void Init_swap();
 
 extern "C" void Init_faster()
 {
     rb_define_method(rb_mEnumerable, "each_uniq", RUBY_METHOD_FUNC(enumerable_each_uniq), 0);
+    rb_define_method(rb_mKernel, "is_singleton?", RUBY_METHOD_FUNC(kernel_is_singleton_p), 0);
 
     Init_value_set();
     Init_swap();
