@@ -30,13 +30,19 @@ module Utilrb
 	end
     end
 
+    # Yields if the faster extension is present. This is used for Ruby code
+    # which depends on methods in the C extension
+    def self.if_faster(&block)
+	require_faster(nil, &block)
+    end
+
     # Yields if the faster extension is present, and 
     # issue a warning otherwise. This is used for Ruby
     # code which depends on methods in the C extension
     def self.require_faster(name)
 	if UTILRB_FASTER_MODE
 	    yield if block_given?
-	else
+	elsif name
 	    STDERR.puts "Utilrb: not loading #{name} since the C extension is not available"
 	end
     end
