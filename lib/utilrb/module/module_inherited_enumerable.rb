@@ -1,6 +1,7 @@
-require 'utilrb/module/module_inherited_enumerable'
+require 'utilrb/object/attribute'
+require 'utilrb/enumerable/uniq'
 
-class Class
+class Module
     # Defines an attribute as being enumerable in the class instance and in the
     # whole class inheritance hierarchy.  More specifically, it defines a
     # <tt>each_#{name}(&iterator)</tt> instance method and a <tt>each_#{name}(&iterator)</tt>
@@ -41,10 +42,48 @@ class Class
     #	B.each_enum => 2, 1
     #	b.singleton_class.each_enum => 3, 2, 1
     #
-    def class_inherited_enumerable(name, attribute_name = name, options = Hash.new, &init)
-	singleton_class.class_eval { module_inherited_enumerable(name, attribute_name, options, &init) }
+    def module_inherited_enumerable(name, attribute_name = name, options = Hash.new, &init)
+        # Set up the attribute accessor
+	attribute(attribute_name, &init)
+	class_eval { private "#{attribute_name}=" }
+
+	options[:enum_with] ||= :each
+
+        if options[:map]
+            class_eval <<-EOF
+            def each_#{name}(key = nil, uniq = true)
+		if key
+		    if #{attribute_name}.has_key?(key)
+			yield(#{attribute_name}[key])
+			return self if uniq
+		    end
+		elsif uniq
+		    @enum_#{name}_uniq ||= enum_uniq(:each_#{name}, nil, false) { |k, v| k }
+		    @enum_#{name}_uniq.each { |el| yield(el) }
+		    return self
+		else
+                    #{attribute_name}.#{options[:enum_with]} { |el| yield(el) }
+		end
+		superclass.each_#{name}(key, uniq) { |el| yield(el) } if superclass.respond_to?(:each_#{name})
+                self
+            end
+            def has_#{name}?(key)
+                return true if #{attribute_name}[key]
+		superclass.has_#{name}?(key)
+            end
+            EOF
+        else
+            class_eval <<-EOF
+            def each_#{name}(&iterator)
+                #{attribute_name}.#{options[:enum_with]}(&iterator) if #{attribute_name}
+		superclass.each_#{name}(&iterator) if superclass.respond_to?(:each_#{name})
+                self
+            end
+            EOF
+        end
     end
 end
+
 
 
 

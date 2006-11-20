@@ -19,8 +19,11 @@ class TC_Class < Test::Unit::TestCase
 	    class_inherited_enumerable(:signature, :signatures) { Array.new }
 	    class_inherited_enumerable(:mapped, :map, :map => true) { Hash.new }
 	end
+	m = Module.new do
+	    module_inherited_enumerable(:only_in_child) { Array.new }
+	end
 	b = Class.new(a) do
-	    class_inherited_enumerable(:only_in_child) { Hash.new }
+	    extend m
 	end
 
         [a, b].each do |klass|
@@ -63,6 +66,5 @@ class TC_Class < Test::Unit::TestCase
 	assert_equal([:in_singleton], object.singleton_class.signatures)
         assert_equal([:in_singleton, :in_b, :in_a], object.singleton_class.enum_for(:each_signature).to_a)
     end
-
 end
 
