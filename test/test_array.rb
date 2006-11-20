@@ -1,3 +1,4 @@
+require 'test_config'
 require 'utilrb/array'
 
 class TC_Array < Test::Unit::TestCase

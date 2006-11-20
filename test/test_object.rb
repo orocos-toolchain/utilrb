@@ -1,4 +1,3 @@
-require 'test/unit'
 require 'test_config'
 
 require 'utilrb/object'
