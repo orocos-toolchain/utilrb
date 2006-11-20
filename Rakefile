@@ -1,29 +1,33 @@
-require 'rake/rdoctask'
+require 'hoe'
+require './lib/utilrb/common'
 
-Rake::RDocTask.new("rdoc") do |rdoc|
-  rdoc.main = "README"
-  rdoc.options << "--inline-source"
-  rdoc.rdoc_dir = 'html'
-  rdoc.title    = "Utilrb"
-  rdoc.rdoc_files.include('README', 'ext/*.cc', 'lib/**/*.rb', 'doc/**/*.rdoc')
-  rdoc.rdoc_files.exclude('doc/**/*_attrs.rdoc')
+Hoe.new('Utilrb', Utilrb::VERSION) do |p|
+    p.author = "Sylvain Joyeux"
+    p.email = "sylvain.joyeux@m4x.org"
+
+    p.summary = 'Yet another Ruby toolkit'
+    p.description = p.paragraphs_of('Readme.txt', 2..5).join("\n\n")
+    p.url         = p.paragraphs_of('Readme.txt', 0).first.split(/\n/)[1..-1]
+    p.changes     = p.paragraphs_of('Changes.txt', 0..1).join("\n\n")
 end
 
-task :test do
+task :full_test do
     ENV['UTILRB_FASTER_MODE'] = 'no'
     system("testrb test/")
     ENV['UTILRB_FASTER_MODE'] = 'yes'
     system("testrb test/")
 end
 
-task :test_rcov do
+task :rcov_test do
     Dir.chdir('test') do 
 	if !File.directory?('../rcov')
 	    File.mkdir('../rcov')
 	end
 	File.open("../rcov/index.html", "w") do |index|
 	    index.puts <<-EOF
-		<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+		<!DOCTYPE html PUBLIC 
+		    "-//W3C//DTD XHTML 1.0 Transitional//EN" 
+		    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 		<body>
 	    EOF
 
