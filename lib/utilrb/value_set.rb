@@ -12,9 +12,6 @@ Utilrb.require_faster("ValueSet") do
 	    base = super[0..-2]
 	    "#{base} { #{to_a.map { |o| o.to_s }.join(", ")} }"
 	end
-	def inspect 
-	    base = super[0..-2]
-	    "#{base} { #{to_a.map { |o| o.inspect }.join(", ")} }"
-	end
+	alias :inspect :to_s
     end
 end
