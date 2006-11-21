@@ -1,10 +1,17 @@
-== Version 0.2.1
+=== Version 0.2.1
  * new features:
     - is_singleton?
     - module_inherited_enumerable
     - attribute() can be used in singleton classes (previously we had to 
       call class_attribute() in the class itself)
+    - UnboundMethod#call(obj, *args, &block) calls the method on obj with 
+      the provided arguments
+ * changes:
+    - changed semantics of include for inclusion of modules in modules: the
+      source_module::ClassExtension gets included in target_module::ClassExtension.
+      Previously, it was extending the target's singleton class. This way, Module
+      really acts as a mixin for both class methods and instance methods
 
-== Version 0.2
+=== Version 0.2
  * Initial release
 

@@ -34,4 +34,5 @@ is not set, the extension is loaded if available.
 
   [DONE 20061101125259-1e605-fef189550540b8e096f0bbe6c219d892bf3e13fc.gz]
 
-
+== CHANGES
+:include: Changes.txt
