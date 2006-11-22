@@ -3,6 +3,12 @@ Utilrb
     http://www.laas.fr/~sjoyeux/darcs/utilrb
     http://www.laas.fr/~sjoyeux/research.php
 
+Copyright (c) 2006 
+    Sylvain Joyeux <sylvain.joyeux@m4x.org>
+    LAAS/CNRS <openrobots@laas.fr>
+
+This work is licensed under the BSD license. See License.txt for details
+
 == What is Utilrb ?
 Utilrb is yet another Ruby toolkit, in the spirit of facets. It includes all
 the standard class extensions I use in my own projects like Genom.rb.
