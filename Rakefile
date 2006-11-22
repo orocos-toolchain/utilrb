@@ -6,7 +6,7 @@ Hoe.new('utilrb', Utilrb::VERSION) do |p|
     p.email = "sylvain.joyeux@m4x.org"
 
     p.summary = 'Yet another Ruby toolkit'
-    p.description = p.paragraphs_of('README.txt', 2..5).join("\n\n")
+    p.description = p.paragraphs_of('README.txt', 3..6).join("\n\n")
     p.url         = p.paragraphs_of('README.txt', 0).first.split(/\n/)[1..-1]
     p.changes     = p.paragraphs_of('Changes.txt', 0..1).join("\n\n")
 
