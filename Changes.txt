@@ -1,11 +1,11 @@
 === Version 0.2.1
  * new features:
-    - is_singleton?
-    - inherited_enumerable (class_inherited_enumerable on steroids)
-    - attribute() can be used in singleton classes (previously we had to 
+    - Kernel#is_singleton?
+    - Module#inherited_enumerable (class_inherited_enumerable on steroids)
+    - Module#attribute() can be used in singleton classes (previously we had to 
       call class_attribute() in the class itself)
     - UnboundMethod#call(obj, *args, &block) calls the method on obj with 
-      the provided arguments
+      the provided arguments (does m.bind(obj).call(*args, &block))
 
  * changes:
     - changed semantics of Module::include for inclusion of modules in modules:
