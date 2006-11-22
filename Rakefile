@@ -1,7 +1,7 @@
 require 'hoe'
 require './lib/utilrb/common'
 
-Hoe.new('Utilrb', Utilrb::VERSION) do |p|
+Hoe.new('utilrb', Utilrb::VERSION) do |p|
     p.author = "Sylvain Joyeux"
     p.email = "sylvain.joyeux@m4x.org"
 
