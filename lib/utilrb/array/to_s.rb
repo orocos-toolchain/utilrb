@@ -6,7 +6,7 @@ class Array
 	else
 	    begin
 		stack.push self
-		map { |obj| obj.to_s }.join(", ")
+		"[" << map { |obj| obj.to_s }.join(", ") << "]"
 	    ensure
 		stack.pop
 	    end
