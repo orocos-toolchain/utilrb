@@ -41,6 +41,8 @@ lib/utilrb/object/attribute.rb
 lib/utilrb/object.rb
 lib/utilrb/object/singleton_class.rb
 lib/utilrb/objectstats.rb
+lib/utilrb/queue/get.rb
+lib/utilrb/queue.rb
 lib/utilrb.rb
 lib/utilrb/time.rb
 lib/utilrb/time/to_hms.rb
