@@ -5,11 +5,6 @@ require 'enumerator'
 
 class TC_GC < Test::Unit::TestCase
     def allocate(&block)
-	ObjectSpace.define_finalizer(Object.new, &block)
-	nil
-    end
-
-    def allocate(&block)
 	# Allocate twice since it seems the last object stays on stack
 	# (and is not GC'ed)
 	2.times { ObjectSpace.define_finalizer(Object.new, &block) }
