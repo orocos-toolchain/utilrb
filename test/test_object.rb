@@ -59,7 +59,7 @@ class TC_Object < Test::Unit::TestCase
 	assert_equal(object, object.singleton_class.singleton_instance)
 	assert(object.has_singleton?)
 	assert_equal(klass, object.singleton_class.superclass)
-	assert_equal([object.singleton_class, klass, Object, Kernel], object.singleton_class.ancestors)
+	assert_equal([object.singleton_class, klass, Object], object.singleton_class.ancestors[0, 3])
     end
 end
 

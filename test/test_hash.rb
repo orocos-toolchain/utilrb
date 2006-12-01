@@ -16,7 +16,7 @@ class TC_Hash < Test::Unit::TestCase
     end
 
     def test_to_s
-	assert_equal("1 => 2, 2 => 3", { 1 => 2, 2 => 3 }.to_s)
+	assert_equal("{1 => 2, 2 => 3}", { 1 => 2, 2 => 3 }.to_s)
     end
 end
 
