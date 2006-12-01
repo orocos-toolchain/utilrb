@@ -1,3 +1,15 @@
+=== Version 0.2.2
+The "don't forget to bump version number" release. 0.2 was supposed to be 0.2.1
+
+ * new features:
+    - Queue#get: waits for the queue to be not empty and returns all elements at 
+      once. A non_block parameter is given which makes get() return [] if the
+      queue is empty
+
+ * changes:
+    - Array#to_s and Hash#to_s now enclose the result in [] and {}. The difference
+      with #inspect is that we call #to_s on the elements.
+
 === Version 0.2.1
  * new features:
     - Kernel#is_singleton?
