@@ -1,6 +1,6 @@
 Utilrb
     http://utilrb.rubyforge.org
-    http://www.laas.fr/~sjoyeux/darcs/utilrb
+    http://www.laas.fr/~sjoyeux/darcs/utilrb (dev repository)
     http://www.laas.fr/~sjoyeux/research.php
 
 Copyright (c) 2006 
