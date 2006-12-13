@@ -25,7 +25,11 @@ static VALUE enumerable_each_uniq(VALUE self)
     return self;
 }
 
-/* Returns true if +self+ is a singleton class */
+/* call-seq:
+ *  Kernel.is_singleton?(object)
+ *
+ * Returns true if +self+ is a singleton class 
+ */
 static VALUE kernel_is_singleton_p(VALUE self)
 {
     if (BUILTIN_TYPE(self) == T_CLASS && FL_TEST(self, FL_SINGLETON))
