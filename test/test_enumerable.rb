@@ -83,6 +83,8 @@ class TC_Enumerable < Test::Unit::TestCase
 	    assert([].to_value_set.empty?)
 
 	    assert([1, 2, 4, 3].to_value_set.clear.empty?)
+
+	    assert_equal([1,3,5].to_value_set, [1, 2, 3, 4, 5, 6].to_value_set.delete_if { |v| v % 2 == 0 })
 	end
     end
 end

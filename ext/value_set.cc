@@ -65,6 +65,27 @@ static VALUE value_set_each(VALUE self)
     }
     return self;
 }
+
+/* call-seq:
+ *  set.delete_if { |obj| ... }		=> set
+ *
+ * Deletes all objects for which the block returns true
+ */
+static VALUE value_set_delete_if(VALUE self)
+{
+    ValueSet& set = get_wrapped_set(self);
+    for (ValueSet::iterator it = set.begin(); it != set.end();)
+    {
+	// Increment before calling yield() so that 
+	// the current element can be deleted safely
+	ValueSet::iterator this_it = it++;
+	bool do_delete = RTEST(rb_yield(*this_it));
+	if (do_delete)
+	    set.erase(this_it);
+    }
+    return self;
+}
+
 /* call-seq:
  *  set.include?(value)	    => true or false
  *
@@ -285,6 +306,7 @@ extern "C" void Init_value_set()
     rb_define_method(cValueSet, "size", RUBY_METHOD_FUNC(value_set_size), 0);
     rb_define_method(cValueSet, "clear", RUBY_METHOD_FUNC(value_set_clear), 0);
     rb_define_method(cValueSet, "initialize_copy", RUBY_METHOD_FUNC(value_set_initialize_copy), 1);
+    rb_define_method(cValueSet, "delete_if", RUBY_METHOD_FUNC(value_set_delete_if), 0);
 }
 
 
