@@ -5,6 +5,12 @@ module Kernel
     # arguments, with default value support. All option keys are
     # converted to symbols for consistency.
     #
+    # The following rules apply:
+    #	* if a hash is given, non-nil values are treated as default values.
+    #	* an array is equivalent to a hash where all values are 'nil'
+    #
+    # See #validate_options and #filter_and_validate_options
+    #
     # call-seq:
     #   filter_options(option, hash)       -> known, unknown
     #   filter_options(option, array)	   -> known, unknown
@@ -38,7 +44,7 @@ module Kernel
     # as an empty option hash, all keys are converted into symbols.
     #
     def validate_options(options, known_options)
-	opt, unknown = filter_options(options, known_options)
+	opt, unknown = Kernel.filter_options(options, known_options)
 	unless unknown.empty?
 	    not_valid = unknown.keys.map { |m| "'#{m}'" }.join(" ")
 	    raise ArgumentError, "unknown options #{not_valid}", caller(1)
