@@ -74,6 +74,7 @@ class TC_Enumerable < Test::Unit::TestCase
 	    assert_equal([1, 2, 3, 4, 6, 8, 11], (a.union(b)).to_a)
 	    assert_equal([1, 3, 4], (a.intersection(b)).to_a)
 	    assert_equal([6, 8], (a.difference(b)).to_a)
+	    assert(! (a == :bla)) # check #== behaves correctly with a non-enumerable
 
 	    a.delete(1)
 	    assert(! a.include?(1))

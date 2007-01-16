@@ -219,6 +219,9 @@ static VALUE value_set_delete(VALUE vself, VALUE v)
 static VALUE value_set_equal(VALUE vself, VALUE vother)
 {
     ValueSet const& self  = get_wrapped_set(vself);
+    if (!rb_respond_to(vother, id_to_value_set))
+	return Qfalse;
+
     ValueSet const& other = get_wrapped_set(rb_funcall(vother, id_to_value_set, 0));
     return (self == other) ? Qtrue : Qfalse;
 }
