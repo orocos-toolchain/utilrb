@@ -43,19 +43,6 @@ module ObjectStats
             merge(after) { |klass, old, new| new - old }.
             delete_if { |klass, count| count == 0 }
     end
-
-    def self.stats(filter = nil)
-        total_count = 0
-        output = ""
-        count_by_class.each do |klass, obj_count|
-            total_count += obj_count
-            if !filter || klass.name =~ filter
-                output << klass.name << " " << obj_count.to_s << "\n"
-            end
-        end
-        
-        (output << "Total object count: #{total_count}")
-    end
 end
 
 # BenchmarkAllocation is a Benchmark-like interface to benchmark object allocation. 
