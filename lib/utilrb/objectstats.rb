@@ -32,6 +32,14 @@ module ObjectStats
     #
     # If alive is true, then only live objects are returned.
     def self.profile(alive = false)
+	if alive
+	    GC.force
+	    profile do
+		yield
+		GC.force
+	    end
+	end
+
         already_disabled = GC.disable
         before = count_by_class
         yield
