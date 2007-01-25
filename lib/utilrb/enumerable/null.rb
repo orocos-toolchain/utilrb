@@ -2,6 +2,8 @@
 # Kernel#null_enum
 class NullEnumerator
     def each; self end
+    def +(other); other end
+
     include Enumerable
 end
 

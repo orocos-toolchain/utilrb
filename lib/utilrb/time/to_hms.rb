@@ -1,14 +1,15 @@
 class Time
+    # Converts this time into a h:m:s.ms representation
     def to_hms
 	sec, usec = tv_sec, tv_usec
 	"%i:%02i:%02i.%03i" % [sec / 3600, (sec % 3600) / 60, sec % 60, usec / 1000]
     end
-    #
-    # :: => 0:0:
-    # value => seconds
+
+    # Creates a Time object from a h:m:s.ms representation. The following formats are allowed:
+    # s, s.ms, m:s, m:s.ms, h:m:s, h:m:s.ms
     def self.from_hms(string)
 	unless string =~ /(?:^|:)(\d+)(?:$|\.)/
-	    raise "invalid format "#{string}"
+	    raise "invalid format #{string}"
 	end
 	hm, ms = $`, $'
 

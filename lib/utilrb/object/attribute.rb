@@ -3,7 +3,7 @@ require 'utilrb/object/singleton_class'
 
 Utilrb.unless_faster do
     class Object
-	# :call-seq
+	# call-seq:
 	#   attribute :name => default_value
 	#   attribute(:name) { default_value }
 	#
