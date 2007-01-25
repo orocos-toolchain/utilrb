@@ -2,7 +2,12 @@ require 'utilrb/gc/force'
 require 'utilrb/object/attribute'
 
 module ObjectStats
-    # Allocates no object
+    # The count of objects currently allocated
+    #
+    # It allocates no objects, which means that if
+    #	a = ObjectStats.count
+    #	b = ObjectStats.count
+    #	then a == b
     def self.count
         count = 0
         ObjectSpace.each_object { |obj| count += 1}
@@ -10,7 +15,9 @@ module ObjectStats
 	count
     end
 
-    # Allocates 1 Hash, which is included in the count
+    # Returns a klass => count hash counting the currently allocated objects
+    # 
+    # It allocates 1 Hash, which is included in the count
     def self.count_by_class
         by_class = Hash.new(0)
         ObjectSpace.each_object { |obj|
@@ -20,9 +27,10 @@ module ObjectStats
         by_class
     end
 
-    # Profiles the memory allocation in the block
-    # If alive is true, then only non-gcable objects
-    # are returned.
+    # Profiles how much objects has been allocated by the block. Returns a
+    # klass => count hash like count_by_class
+    #
+    # If alive is true, then only live objects are returned.
     def self.profile(alive = false)
         already_disabled = GC.disable
         before = count_by_class
