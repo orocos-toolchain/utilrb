@@ -1,3 +1,19 @@
+=== Version 0.2.3
+
+ * new features:
+    - BenchmarkAllocation, a Benchmark-like interface to benchmark object
+      allocation
+    - ValueSet#delete_if
+    - Time#from_hms takes a time as "h:m:s.ms" and builds the corresponding
+      Time object. Note that "s", "s.ms", "m:s", "m:s.ms", ... are accepted
+      formats
+
+ * changes and fixes:
+    - define Queue#get only if we are using Ruby's core Queue. The current
+      implementation is incompatible with fastthread for instance (and 
+      fastthhread's maintainer does not want #get on its Queue)
+    - fix ValueSet#== raising if the argument is not a ValueSet
+
 === Version 0.2.2
 The "don't forget to bump version number" release. 0.2 was supposed to be 0.2.1
 
