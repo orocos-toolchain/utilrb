@@ -10,7 +10,7 @@ module ObjectStats
     #	then a == b
     def self.count
         count = 0
-        ObjectSpace.each_object { |obj| count += 1}
+        ObjectSpace.each_object { |obj| count += 1 }
 
 	count
     end
