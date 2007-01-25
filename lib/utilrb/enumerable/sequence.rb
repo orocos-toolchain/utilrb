@@ -3,7 +3,6 @@ class SequenceEnumerator
     def initialize; @sequence = Array.new end
     # Adds +object+ at the back of the sequence
     def <<(object); @sequence << object; self end
-    alias :+ :<<
 
     def each
 	@sequence.each { |enum| enum.each { |o| yield(o) } } if block_given?

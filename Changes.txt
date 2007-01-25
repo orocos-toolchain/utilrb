@@ -14,6 +14,7 @@
       fastthhread's maintainer does not want #get on its Queue). Included
       a patch to define Queue#get on fastthread
     - fix ValueSet#== raising if the argument is not a ValueSet
+    - fix brain-dead SequenceEnumerator#+, which was changing its receiver
 
 === Version 0.2.2
 The "don't forget to bump version number" release. 0.2 was supposed to be 0.2.1
