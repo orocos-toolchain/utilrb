@@ -11,7 +11,8 @@
  * changes and fixes:
     - define Queue#get only if we are using Ruby's core Queue. The current
       implementation is incompatible with fastthread for instance (and 
-      fastthhread's maintainer does not want #get on its Queue)
+      fastthhread's maintainer does not want #get on its Queue). Included
+      a patch to define Queue#get on fastthread
     - fix ValueSet#== raising if the argument is not a ValueSet
 
 === Version 0.2.2
