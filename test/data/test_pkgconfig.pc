@@ -1,0 +1,9 @@
+prefix=a_prefix
+
+Name: test_pkgconfig
+Description:
+Version: 4.2
+
+Cflags: -I${prefix}/include -O3
+Libs: -ltest -lother -L${prefix}/lib
+
