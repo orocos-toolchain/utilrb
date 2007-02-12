@@ -7,6 +7,8 @@
     - Time#from_hms takes a time as "h:m:s.ms" and builds the corresponding
       Time object. Note that "s", "s.ms", "m:s", "m:s.ms", ... are accepted
       formats
+    - PkgConfig class
+    - define Proc#same_body?, Proc#file and Proc#line
 
  * changes and fixes:
     - define Queue#get only if we are using Ruby's core Queue. The current
