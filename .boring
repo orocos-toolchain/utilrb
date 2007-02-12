@@ -35,5 +35,6 @@
 (^|/)autom4te\.cache($|/)
 ^rcov
 \.so$
-^ext/Makefile$
+^ext/(Makefile|mkmf.log)$
 -stamp$
+^doc$
