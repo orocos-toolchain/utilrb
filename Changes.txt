@@ -5,6 +5,7 @@
     - define Proc#same_body?, Proc#file and Proc#line
 
  * changes and fixes:
+    - Enumerable#+ acts on too many objects. Define it only on Enumerable::Enumerator
 
 === Version 0.2.3
 
