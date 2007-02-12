@@ -1,38 +1,4 @@
-#include <ruby.h>
-#include <intern.h>
-#include <node.h>
-#include <re.h>
-#include <env.h>
-
-typedef struct RVALUE {
-    union {
-        struct {
-            unsigned long flags;        /* always 0 for freed obj */
-            struct RVALUE *next;
-        } free;
-        struct RBasic  basic;
-        struct RObject object;
-        struct RClass  klass;
-        struct RFloat  flonum;
-        struct RString string;
-        struct RArray  array;
-        struct RRegexp regexp;
-        struct RHash   hash;
-        struct RData   data;
-        struct RStruct rstruct;
-        struct RBignum bignum;
-        struct RFile   file;
-        struct RNode   node;
-        struct RMatch  match;
-        struct RVarmap varmap;
-        struct SCOPE   scope;
-    } as;
-#ifdef GC_DEBUG
-    char *file;
-    int   line;
-#endif
-} RVALUE;
-static const size_t SLOT_SIZE = sizeof(RVALUE);
+#include "ruby_internals.h"
 
 /*
  * Kernel.swap!(obj1, obj2, *args)
