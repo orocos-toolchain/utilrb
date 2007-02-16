@@ -18,7 +18,6 @@ end
 Rake::RDocTask.new(:rdoc) do |rd|
     rd.main = "README.txt"
     rd.rdoc_files.include("README.txt", "lib/**/*.rb", "ext/*.cc")
-    rd.rdoc_dir = 'doc'
     rd.options = ''
 end
 
