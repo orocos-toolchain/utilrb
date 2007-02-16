@@ -11,6 +11,15 @@ Hoe.new('utilrb', Utilrb::VERSION) do |p|
     p.changes     = p.paragraphs_of('Changes.txt', 0..2).join("\n\n")
 
     p.extra_deps << 'facets'
+    p.rdoc_pattern = /^(ext\/.*cc$|lib)|txt$/
+end
+
+# Override Hoe's rdoc task because diagram generation fails
+Rake::RDocTask.new(:rdoc) do |rd|
+    rd.main = "README.txt"
+    rd.rdoc_files.include("README.txt", "lib/**/*.rb", "ext/*.cc")
+    rd.rdoc_dir = 'doc'
+    rd.options = ''
 end
 
 task :full_test do
