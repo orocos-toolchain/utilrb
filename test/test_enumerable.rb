@@ -43,6 +43,7 @@ class TC_Enumerable < Test::Unit::TestCase
 	c2 = [:d, :e, :f]
 	assert_equal([:a, :b, :c, :d, :e, :f], (c1.to_enum + c2.to_enum).to_a)
 	assert_equal([:a, :b, :c, :d, :e, :f], [c1, c2].inject(null_enum) { |a, b| a + b }.to_a)
+	assert_equal([:a, :b, :c, :d, :e, :f], [c1, c2].inject(SequenceEnumerator.new) { |a, b| a << b }.to_a)
     end
 
     def test_random_element
