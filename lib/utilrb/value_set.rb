@@ -13,5 +13,12 @@ Utilrb.require_faster("ValueSet") do
 	    "#{base} { #{to_a.map { |o| o.to_s }.join(", ")} }"
 	end
 	alias :inspect :to_s
+
+	def _dump(lvl = -1)
+	    Marshal.dump(to_a)
+	end
+	def self._load(str)
+	    Marshal.load(str).to_value_set
+	end
     end
 end
