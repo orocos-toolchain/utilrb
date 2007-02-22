@@ -3,6 +3,7 @@
  * new features:
     - PkgConfig class
     - define Proc#same_body?, Proc#file and Proc#line
+    - Object#attr_predicate
 
  * changes and fixes:
     - Enumerable#+ acts on too many objects. Define it only on Enumerable::Enumerator

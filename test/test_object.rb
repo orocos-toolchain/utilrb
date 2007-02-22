@@ -61,5 +61,24 @@ class TC_Object < Test::Unit::TestCase
 	assert_equal(klass, object.singleton_class.superclass)
 	assert_equal([object.singleton_class, klass, Object], object.singleton_class.ancestors[0, 3])
     end
+
+    def test_attr_predicate
+	klass = Class.new do
+	    attr_predicate :working
+	    attr_predicate :not_working, true
+	end
+	assert(klass.method_defined?(:working?))
+	assert(!klass.method_defined?(:working))
+	assert(!klass.method_defined?(:working=))
+	assert(klass.method_defined?(:not_working?))
+	assert(!klass.method_defined?(:not_working))
+	assert(klass.method_defined?(:not_working=))
+
+	object = klass.new
+	object.instance_eval { @working = true }
+	assert(object.working?)
+	object.not_working = 5
+	assert_equal(true, object.not_working?)
+    end
 end
 
