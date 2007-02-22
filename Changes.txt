@@ -7,6 +7,7 @@
 
  * changes and fixes:
     - Enumerable#+ acts on too many objects. Define it only on Enumerable::Enumerator
+    - properly handle singleton classes in has_ancestor?
 
 === Version 0.2.3
 

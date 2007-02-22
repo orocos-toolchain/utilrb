@@ -123,5 +123,25 @@ class TC_Module < Test::Unit::TestCase
         assert_equal([[:base, 10], [:overriden, 20], [:overriden, 15], [:derived, 25]].to_set, derived.enum_for(:each_mapped, nil, false).to_set)
         assert_equal([[:base, 10], [:overriden, 15], [:derived, 25]].to_set, derived.enum_for(:each_mapped, nil, true).to_set)
     end
+
+    def test_has_ancestor
+	mod       = Module.new
+	parent    = Class.new do
+	    include mod
+	end
+	child     = Class.new(parent)
+	singleton = child.new.singleton_class
+
+	assert(child.has_ancestor?(parent))
+	assert(child.has_ancestor?(mod))
+	assert(parent.has_ancestor?(mod))
+
+	assert(singleton.has_ancestor?(parent), singleton.superclass)
+	assert(singleton.has_ancestor?(mod))
+	assert(singleton.has_ancestor?(child))
+
+	assert(!parent.has_ancestor?(child))
+	assert(!parent.has_ancestor?(singleton))
+    end
 end
 
