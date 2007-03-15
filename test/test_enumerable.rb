@@ -70,6 +70,10 @@ class TC_Enumerable < Test::Unit::TestCase
 	    assert(a.include_all?([4, 1, 8]))
 	    assert(!a.include_all?(b))
 
+	    assert(a.intersects?(b))
+	    assert(b.intersects?(a))
+	    assert(!a.intersects?([2, 9, 12]))
+
 	    assert(a.object_id == a.to_value_set.object_id)
 
 	    assert_equal([1, 2, 3, 4, 6, 8, 11], (a.union(b)).to_a)

@@ -165,6 +165,35 @@ static VALUE value_set_intersection(VALUE vself, VALUE vother)
 	    std::inserter(result, result.end()));
     return vresult;
 }
+
+/* call-seq:
+ *  set.intersects?(other)	=> true or false
+ *
+ * Returns true if there is elements in +set+ that are also in +other
+ */
+static VALUE value_set_intersects(VALUE vself, VALUE vother)
+{
+    ValueSet const& self  = get_wrapped_set(vself);
+    ValueSet const& other = get_wrapped_set(rb_funcall(vother, id_to_value_set, 0));
+
+    ValueSet::const_iterator 
+	self_it   = self.begin(),
+	self_end  = self.end(),
+	other_it  = other.begin(),
+	other_end = other.end();
+
+    while(self_it != self_end && other_it != other_end)
+    {
+	if (*self_it < *other_it)
+	    ++self_it;
+	else if (*other_it < *self_it)
+	    ++other_it;
+	else
+	    return Qtrue;
+    }
+    return Qfalse;
+}
+
 /* call-seq:
  *   set.difference(other)	=> difference_set
  *   set - other		=> difference_set
@@ -299,6 +328,7 @@ extern "C" void Init_value_set()
     rb_define_method(cValueSet, "include_all?", RUBY_METHOD_FUNC(value_set_include_all_p), 1);
     rb_define_method(cValueSet, "union", RUBY_METHOD_FUNC(value_set_union), 1);
     rb_define_method(cValueSet, "intersection", RUBY_METHOD_FUNC(value_set_intersection), 1);
+    rb_define_method(cValueSet, "intersects?", RUBY_METHOD_FUNC(value_set_intersects), 1);
     rb_define_method(cValueSet, "difference", RUBY_METHOD_FUNC(value_set_difference), 1);
     rb_define_method(cValueSet, "insert", RUBY_METHOD_FUNC(value_set_insert), 1);
     rb_define_method(cValueSet, "merge", RUBY_METHOD_FUNC(value_set_merge), 1);
