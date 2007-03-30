@@ -16,8 +16,11 @@ class Exception
     #   test.rb:3:in `test': this is a test (RuntimeError)
     #         from test.rb:7
     #
-    def full_message
-	first, *remaining = backtrace
+    def full_message(&block)
+	first, *remaining = if block_given? then backtrace.find_all(&block)
+			    else backtrace
+			    end
+
 	"#{first}: #{message} (#{self.class})\n\tfrom " + remaining.join("\n\tfrom ")
     end
 end
