@@ -7,6 +7,7 @@ bm/allocation.rb
 bm/speed.rb
 ext/extconf.rb
 ext/faster.cc
+ext/ruby_internals.h
 ext/swap.cc
 ext/value_set.cc
 lib/utilrb.rb
@@ -38,6 +39,7 @@ lib/utilrb/logger/hierarchy.rb
 lib/utilrb/module.rb
 lib/utilrb/module/ancestor_p.rb
 lib/utilrb/module/attr_enumerable.rb
+lib/utilrb/module/attr_predicate.rb
 lib/utilrb/module/define_method.rb
 lib/utilrb/module/include.rb
 lib/utilrb/module/inherited_enumerable.rb
@@ -46,6 +48,7 @@ lib/utilrb/object/address.rb
 lib/utilrb/object/attribute.rb
 lib/utilrb/object/singleton_class.rb
 lib/utilrb/objectstats.rb
+lib/utilrb/pkgconfig.rb
 lib/utilrb/queue.rb
 lib/utilrb/queue/get.rb
 lib/utilrb/set.rb
@@ -56,6 +59,7 @@ lib/utilrb/unbound_method.rb
 lib/utilrb/unbound_method/call.rb
 lib/utilrb/value_set.rb
 patches/fastthread-queue-get.patch
+test/data/test_pkgconfig.pc
 test/test_array.rb
 test/test_config.rb
 test/test_enumerable.rb
@@ -66,5 +70,7 @@ test/test_misc.rb
 test/test_module.rb
 test/test_object.rb
 test/test_objectstats.rb
+test/test_pkgconfig.rb
+test/test_proc.rb
 test/test_time.rb
 test/test_unbound_method.rb
