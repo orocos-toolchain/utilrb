@@ -3,11 +3,11 @@ class Array
     # Unlike #inspect, it calls #to_s on the elements too
     def to_s
 	stack = (Thread.current[:array_to_s] ||= [])
-	if stack.include?(self)
+	if stack.include?(object_id)
 	    "..."
 	else
 	    begin
-		stack.push self
+		stack.push object_id
 		"[" << map { |obj| obj.to_s }.join(", ") << "]"
 	    ensure
 		stack.pop
