@@ -60,6 +60,7 @@ test/data/test_pkgconfig.pc
 test/test_array.rb
 test/test_config.rb
 test/test_enumerable.rb
+test/test_exception.rb
 test/test_gc.rb
 test/test_hash.rb
 test/test_kernel.rb
