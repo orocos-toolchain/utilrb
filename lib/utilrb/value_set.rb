@@ -9,8 +9,17 @@ Utilrb.require_faster("ValueSet") do
 	include Enumerable
 
 	def to_s
-	    base = super[0..-2]
-	    "#{base} { #{to_a.map { |o| o.to_s }.join(", ")} }"
+	    stack = (Thread.current[:__value_set_stack__] ||= ValueSet.new)
+	    if stack.include?(self)
+		"..."
+	    else
+		stack << self
+
+		base = super[0..-2]
+		"#{base} { #{to_a.map { |o| o.to_s }.join(", ")} }"
+	    end
+	ensure
+	    stack.delete(self)
 	end
 	alias :inspect :to_s
 
