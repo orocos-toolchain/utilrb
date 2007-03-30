@@ -49,8 +49,6 @@ lib/utilrb/object/attribute.rb
 lib/utilrb/object/singleton_class.rb
 lib/utilrb/objectstats.rb
 lib/utilrb/pkgconfig.rb
-lib/utilrb/queue.rb
-lib/utilrb/queue/get.rb
 lib/utilrb/set.rb
 lib/utilrb/set/to_s.rb
 lib/utilrb/time.rb
@@ -58,7 +56,6 @@ lib/utilrb/time/to_hms.rb
 lib/utilrb/unbound_method.rb
 lib/utilrb/unbound_method/call.rb
 lib/utilrb/value_set.rb
-patches/fastthread-queue-get.patch
 test/data/test_pkgconfig.pc
 test/test_array.rb
 test/test_config.rb
