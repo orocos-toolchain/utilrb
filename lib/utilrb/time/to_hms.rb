@@ -9,13 +9,13 @@ class Time
     # s, s.ms, m:s, m:s.ms, h:m:s, h:m:s.ms
     def self.from_hms(string)
 	unless string =~ /(?:^|:)(\d+)(?:$|\.)/
-	    raise "invalid format #{string}"
+	    raise ArgumentError, "#{string} found, expected [[h:]m:]s[.ms]"
 	end
 	hm, ms = $`, $'
 
 	s = Integer($1)
 	unless hm =~ /^(?:(\d*):)?(?:(\d*))?$/
-	    raise "invalid format #{string}. found #{hm}, expected nothing, m: or h:m:"
+	    raise ArgumentError, "found #{hm}, expected nothing, m: or h:m:"
 	end
 	h, m = if $2.empty? then 
 		   if $1 then [0, Integer($1)]
@@ -27,7 +27,7 @@ class Time
 	ms = if ms.empty? then 0
 	     else
 		 unless ms =~ /^\d*$/
-		     raise "invalid format "#{string}"
+		     raise ArgumentError, "found #{string}, expected a number"
 		 end
 		 ms += "0" * (3 - ms.size)
 		 Integer(ms)
