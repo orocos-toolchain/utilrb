@@ -1,13 +1,24 @@
-=== Version 0.2.4
+=== Version 1.0
+Bumped version number because of incompatible changes. Make it 1.0 since
+having 0. version numbers for this kind of library is completely meaningless
+
+ * incompatible changes:
+    - Enumerable#+ acts on too many objects. Define it only on Enumerable::Enumerator
+    - remove automatic convertion into ValueSet for methods which were doing it
+    - removed Queue#get: fastthread is now the preferred threading library in
+      Ruby 1.8.6, so Queue#get cannot be implemented anymore
 
  * new features:
     - PkgConfig class
     - define Proc#same_body?, Proc#file and Proc#line
-    - Object#attr_predicate
+    - Module#attr_predicate
+    - block parameter for Exception#full_message
+    - ValueSet#intersects? (more efficient than checking that the intersection
+      is empty)
 
  * changes and fixes:
-    - Enumerable#+ acts on too many objects. Define it only on Enumerable::Enumerator
     - properly handle singleton classes in has_ancestor?
+    - properly handle recursion in ValueSet#to_s and Array#to_s
 
 === Version 0.2.3
 
