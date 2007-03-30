@@ -9,7 +9,6 @@ using namespace std;
 
 static VALUE cValueSet;
 static ID id_new;
-static ID id_to_value_set;
 
 typedef std::set<VALUE> ValueSet;
 static ValueSet& get_wrapped_set(VALUE self)
@@ -110,7 +109,9 @@ static VALUE value_set_to_value_set(VALUE self) { return self; }
 static VALUE value_set_include_all_p(VALUE vself, VALUE vother)
 {
     ValueSet const& self  = get_wrapped_set(vself);
-    ValueSet const& other = get_wrapped_set(rb_funcall(vother, id_to_value_set, 0));
+    if (!RTEST(rb_obj_is_kind_of(vother, cValueSet)))
+	rb_raise(rb_eArgError, "expected a ValueSet");
+    ValueSet const& other = get_wrapped_set(vother);
     return std::includes(self.begin(), self.end(), other.begin(), other.end()) ? Qtrue : Qfalse;
 }
 
@@ -124,7 +125,9 @@ static VALUE value_set_include_all_p(VALUE vself, VALUE vother)
 static VALUE value_set_union(VALUE vself, VALUE vother)
 {
     ValueSet const& self  = get_wrapped_set(vself);
-    ValueSet const& other = get_wrapped_set(rb_funcall(vother, id_to_value_set, 0));
+    if (!RTEST(rb_obj_is_kind_of(vother, cValueSet)))
+	rb_raise(rb_eArgError, "expected a ValueSet");
+    ValueSet const& other = get_wrapped_set(vother);
     
     VALUE vresult = rb_funcall(cValueSet, id_new, 0);
     ValueSet& result = get_wrapped_set(vresult);
@@ -141,7 +144,9 @@ static VALUE value_set_union(VALUE vself, VALUE vother)
 static VALUE value_set_merge(VALUE vself, VALUE vother)
 {
     ValueSet& self  = get_wrapped_set(vself);
-    ValueSet const& other = get_wrapped_set(rb_funcall(vother, id_to_value_set, 0));
+    if (!RTEST(rb_obj_is_kind_of(vother, cValueSet)))
+	rb_raise(rb_eArgError, "expected a ValueSet");
+    ValueSet const& other = get_wrapped_set(vother);
     
     self.insert(other.begin(), other.end());
     return vself;
@@ -157,7 +162,9 @@ static VALUE value_set_merge(VALUE vself, VALUE vother)
 static VALUE value_set_intersection(VALUE vself, VALUE vother)
 {
     ValueSet const& self  = get_wrapped_set(vself);
-    ValueSet const& other = get_wrapped_set(rb_funcall(vother, id_to_value_set, 0));
+    if (!RTEST(rb_obj_is_kind_of(vother, cValueSet)))
+	rb_raise(rb_eArgError, "expected a ValueSet");
+    ValueSet const& other = get_wrapped_set(vother);
     
     VALUE vresult = rb_funcall(cValueSet, id_new, 0);
     ValueSet& result = get_wrapped_set(vresult);
@@ -174,7 +181,9 @@ static VALUE value_set_intersection(VALUE vself, VALUE vother)
 static VALUE value_set_intersects(VALUE vself, VALUE vother)
 {
     ValueSet const& self  = get_wrapped_set(vself);
-    ValueSet const& other = get_wrapped_set(rb_funcall(vother, id_to_value_set, 0));
+    if (!RTEST(rb_obj_is_kind_of(vother, cValueSet)))
+	rb_raise(rb_eArgError, "expected a ValueSet");
+    ValueSet const& other = get_wrapped_set(vother);
 
     ValueSet::const_iterator 
 	self_it   = self.begin(),
@@ -204,7 +213,9 @@ static VALUE value_set_intersects(VALUE vself, VALUE vother)
 static VALUE value_set_difference(VALUE vself, VALUE vother)
 {
     ValueSet const& self  = get_wrapped_set(vself);
-    ValueSet const& other = get_wrapped_set(rb_funcall(vother, id_to_value_set, 0));
+    if (!RTEST(rb_obj_is_kind_of(vother, cValueSet)))
+	rb_raise(rb_eArgError, "expected a ValueSet");
+    ValueSet const& other = get_wrapped_set(vother);
     
     VALUE vresult = rb_funcall(cValueSet, id_new, 0);
     ValueSet& result = get_wrapped_set(vresult);
@@ -248,10 +259,9 @@ static VALUE value_set_delete(VALUE vself, VALUE v)
 static VALUE value_set_equal(VALUE vself, VALUE vother)
 {
     ValueSet const& self  = get_wrapped_set(vself);
-    if (!rb_respond_to(vother, id_to_value_set))
+    if (!RTEST(rb_obj_is_kind_of(vother, cValueSet)))
 	return Qfalse;
-
-    ValueSet const& other = get_wrapped_set(rb_funcall(vother, id_to_value_set, 0));
+    ValueSet const& other = get_wrapped_set(vother);
     return (self == other) ? Qtrue : Qfalse;
 }
 
@@ -273,7 +283,7 @@ static VALUE value_set_clear(VALUE self)
  */
 static VALUE value_set_initialize_copy(VALUE vself, VALUE vother)
 {
-    ValueSet const& other = get_wrapped_set(rb_funcall(vother, id_to_value_set, 0));
+    ValueSet const& other = get_wrapped_set(vother);
     set<VALUE> new_set(other.begin(), other.end());
     get_wrapped_set(vself).swap(new_set);
     return vself;
@@ -321,7 +331,6 @@ extern "C" void Init_value_set()
 
     cValueSet = rb_define_class("ValueSet", rb_cObject);
     id_new = rb_intern("new");
-    id_to_value_set = rb_intern("to_value_set");
     rb_define_alloc_func(cValueSet, value_set_alloc);
     rb_define_method(cValueSet, "each", RUBY_METHOD_FUNC(value_set_each), 0);
     rb_define_method(cValueSet, "include?", RUBY_METHOD_FUNC(value_set_include_p), 1);

@@ -67,12 +67,12 @@ class TC_Enumerable < Test::Unit::TestCase
 	    assert_equal(5, a.size)
 	    assert_equal([1, 3, 4, 6, 8], a.to_a)
 	    assert(a.include?(1))
-	    assert(a.include_all?([4, 1, 8]))
+	    assert(a.include_all?([4, 1, 8].to_value_set))
 	    assert(!a.include_all?(b))
 
 	    assert(a.intersects?(b))
 	    assert(b.intersects?(a))
-	    assert(!a.intersects?([2, 9, 12]))
+	    assert(!a.intersects?([2, 9, 12].to_value_set))
 
 	    assert(a.object_id == a.to_value_set.object_id)
 
