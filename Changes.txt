@@ -1,80 +1,80 @@
 === Version 1.1
 
- * changes and fixes:
-   - fix documentation here and there
-   - make sure all defined #to_s methods handle recursion
+* changes and fixes:
+  - fix documentation here and there
+  - make sure all defined #to_s methods handle recursion
 
 === Version 1.0
 Bumped version number because of incompatible changes. Make it 1.0 since
 having 0. version numbers for this kind of library is completely meaningless
 
- * incompatible changes:
-    - Enumerable#+ acts on too many objects. Define it only on Enumerable::Enumerator
-    - remove automatic convertion into ValueSet for methods which were doing it
-    - removed Queue#get: fastthread is now the preferred threading library in
-      Ruby 1.8.6, so Queue#get cannot be implemented anymore
+* incompatible changes:
+  - Enumerable#+ acts on too many objects. Define it only on Enumerable::Enumerator
+  - remove automatic convertion into ValueSet for methods which were doing it
+  - removed Queue#get: fastthread is now the preferred threading library in
+    Ruby 1.8.6, so Queue#get cannot be implemented anymore
 
- * new features:
-    - PkgConfig class
-    - define Proc#same_body?, Proc#file and Proc#line
-    - Module#attr_predicate
-    - 'since', 'until' and block parameters for Exception#full_message
-    - ValueSet#intersects? (more efficient than checking that the intersection
-      is empty)
+* new features:
+  - PkgConfig class
+  - define Proc#same_body?, Proc#file and Proc#line
+  - Module#attr_predicate
+  - 'since', 'until' and block parameters for Exception#full_message
+  - ValueSet#intersects? (more efficient than checking that the intersection
+    is empty)
 
- * changes and fixes:
-    - properly handle singleton classes in has_ancestor?
-    - properly handle recursion in ValueSet#to_s and Array#to_s
-    - add the 'setup' task on the Rakefile to build the C extension
-    - make Module#has_ancestor? work event if the C extension is not built
+* changes and fixes:
+  - properly handle singleton classes in has_ancestor?
+  - properly handle recursion in ValueSet#to_s and Array#to_s
+  - add the 'setup' task on the Rakefile to build the C extension
+  - make Module#has_ancestor? work event if the C extension is not built
 
 === Version 0.2.3
 
- * new features:
-    - BenchmarkAllocation, a Benchmark-like interface to benchmark object
-      allocation
-    - ValueSet#delete_if
-    - Time#from_hms takes a time as "h:m:s.ms" and builds the corresponding
-      Time object. Note that "s", "s.ms", "m:s", "m:s.ms", ... are accepted
-      formats
+* new features:
+  - BenchmarkAllocation, a Benchmark-like interface to benchmark object
+    allocation
+  - ValueSet#delete_if
+  - Time#from_hms takes a time as "h:m:s.ms" and builds the corresponding
+    Time object. Note that "s", "s.ms", "m:s", "m:s.ms", ... are accepted
+    formats
 
- * changes and fixes:
-    - define Queue#get only if we are using Ruby's core Queue. The current
-      implementation is incompatible with fastthread for instance (and 
-      fastthhread's maintainer does not want #get on its Queue). Included
-      a patch to define Queue#get on fastthread
-    - fix ValueSet#== raising if the argument is not a ValueSet
-    - fix brain-dead SequenceEnumerator#+, which was changing its receiver
+* changes and fixes:
+  - define Queue#get only if we are using Ruby's core Queue. The current
+    implementation is incompatible with fastthread for instance (and 
+    fastthhread's maintainer does not want #get on its Queue). Included
+    a patch to define Queue#get on fastthread
+  - fix ValueSet#== raising if the argument is not a ValueSet
+  - fix brain-dead SequenceEnumerator#+, which was changing its receiver
 
 === Version 0.2.2
 The "don't forget to bump version number" release. 0.2 was supposed to be 0.2.1
 
- * new features:
-    - Queue#get: waits for the queue to be not empty and returns all elements at 
-      once. A non_block parameter is given which makes get() return [] if the
-      queue is empty
+* new features:
+  - Queue#get: waits for the queue to be not empty and returns all elements at 
+    once. A non_block parameter is given which makes get() return [] if the
+    queue is empty
 
- * changes:
-    - Array#to_s and Hash#to_s now enclose the result in [] and {}. The difference
-      with #inspect is that we call #to_s on the elements.
+* changes:
+  - Array#to_s and Hash#to_s now enclose the result in [] and {}. The difference
+    with #inspect is that we call #to_s on the elements.
 
 === Version 0.2.1
- * new features:
-    - Kernel#is_singleton?
-    - Module#inherited_enumerable (class_inherited_enumerable on steroids)
-    - Module#attribute() can be used in singleton classes (previously we had to 
-      call class_attribute() in the class itself)
-    - UnboundMethod#call(obj, *args, &block) calls the method on obj with 
-      the provided arguments (does m.bind(obj).call(*args, &block))
+* new features:
+  - Kernel#is_singleton?
+  - Module#inherited_enumerable (class_inherited_enumerable on steroids)
+  - Module#attribute() can be used in singleton classes (previously we had to 
+    call class_attribute() in the class itself)
+  - UnboundMethod#call(obj, *args, &block) calls the method on obj with 
+    the provided arguments (does m.bind(obj).call(*args, &block))
 
- * changes:
-    - changed semantics of Module::include for inclusion of modules in modules:
-      the source_module::ClassExtension gets included in
-      target_module::ClassExtension.  Previously, it was extending the target's
-      singleton class. This way, Module really acts as a mixin for both class
-      methods and instance methods
+* changes:
+  - changed semantics of Module::include for inclusion of modules in modules:
+    the source_module::ClassExtension gets included in
+    target_module::ClassExtension.  Previously, it was extending the target's
+    singleton class. This way, Module really acts as a mixin for both class
+    methods and instance methods
 
 === Version 0.1
- * Initial release
+* Initial release
 
 
