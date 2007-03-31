@@ -2,6 +2,7 @@
 
  * changes and fixes:
    - fix documentation here and there
+   - make sure all defined #to_s methods handle recursion
 
 === Version 1.0
 Bumped version number because of incompatible changes. Make it 1.0 since
