@@ -2,11 +2,19 @@ require 'utilrb/common'
 require 'enumerator'
 require 'set'
 
-# Enumerator object which removes duplicate entries. See
-# Kernel#each_uniq
+# Enumerator object which removes duplicate entries. 
+# See also Object#enum_uniq and Enumerable#each_uniq
 class UniqEnumerator < Enumerable::Enumerator
-    def initialize(root, enum_with, args, key = nil)
-	super(root, enum_with, *args)
+    # Creates the enumerator on +obj+ using the method +enum_with+ to
+    # enumerate. The method will be called with the arguments in +args+.
+    #
+    # If +key+ is given, it is a proc object which should return the key on
+    # which we base ourselves to compare two objects. If it is not given,
+    # UniqEnumerator uses the object itself
+    #
+    # See also Object#enum_uniq and Enumerable#each_uniq
+    def initialize(obj, enum_with, args, key = nil)
+	super(obj, enum_with, *args)
 	@key = key
 	@result = Hash.new
     end
@@ -29,12 +37,12 @@ class UniqEnumerator < Enumerable::Enumerator
 	    self
 	end
     end
-
-    include Enumerable
 end
 
 class Object
-    # Enumerate removing the duplicate entries
+    # Enumerate using the <tt>each(*args)</tt> method, removing the duplicate
+    # entries. If +filter+ is given, it should return an object the enumerator
+    # will compare for equality (instead of using the objects themselves)
     def enum_uniq(enum_with = :each, *args, &filter)
 	UniqEnumerator.new(self, enum_with, args, filter)
     end
@@ -43,10 +51,9 @@ end
 Utilrb.unless_faster do
     module Enumerable
 	# call-seq:
-	#  enum.each_uniq { |obj| ... }
+	#  each_uniq { |obj| ... }
 	# 
 	# Yields all unique values found in +enum+
-	# 
 	def each_uniq(&iterator)
 	    seen = Set.new
 	    each do |obj|

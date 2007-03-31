@@ -6,8 +6,8 @@ module Kernel
     # converted to symbols for consistency.
     #
     # The following rules apply:
-    #	* if a hash is given, non-nil values are treated as default values.
-    #	* an array is equivalent to a hash where all values are 'nil'
+    #   * if a hash is given, non-nil values are treated as default values.
+    #   * an array is equivalent to a hash where all values are 'nil'
     #
     # See #validate_options and #filter_and_validate_options
     #
@@ -54,7 +54,7 @@ module Kernel
     end
 
     # call-seq:
-    #	validate_option(options, name, required, message) { |v| ... }
+    #	validate_option(options, name, required, message) { |v| ... }
     #	validate_option(options, name, required, message)
     #
     # Validates option +name+ in the +options+ hash. If required is true,

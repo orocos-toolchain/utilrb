@@ -1,5 +1,5 @@
 require 'utilrb/common'
-require 'enumerable/to_s_helper'
+require 'utilrb/enumerable/to_s_helper'
 
 Utilrb.require_faster("ValueSet") do
     class ValueSet

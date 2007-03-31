@@ -1,8 +1,9 @@
 class Module
-    # Defines a +name+ predicate (name should end with '?'), and if writable is true
-    # a writer method which is +name+ without '?'
+    # Defines a +name?+ predicate, and if writable is true a #name= method.
+    # Note that +name+ can end with '?', in which case the ending '?' is
+    # removed.
     #
-    # The predicate reads the instance variable which is +name+ without the '?'
+    # The methods use the @name instance variable internally
     def attr_predicate(name, writable = false)
 	attr_name = name.to_s.gsub(/\?$/, '')
 	attr_reader attr_name

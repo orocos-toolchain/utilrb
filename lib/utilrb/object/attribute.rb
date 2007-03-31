@@ -39,16 +39,7 @@ end
 
 Utilrb.if_faster do
     class Object
-	# :call-seq
-	#   attribute :name => default_value
-	#   attribute(:name) { default_value }
-	#
-	# In the first form, defines a read-write attribute
-	# named 'name' with default_value for default value.
-	# In the second form, the block is called if the attribute
-	# is read before it has been ever written, and its return
-	# value is used as default value.
-	def attribute(attr_def, &init)
+	def attribute(attr_def, &init) # :nodoc:
 	    if Hash === attr_def
 		name, defval = attr_def.to_a.flatten
 	    else
@@ -82,6 +73,7 @@ Utilrb.if_faster do
 end
 
 class Object
+    # Like #attribute, but on the singleton class of this object
     def class_attribute(attr_def, &init)
 	singleton_class.class_eval { attribute(attr_def, &init) }
     end

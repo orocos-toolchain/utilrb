@@ -76,7 +76,7 @@ static VALUE proc_file(VALUE self)
 }
 
 /* call-seq:
- *  proc.file
+ *  proc.line
  *
  * Returns the line at which the proc body is defined, or nil
  */

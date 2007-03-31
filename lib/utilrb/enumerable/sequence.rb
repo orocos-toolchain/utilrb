@@ -2,9 +2,9 @@ require 'enumerator'
 
 # An enumerator which iterates on multiple iterators in sequence
 #
-#   ([1, 2].enum_for + [2, 3].enum_for).each => 1, 2, 2, 3
+#   ([1, 2].enum_for + [2, 3].enum_for).to_a # => [1, 2, 2, 3]
 #
-# See also Enumerator#+
+# See also Enumerable::Enumerator#+
 class SequenceEnumerator
     def initialize; @sequence = Array.new end
 
@@ -22,7 +22,7 @@ end
 
 class Enumerable::Enumerator # :nodoc
     # Builds a sequence of enumeration object.
-    #	([1, 2].enum_for + [2, 3]).each		=> 1, 2, 2, 3
+    #	([1, 2].enum_for + [2, 3].enum_for).to_a # => [1, 2, 2, 3]
     def +(other_enumerator) # :nodoc
 	SequenceEnumerator.new << self << other_enumerator
     end

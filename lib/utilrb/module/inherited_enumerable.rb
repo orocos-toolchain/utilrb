@@ -78,7 +78,7 @@ class Module
     #   yields at most one value). See the examples below
     # enum_with:: the enumeration method of the enumerable, if it is not +each+
     #
-    # == Example
+    # === Example
     # Let's define some classes and look at the ancestor chain
     #
     #   class A;  end
@@ -87,7 +87,7 @@ class Module
     #   A.ancestors # => [A, Object, Kernel]
     #   B.ancestors # => [B, M, A, Object, Kernel]
     #
-    # === Attributes for which 'map' is not set
+    # ==== Attributes for which 'map' is not set
     #
     #   class A
     #     inherited_enumerable("value", "values") do
@@ -115,7 +115,7 @@ class Module
     #   b.singleton_class.enum_for(:each_value).to_a # => [3, 2, 1]
     #   b.singleton_class.enum_for(:each_mod).to_a # => [4, 1, 2]
     #
-    # === Attributes for which 'map' is set
+    # ==== Attributes for which 'map' is set
     #
     #   class A
     #     inherited_enumerable("mapped", "map", :map => true) do

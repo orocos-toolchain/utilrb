@@ -16,7 +16,7 @@ class Module
     #	define_method_with_block('my_method') do |block, *args|
     #	end
     #
-    # +block+ is +nil+ if no block is given on the method call
+    # +block+ is +nil+ if no block is given during the method call
     #
     def define_method_with_block(name, &mdef)
 	class_eval <<-EOD
