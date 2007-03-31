@@ -93,10 +93,20 @@ class TC_Enumerable < Test::Unit::TestCase
 	    assert_equal([1,3,5].to_value_set, [1, 2, 3, 4, 5, 6].to_value_set.delete_if { |v| v % 2 == 0 })
 	end
 
-	def test_value_set_recursive_to_s
-	    v = [1, 2].to_value_set
-	    v << v
-	    assert_nothing_raised { v.to_s }
+	def test_value_set_to_s
+	    obj = ValueSet.new
+	    obj << 1
+	    obj << 2
+	    assert(obj.to_s =~ /\{(.*)\}/)
+	    values = $1.split(", ")
+	    assert_equal(["1", "2"].to_set, values.to_set)
+
+	    obj << obj
+	    assert(obj.to_s =~ /^(.+)\{(.*)\}>$/)
+
+	    base_s = $1
+	    values = $2.split(", ")
+	    assert_equal(["1", "2", "#{base_s}...>"].to_set, values.to_set)
 	end
     end
 end

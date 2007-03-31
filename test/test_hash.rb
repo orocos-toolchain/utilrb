@@ -16,7 +16,15 @@ class TC_Hash < Test::Unit::TestCase
     end
 
     def test_to_s
-	assert_equal("{1 => 2, 2 => 3}", { 1 => 2, 2 => 3 }.to_s)
+	obj = { 1 => 2, 2 => 3 }
+	assert(obj.to_s =~ /^\{(.*)\}$/)
+	values = $1.split(", ")
+	assert_equal(["1 => 2", "2 => 3"].to_set, values.to_set)
+
+	obj[3] = obj
+	assert(obj.to_s =~ /^\{(.*)\}$/)
+	values = $1.split(", ")
+	assert_equal(["1 => 2", "2 => 3", "3 => ..."].to_set, values.to_set)
     end
 end
 

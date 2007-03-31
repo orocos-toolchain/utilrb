@@ -1,4 +1,5 @@
 require 'utilrb/common'
+require 'enumerable/to_s_helper'
 
 Utilrb.require_faster("ValueSet") do
     class ValueSet
@@ -9,17 +10,11 @@ Utilrb.require_faster("ValueSet") do
 	include Enumerable
 
 	def to_s
-	    stack = (Thread.current[:__value_set_stack__] ||= ValueSet.new)
-	    if stack.include?(self)
-		"..."
-	    else
-		stack << self
-
-		base = super[0..-2]
-		"#{base} { #{to_a.map { |o| o.to_s }.join(", ")} }"
+	    elements = EnumerableToString.to_s_helper(self, '{', '}') do |obj|
+		obj.to_s
 	    end
-	ensure
-	    stack.delete(self)
+	    base = super[0..-2]
+	    "#{base} #{elements}>"
 	end
 	alias :inspect :to_s
 
