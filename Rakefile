@@ -1,3 +1,15 @@
+require 'rake'
+require 'rake/rdoctask'
+# FIX: Hoe always calls rdoc with -d, and diagram generation fails here
+class Rake::RDocTask
+    alias __option_list__ option_list
+    def option_list
+	options = __option_list__
+	options.delete("-d")
+	options
+    end
+end
+
 require 'hoe'
 require './lib/utilrb/common'
 
@@ -11,13 +23,7 @@ Hoe.new('utilrb', Utilrb::VERSION) do |p|
     p.changes     = p.paragraphs_of('Changes.txt', 0..3).join("\n\n")
 
     p.extra_deps << 'facets'
-    p.rdoc_pattern = /^(ext\/.*cc$|lib)|txt$/
-end
-
-# Override Hoe's rdoc task because diagram generation fails
-Rake::RDocTask.new(:rdoc) do |rd|
-    rd.main = "README.txt"
-    rd.rdoc_files.include("README.txt", "lib/**/*.rb", "ext/*.cc")
+    p.rdoc_pattern = /(ext\/.*cc$|lib)|txt/
 end
 
 task :full_test do
