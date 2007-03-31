@@ -26,6 +26,16 @@ Hoe.new('utilrb', Utilrb::VERSION) do |p|
     p.rdoc_pattern = /(ext\/.*cc$|lib)|txt/
 end
 
+desc "builds Utilrb's C extension"
+task :setup do
+    Dir.chdir("ext") do
+	if !system("ruby extconf.rb") || !system("make")
+	    raise "cannot build the C extension"
+	end
+    end
+    FileUtils.ln_sf "../../ext/faster.so", "lib/utilrb/faster.so"
+end
+
 task :full_test do
     ENV['UTILRB_FASTER_MODE'] = 'no'
     system("testrb test/")
