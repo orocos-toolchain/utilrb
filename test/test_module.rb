@@ -136,9 +136,11 @@ class TC_Module < Test::Unit::TestCase
 	assert(child.has_ancestor?(mod))
 	assert(parent.has_ancestor?(mod))
 
-	assert(singleton.has_ancestor?(parent), singleton.superclass)
-	assert(singleton.has_ancestor?(mod))
-	assert(singleton.has_ancestor?(child))
+	Utilrb.if_faster do
+	    assert(singleton.has_ancestor?(parent), singleton.superclass)
+	    assert(singleton.has_ancestor?(mod))
+	    assert(singleton.has_ancestor?(child))
+	end
 
 	assert(!parent.has_ancestor?(child))
 	assert(!parent.has_ancestor?(singleton))
