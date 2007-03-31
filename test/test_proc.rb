@@ -1,8 +1,8 @@
 require 'test/unit'
 require 'utilrb'
 
-class TC_Proc < Test::Unit::TestCase
-    Utilrb.require_faster('Proc#same_body?') do
+Utilrb.require_faster('TC_Proc') do
+    class TC_Proc < Test::Unit::TestCase
 	def block_to_proc_helper(&block); block end
 	def block_to_proc
 	    [block_to_proc_helper { blo }, block_to_proc_helper { bla }]
