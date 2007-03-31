@@ -21,7 +21,7 @@ class Module
     end
     Utilrb.unless_faster do
 	def has_ancestor?(klass) # :nodoc:
-	    self == klass || self < klass
+	    self == klass || self < klass || superclass == klass || superclass < klass
 	end
     end
 end

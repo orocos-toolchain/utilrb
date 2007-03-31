@@ -20,6 +20,7 @@ having 0. version numbers for this kind of library is completely meaningless
     - properly handle singleton classes in has_ancestor?
     - properly handle recursion in ValueSet#to_s and Array#to_s
     - add the 'setup' task on the Rakefile to build the C extension
+    - make Module#has_ancestor? work event if the C extension is not built
 
 === Version 0.2.3
 
