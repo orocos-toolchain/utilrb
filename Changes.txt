@@ -12,7 +12,7 @@ having 0. version numbers for this kind of library is completely meaningless
     - PkgConfig class
     - define Proc#same_body?, Proc#file and Proc#line
     - Module#attr_predicate
-    - block parameter for Exception#full_message
+    - 'since', 'until' and block parameters for Exception#full_message
     - ValueSet#intersects? (more efficient than checking that the intersection
       is empty)
 
