@@ -1,5 +1,5 @@
 module Utilrb
-    VERSION = "1.0" unless defined? Utilrb::VERSION
+    VERSION = "1.1" unless defined? Utilrb::VERSION
 
     unless defined? UTILRB_FASTER_MODE
 	if ENV['UTILRB_FASTER_MODE'] == 'no'

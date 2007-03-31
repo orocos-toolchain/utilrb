@@ -1,3 +1,8 @@
+=== Version 1.1
+
+ * changes and fixes:
+   - fix documentation here and there
+
 === Version 1.0
 Bumped version number because of incompatible changes. Make it 1.0 since
 having 0. version numbers for this kind of library is completely meaningless
