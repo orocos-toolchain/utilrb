@@ -12,12 +12,12 @@ class Module
 	#   singleton.has_ancestor?(MyClass) # => true 
 	#
 	def has_ancestor?(klass)
-	    self == klass || self < klass || (is_singleton? && superclass.has_ancestor?(klass))
+	    self <= klass || (is_singleton? && superclass.has_ancestor?(klass))
 	end
     end
     Utilrb.unless_faster do
 	def has_ancestor?(klass) # :nodoc:
-	    self == klass || self < klass || superclass == klass || superclass < klass
+	    self <= klass || superclass == klass || superclass < klass
 	end
     end
 end
