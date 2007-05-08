@@ -3,6 +3,10 @@
 * changes and fixes:
   - fix documentation here and there
   - make sure all defined #to_s methods handle recursion
+  - defined Module#cached_enum: returns an Enumerator method for
+    a "each_" method, cachin the enumerator object. Works also
+    for iteration with one argument (caching one Enumerator by
+    argument)
 
 === Version 1.0
 Bumped version number because of incompatible changes. Make it 1.0 since
