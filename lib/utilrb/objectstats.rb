@@ -216,7 +216,7 @@ class BenchmarkAllocation
 	    yield
 	end
 	result.inject({}) do |result, (klass, count)|
-	    klass = klass.name
+	    klass = klass.to_s
 	    klass = "unknown" if !klass || klass.empty?
 	    result[klass] = count
 	    result
