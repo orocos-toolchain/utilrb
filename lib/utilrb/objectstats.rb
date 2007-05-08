@@ -24,6 +24,10 @@ module ObjectStats
             by_class[obj.class] += 1
             by_class
         }
+	if ObjectSpace.respond_to?(:live_objects)
+	    by_class['live_objects'] = ObjectSpace.live_objects
+	end
+
         by_class
     end
 
