@@ -8,13 +8,13 @@ class Time
     # Creates a Time object from a h:m:s.ms representation. The following formats are allowed:
     # s, s.ms, m:s, m:s.ms, h:m:s, h:m:s.ms
     def self.from_hms(string)
-	unless string =~ /(?:^|:)(\d+)(?:$|\.)/
+	unless string =~ /(?:^|:)0*(\d+)(?:$|\.)/
 	    raise ArgumentError, "#{string} found, expected [[h:]m:]s[.ms]"
 	end
 	hm, ms = $`, $'
 
 	s = Integer($1)
-	unless hm =~ /^(?:(\d*):)?(?:(\d*))?$/
+	unless hm =~ /^(?:0*(\d*):)?(?:0*(\d*))?$/
 	    raise ArgumentError, "found #{hm}, expected nothing, m: or h:m:"
 	end
 	h, m = if $2.empty? then 
@@ -26,9 +26,10 @@ class Time
 
 	ms = if ms.empty? then 0
 	     else
-		 unless ms =~ /^\d*$/
+		 unless ms =~ /^0*(\d*)$/
 		     raise ArgumentError, "found #{string}, expected a number"
 		 end
+		 ms = $1
 		 ms += "0" * (3 - ms.size)
 		 Integer(ms)
 	     end
