@@ -4,6 +4,14 @@ require 'utilrb/enumerable/uniq'
 require 'utilrb/module/include'
 
 class Module
+    def answering_superclass(message)
+	klass = superclass
+	while klass && !klass.respond_to?(message)
+	    klass = klass.superclass
+	end
+	klass
+    end
+
     def define_inherited_enumerable(name, attribute_name = name, options = Hash.new, &init) # :nodoc:
         # Set up the attribute accessor
 	attribute(attribute_name, &init)
@@ -26,23 +34,24 @@ class Module
 		else
                     #{attribute_name}.#{options[:enum_with]} { |el| yield(el) }
 		end
-		if superclass = ancestors[1..-1].find { |k| k.respond_to?(:each_#{name}) }
-		    superclass.each_#{name}(key, uniq) { |el| yield(el) }
+
+		if klass = answering_superclass("each_#{name}")
+		    klass.each_#{name}(key, uniq) { |el| yield(el) }
 		end
                 self
             end
             def has_#{name}?(key)
                 return true if #{attribute_name}[key]
-		if superclass = ancestors[1..-1].find { |k| k.respond_to?(:has_#{name}) }
-		    superclass.has_#{name}(key)
+		if klass = answering_superclass("has_#{name}")
+		    klass.has_#{name}(key)
 		end
             end
             EOF
         else
             class_eval <<-EOF
-            def each_#{name}(&iterator)
-                #{attribute_name}.#{options[:enum_with]}(&iterator) if #{attribute_name}
-		if superclass = ancestors[1..-1].find { |k| k.respond_to?(:each_#{name}) }
+            def each_#{name}
+                #{attribute_name}.#{options[:enum_with]} { |el| yield(el) } if #{attribute_name}
+		if klass = answering_superclass(:each_#{name})
 		    superclass.each_#{name} { |el| yield(el) }
 		end
                 self
