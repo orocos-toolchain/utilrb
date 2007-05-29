@@ -46,28 +46,22 @@ Utilrb.if_faster do
 		name = attr_def
 	    end
 
-	    if is_singleton? || instance_of?(Module)
-		class_eval do
-		    attr_writer name
-		    define_method("#{name}_defval") do
-			defval || (instance_eval(&init) if init)
-		    end
-		end
-
-		class_eval <<-EOD
-		def #{name}
-		    if defined? @#{name} then @#{name}
-		    else @#{name} = #{name}_defval
-		    end
-		end
-		EOD
-	    else
-		class_eval { attr_writer name }
-		define_method(name) do
-		    singleton_class.class_eval { attr_reader name }
-		    instance_variable_set("@#{name}", defval || (instance_eval(&init) if init))
+	    class_eval do
+		attr_writer name
+		if !defval && init
+		    define_method("#{name}_defval", &init)
+		else
+		    define_method("#{name}_defval") { defval }
 		end
 	    end
+
+	    class_eval <<-EOD
+	    def #{name}
+		if defined? @#{name} then @#{name}
+		else @#{name} = #{name}_defval
+		end
+	    end
+	    EOD
 	end
     end
 end
