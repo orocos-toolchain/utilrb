@@ -4,14 +4,6 @@ require 'utilrb/enumerable/uniq'
 require 'utilrb/module/include'
 
 class Module
-    def answering_superclass(message)
-	klass = superclass
-	while klass && !klass.respond_to?(message)
-	    klass = klass.superclass
-	end
-	klass
-    end
-
     def define_inherited_enumerable(name, attribute_name = name, options = Hash.new, &init) # :nodoc:
         # Set up the attribute accessor
 	attribute(attribute_name, &init)
@@ -22,39 +14,48 @@ class Module
         if options[:map]
             class_eval <<-EOF
             def each_#{name}(key = nil, uniq = true)
-		if key
-		    if #{attribute_name}.has_key?(key)
-			yield(#{attribute_name}[key])
-			return self if uniq
-		    end
-		elsif uniq
+		if !key && uniq
 		    @enum_#{name}_uniq ||= enum_uniq(:each_#{name}, nil, false) { |k, v| k }
 		    @enum_#{name}_uniq.each { |el| yield(el) }
 		    return self
-		else
-                    #{attribute_name}.#{options[:enum_with]} { |el| yield(el) }
 		end
 
-		if klass = answering_superclass("each_#{name}")
-		    klass.each_#{name}(key, uniq) { |el| yield(el) }
+		if key
+		    for klass in ancestors
+			if klass.instance_variable_defined?(:@#{attribute_name})
+			    if klass.#{attribute_name}.has_key?(key)
+				yield(klass.#{attribute_name}[key])
+				return self if uniq
+			    end
+			end
+		    end
+		else
+		    for klass in ancestors
+			if klass.instance_variable_defined?(:@#{attribute_name})
+			    klass.#{attribute_name}.#{options[:enum_with]} { |el| yield(el) }
+			end
+		    end
 		end
                 self
             end
             def has_#{name}?(key)
-                return true if #{attribute_name}[key]
-		if klass = answering_superclass("has_#{name}")
-		    klass.has_#{name}(key)
+		for klass in ancestors
+		    if klass.instance_variable_defined?(:@#{attribute_name})
+			return true if klass.#{attribute_name}.has_key?(key)
+		    end
 		end
+		false
             end
             EOF
         else
             class_eval <<-EOF
             def each_#{name}
-                #{attribute_name}.#{options[:enum_with]} { |el| yield(el) } if #{attribute_name}
-		if klass = answering_superclass(:each_#{name})
-		    superclass.each_#{name} { |el| yield(el) }
+		for klass in ancestors
+		    if klass.instance_variable_defined?(:@#{attribute_name})
+			klass.#{attribute_name}.#{options[:enum_with]} { |el| yield(el) }
+		    end
 		end
-                self
+		self
             end
             EOF
         end
