@@ -1,5 +1,6 @@
 require 'utilrb/gc/force'
 require 'utilrb/object/attribute'
+require 'utilrb/column_formatter'
 
 module ObjectStats
     # The count of objects currently allocated
@@ -142,8 +143,8 @@ end
 #   delegate      -                  1     -            1
 #   
 class BenchmarkAllocation
-    MARGIN       = 2
     SCREEN_WIDTH = 90
+    MARGIN = 2
 
     def self.bm(label_width = nil)
 	yield(gather = new)
@@ -162,58 +163,11 @@ class BenchmarkAllocation
     end
 
     def format(screen_width = SCREEN_WIDTH, margin = MARGIN)
-	label_width ||= 0
-	column_names = profiles.inject([]) do |column_names, (label, profile)|
-	    label_width = label_width < label.length ? label.length : label_width
-	    column_names |= profile.keys
-	end.sort
-
-	# split at the :: to separate modules and klasses (reduce header sizes)
-	blocks = []
-	header, columns, current_width = nil
-	column_names.each_with_index do |name, col_index|
-	    splitted = name.gsub(/::/, "::\n").split("\n")
-	    width    = splitted.map { |part| part.length }.max + MARGIN
-
-	    if !current_width || (current_width + label_width + width > screen_width)
-		# start a new block
-		blocks << [[], []]
-		header, columns = blocks.last
-		current_width = 0
-	    end
-
-	    splitted.each_with_index do |part, line_index|
-		if !header[line_index]
-		    header[line_index] = columns.map { |_, w| " " * w }
-		end
-		header[line_index] << "% #{width}s" % [part]
-	    end
-	    # Pad the remaining lines
-	    header[splitted.size..-1].each_with_index do |line, index|
-		line << " " * width
-	    end
-
-	    columns << [name, width]
-	    current_width += width
+	data = profiles.map do |label, line_data|
+	    line_data['label'] = label
+	    line_data
 	end
-	    
-	blocks.each do |header, columns|
-	    puts
-	    header.each { |line| puts " " * label_width + line.join("") }
-
-	    profiles.each do |label, profile|
-		print "% #{label_width}s" % [label]
-		columns.each do |name, width|
-		    
-		    if count = profile[name] 
-			print "% #{width}i" % [profile[name] || 0]
-		    else
-			print " " * (width - 1) + "-"
-		    end
-		end
-		puts
-	    end
-	end
+	ColumnFormatter.from_hashes(data, screen_width)
     end
 
     attribute(:profiles) { Array.new }
