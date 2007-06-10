@@ -319,6 +319,24 @@ static VALUE enumerable_to_value_set_i(VALUE i, VALUE* memo)
 }
 
 /* call-seq:
+ *  to_value_set    => value_set
+ *
+ * Converts this array into a ValueSet object
+ */
+static VALUE array_to_value_set(VALUE self)
+{
+    VALUE vresult = rb_funcall(cValueSet, id_new, 0);
+    ValueSet& result = get_wrapped_set(vresult);
+
+    VALUE* ptr = RARRAY(self)->ptr;
+    long size  = RARRAY(self)->len;
+    for (int i = 0; i < size; ++i)
+	result.insert(ptr[i]);
+
+    return vresult;
+}
+
+/* call-seq:
  *  enum.to_value_set		=> value_set
  *
  * Builds a ValueSet object from this enumerable
@@ -344,6 +362,7 @@ static VALUE enumerable_to_value_set(VALUE self)
 extern "C" void Init_value_set()
 {
     rb_define_method(rb_mEnumerable, "to_value_set", RUBY_METHOD_FUNC(enumerable_to_value_set), 0);
+    rb_define_method(rb_cArray, "to_value_set", RUBY_METHOD_FUNC(array_to_value_set), 0);
 
     cValueSet = rb_define_class("ValueSet", rb_cObject);
     id_new = rb_intern("new");
