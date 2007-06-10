@@ -14,12 +14,6 @@ class Module
         if options[:map]
             class_eval <<-EOF
             def each_#{name}(key = nil, uniq = true)
-		if !key && uniq
-		    @enum_#{name}_uniq ||= enum_uniq(:each_#{name}, nil, false) { |k, v| k }
-		    @enum_#{name}_uniq.each { |el| yield(el) }
-		    return self
-		end
-
 		if key
 		    for klass in ancestors
 			if klass.instance_variable_defined?(:@#{attribute_name})
@@ -29,12 +23,25 @@ class Module
 			    end
 			end
 		    end
-		else
+		elsif !uniq
 		    for klass in ancestors
 			if klass.instance_variable_defined?(:@#{attribute_name})
 			    klass.#{attribute_name}.#{options[:enum_with]} { |el| yield(el) }
 			end
 		    end
+		else
+		    seen = Set.new
+		    for klass in ancestors
+			if klass.instance_variable_defined?(:@#{attribute_name})
+			    klass.#{attribute_name}.#{options[:enum_with]} do |el| 
+				unless seen.include?(el.first)
+				    seen << el.first
+				    yield(el)
+				end
+			    end
+			end
+		    end
+
 		end
                 self
             end
