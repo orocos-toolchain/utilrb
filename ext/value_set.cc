@@ -102,6 +102,22 @@ static VALUE value_set_include_p(VALUE vself, VALUE vother)
 static VALUE value_set_to_value_set(VALUE self) { return self; }
 
 /* call-seq:
+ *  set.dup => other_set
+ *
+ * Duplicates this set, without duplicating the pointed-to objects
+ */
+static VALUE value_set_dup(VALUE vself, VALUE vother)
+{
+    ValueSet const& self  = get_wrapped_set(vself);
+    VALUE vresult = rb_funcall(cValueSet, id_new, 0);
+    ValueSet& result = get_wrapped_set(vresult);
+    for (ValueSet::const_iterator it = self.begin(); it != self.end(); ++it)
+	result.insert(result.end(), *it);
+
+    return vresult;
+}
+
+/* call-seq:
  *  set.include_all?(other)		=> true or false
  *
  * Checks if all elements of +other+ are in +set+
@@ -344,6 +360,7 @@ extern "C" void Init_value_set()
     rb_define_method(cValueSet, "delete", RUBY_METHOD_FUNC(value_set_delete), 1);
     rb_define_method(cValueSet, "==", RUBY_METHOD_FUNC(value_set_equal), 1);
     rb_define_method(cValueSet, "to_value_set", RUBY_METHOD_FUNC(value_set_to_value_set), 0);
+    rb_define_method(cValueSet, "dup", RUBY_METHOD_FUNC(value_set_dup), 0);
     rb_define_method(cValueSet, "empty?", RUBY_METHOD_FUNC(value_set_empty_p), 0);
     rb_define_method(cValueSet, "size", RUBY_METHOD_FUNC(value_set_size), 0);
     rb_define_method(cValueSet, "clear", RUBY_METHOD_FUNC(value_set_clear), 0);
