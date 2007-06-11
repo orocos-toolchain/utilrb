@@ -24,14 +24,12 @@ class Time
 	       else [Integer($1), Integer($2)]
 	       end
 
-	ms = if ms.empty? then 0
+	ms = if ms =~ /^0*$/ then 0
 	     else
 		 unless ms =~ /^0*(\d*)$/
 		     raise ArgumentError, "found #{string}, expected a number"
 		 end
-		 ms = $1
-		 ms += "0" * (3 - ms.size)
-		 Integer(ms)
+		 Integer($1)
 	     end
 
 	Time.at(Float(h * 3600 + m * 60 + s) + ms * 1.0e-3)
