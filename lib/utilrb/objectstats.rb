@@ -29,6 +29,8 @@ module ObjectStats
         by_class
     end
 
+    LIVE_OBJECTS_KEY = :live_objects
+
     # Profiles how much objects has been allocated by the block. Returns a
     # klass => count hash like count_by_class
     #
@@ -45,7 +47,7 @@ module ObjectStats
         already_disabled = GC.disable
         before = count_by_class
 	if ObjectSpace.respond_to?(:live_objects)
-	    before['live_objects'] = ObjectSpace.live_objects
+	    before_live_objects = ObjectSpace.live_objects
 	end
         yield
 	if ObjectSpace.respond_to?(:live_objects)
@@ -53,7 +55,8 @@ module ObjectStats
 	end
         after  = count_by_class
 	if after_live_objects
-	    after['live_objects'] = after_live_objects - 1 # correction for yield
+	    before[LIVE_OBJECTS_KEY] = before_live_objects
+	    after[LIVE_OBJECTS_KEY]  = after_live_objects - 1 # correction for yield
 	end
         GC.enable unless already_disabled
 
