@@ -20,7 +20,7 @@ Hoe.new('utilrb', Utilrb::VERSION) do |p|
     p.summary = 'Yet another Ruby toolkit'
     p.description = p.paragraphs_of('README.txt', 3..6).join("\n\n")
     p.url         = p.paragraphs_of('README.txt', 0).first.split(/\n/)[1..-1]
-    p.changes     = p.paragraphs_of('Changes.txt', 0..3).join("\n\n")
+    p.changes     = p.paragraphs_of('Changes.txt', 0..1).join("\n\n")
 
     p.extra_deps << 'facets'
     p.rdoc_pattern = /(ext\/.*cc$|lib)|txt/

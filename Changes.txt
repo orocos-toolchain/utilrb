@@ -7,6 +7,12 @@
     a "each_" method, cachin the enumerator object. Works also
     for iteration with one argument (caching one Enumerator by
     argument)
+  - fix Time.from_hms when the millisecond field has leading zeroes
+  - optimizations here and there:
+    * Array#to_value_set does not rely on rb_iterate
+    * specific implementation of ValueSet#dup
+    * more generally, avoid object allocation where possible
+  - ColumnFormatter object: formats CSV output for display
 
 === Version 1.0
 Bumped version number because of incompatible changes. Make it 1.0 since
