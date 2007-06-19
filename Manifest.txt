@@ -13,11 +13,13 @@ ext/value_set.cc
 lib/utilrb.rb
 lib/utilrb/array.rb
 lib/utilrb/array/to_s.rb
+lib/utilrb/column_formatter.rb
 lib/utilrb/common.rb
 lib/utilrb/enumerable.rb
 lib/utilrb/enumerable/null.rb
 lib/utilrb/enumerable/random_element.rb
 lib/utilrb/enumerable/sequence.rb
+lib/utilrb/enumerable/to_s_helper.rb
 lib/utilrb/enumerable/uniq.rb
 lib/utilrb/exception.rb
 lib/utilrb/exception/full_message.rb
@@ -40,6 +42,7 @@ lib/utilrb/module.rb
 lib/utilrb/module/ancestor_p.rb
 lib/utilrb/module/attr_enumerable.rb
 lib/utilrb/module/attr_predicate.rb
+lib/utilrb/module/cached_enum.rb
 lib/utilrb/module/define_method.rb
 lib/utilrb/module/include.rb
 lib/utilrb/module/inherited_enumerable.rb
@@ -70,5 +73,6 @@ test/test_object.rb
 test/test_objectstats.rb
 test/test_pkgconfig.rb
 test/test_proc.rb
+test/test_set.rb
 test/test_time.rb
 test/test_unbound_method.rb
