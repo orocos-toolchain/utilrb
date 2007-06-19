@@ -23,9 +23,12 @@ class TC_Time < Test::Unit::TestCase
 
 	assert_equal(Time.at(0), Time.from_hms("0"))
 	assert_equal(Time.at(0), Time.from_hms("0."))
-	assert_in_delta(0, Time.at(1.2) - Time.from_hms("1.2"), 0.001)
+	assert_in_delta(0, Time.at(1.2) - Time.from_hms("1.2"), 0.001, Time.from_hms("1.2").to_hms)
 	assert_in_delta(0, Time.at(121.3) - Time.from_hms("2:1.3"), 0.001)
 	assert_in_delta(0, Time.at(3723.4) - Time.from_hms("1:2:3.4"), 0.001)
+	assert_in_delta(0, Time.at(1.02) - Time.from_hms("1.02"), 0.001)
+	assert_in_delta(0, Time.at(121.03) - Time.from_hms("2:1.03"), 0.001)
+	assert_in_delta(0, Time.at(3723.04) - Time.from_hms("1:2:3.04"), 0.001)
     end
 end
 

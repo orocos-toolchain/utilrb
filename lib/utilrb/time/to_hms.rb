@@ -8,28 +8,32 @@ class Time
     # Creates a Time object from a h:m:s.ms representation. The following formats are allowed:
     # s, s.ms, m:s, m:s.ms, h:m:s, h:m:s.ms
     def self.from_hms(string)
-	unless string =~ /(?:^|:)0*(\d+)(?:$|\.)/
+	unless string =~ /(?:^|:)0*(\d*)(?:$|\.)/
 	    raise ArgumentError, "#{string} found, expected [[h:]m:]s[.ms]"
 	end
 	hm, ms = $`, $'
 
-	s = Integer($1)
+	s = if $1.empty? then 0
+	    else Integer($1)
+	    end
+
 	unless hm =~ /^(?:0*(\d*):)?(?:0*(\d*))?$/
 	    raise ArgumentError, "found #{hm}, expected nothing, m: or h:m:"
 	end
-	h, m = if $2.empty? then 
-		   if $1 then [0, Integer($1)]
-		   else [0, 0]
-		   end
-	       else [Integer($1), Integer($2)]
+
+	h, m = if (!$1 || $1.empty?) && $2.empty? then [0, 0]
+	       elsif (!$1 || $1.empty?) then [0, Integer($2)]
+	       elsif $2.empty? then [0, Integer($1)]
+	       else
+		   [Integer($1), Integer($2)]
 	       end
 
 	ms = if ms =~ /^0*$/ then 0
 	     else
-		 unless ms =~ /^0*(\d*)$/
+		 unless ms =~ /^(0*)([1-9]+)0*$/
 		     raise ArgumentError, "found #{string}, expected a number"
 		 end
-		 Integer($1)
+		 Integer($2) * (10 ** (2 - $1.length))
 	     end
 
 	Time.at(Float(h * 3600 + m * 60 + s) + ms * 1.0e-3)
