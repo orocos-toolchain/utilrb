@@ -30,10 +30,10 @@ class Time
 
 	ms = if ms =~ /^0*$/ then 0
 	     else
-		 unless ms =~ /^(0*)([1-9]+)0*$/
+		 unless ms =~ /^(0*)(\d+)$/
 		     raise ArgumentError, "found #{string}, expected a number"
 		 end
-		 Integer($2) * (10 ** (2 - $1.length))
+		 Integer($2) * (10 ** (3 - $1.length - $2.length))
 	     end
 
 	Time.at(Float(h * 3600 + m * 60 + s) + ms * 1.0e-3)
