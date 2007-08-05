@@ -14,6 +14,10 @@ class Module
         if options[:map]
             class_eval <<-EOF
             def each_#{name}(key = nil, uniq = true)
+	        if !block_given?
+	            return enum_for(:each_#{name}, key, uniq)
+		end
+
 		if key
 		    for klass in ancestors
 			if klass.instance_variable_defined?(:@#{attribute_name})
