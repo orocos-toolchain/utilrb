@@ -11,7 +11,7 @@ class TC_Time < Test::Unit::TestCase
     end
     def test_from_hms
 	assert_equal(Time.at(0), Time.from_hms("0:00:00.000"))
-	assert_equal(Time.at(0.1), Time.from_hms("0:00:00.100"))
+	assert_in_delta(0, Time.at(0.1) - Time.from_hms("0:00:00.100"), 0.0001)
 	assert_equal(Time.at(34.1), Time.from_hms("0:00:34.100"))
 	assert_equal(Time.at(21 * 60 + 34.1), Time.from_hms("0:21:34.100"))
 	assert_equal(Time.at(236 * 3600 + 21 * 60 + 34.1), Time.from_hms("236:21:34.100"))
@@ -29,9 +29,6 @@ class TC_Time < Test::Unit::TestCase
 	assert_in_delta(0, Time.at(1.02) - Time.from_hms("1.02"), 0.001)
 	assert_in_delta(0, Time.at(121.03) - Time.from_hms("2:1.03"), 0.001)
 	assert_in_delta(0, Time.at(3723.04) - Time.from_hms("1:2:3.04"), 0.001)
-	assert_in_delta(0, Time.at(1.75) - Time.from_hms("1.75"), 0.001)
-	assert_in_delta(0, Time.at(121.75) - Time.from_hms("2:1.75"), 0.001)
-	assert_in_delta(0, Time.at(3723.75) - Time.from_hms("1:2:3.75"), 0.001)
     end
 end
 
