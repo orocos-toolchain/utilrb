@@ -33,11 +33,7 @@ class Time
 		 unless ms =~ /^(0*)(\d+)$/
 		     raise ArgumentError, "found #{string}, expected a number"
 		 end
-v v v v v v v
-		 Integer($2) * (10 ** (3 - $1.length - $2.length))
-*************
-		 Integer($2) * (10 ** (3 - $2.length - $1.length))
-^ ^ ^ ^ ^ ^ ^
+		 Integer($2) * (10 ** (3 - ($2.length + $1.length)))
 	     end
 
 	[h, m, s, ms]
