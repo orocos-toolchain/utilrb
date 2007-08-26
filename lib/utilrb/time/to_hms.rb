@@ -6,25 +6,28 @@ class Time
     end
 
     def self.hms_decomposition(string)
-	unless string =~ /(?:^|:)0*(\d*)(?:$|\.)/
+	unless string =~ /(?:^|:)0*(\d*)(?:$|\.(\d*)$)/
 	    raise ArgumentError, "#{string} found, expected [[h:]m:]s[.ms]"
 	end
-	hm, ms = $`, $'
+	hm, ms = $`, ($2 || "")
 
 	s = if $1.empty? then 0
 	    else Integer($1)
 	    end
 
-	unless hm =~ /^(?:0*(\d*):)?(?:0*(\d*))?$/
-	    raise ArgumentError, "found #{hm}, expected nothing, m: or h:m:"
+	h, m = hm.split(':')
+	if !m
+	    h, m = nil, h
 	end
 
-	h, m = if (!$1 || $1.empty?) && $2.empty? then [0, 0]
-	       elsif (!$1 || $1.empty?) then [0, Integer($2)]
-	       elsif $2.empty? then [0, Integer($1)]
-	       else
-		   [Integer($1), Integer($2)]
-	       end
+	m = if !m || m.empty? then 0
+	    else Integer(m)
+	    end
+
+	h = if !h || h.empty? then 0
+	    else Integer(h)
+	    end
+
 	ms = if ms =~ /^0*$/ then 0
 	     else
 		 unless ms =~ /^(0*)(\d+)$/
