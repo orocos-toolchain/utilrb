@@ -22,11 +22,11 @@ class Logger
         attr_writer :logger
         def logger
             return @logger if defined?(@logger) && @logger
-            if kind_of?(Module)
-                constant(self.dirname).logger
-            else
-                self.class.logger
-            end
+	    @logger = if kind_of?(Module)
+			  constant(self.dirname).logger
+		      else
+			  self.class.logger
+		      end
         end
     end
 end
