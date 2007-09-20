@@ -17,7 +17,7 @@ module Kernel
     #   filter_options(nil, known_options) -> default_options, {}
     #
     def filter_options(options, option_spec)
-        options     = (options || Hash.new).to_sym_keys
+        options     = (options.to_hash || Hash.new).to_sym_keys
 	# cannot use #to_sym_keys as option_spec can be an array
 	option_spec = option_spec.inject({}) { |h, (k, v)| h[k.to_sym] = v; h }
 
@@ -44,7 +44,7 @@ module Kernel
     # as an empty option hash, all keys are converted into symbols.
     #
     def validate_options(options, known_options)
-	opt, unknown = Kernel.filter_options(options, known_options)
+	opt, unknown = Kernel.filter_options(options.to_hash, known_options)
 	unless unknown.empty?
 	    not_valid = unknown.keys.map { |m| "'#{m}'" }.join(" ")
 	    raise ArgumentError, "unknown options #{not_valid}", caller(1)
