@@ -1,6 +1,7 @@
 #include <ruby.h>
 #include <set>
 #include "ruby_internals.h"
+#include <rubyio.h>
 
 using namespace std;
 
@@ -24,6 +25,19 @@ static VALUE enumerable_each_uniq(VALUE self)
     rb_iterate(rb_each, self, 
 	    RUBY_METHOD_FUNC(enumerable_each_uniq_i), (VALUE)&seen);
     return self;
+}
+
+/* call-seq:
+ *  io.clearerr => nil 
+ *
+ * Clear all error flags on the IO
+ */
+static VALUE io_clearerr(VALUE self)
+{
+    OpenFile* file;
+    file = RFILE(self)->fptr;
+    clearerr(file->f);
+    return Qnil;
 }
 
 /* call-seq:
@@ -102,6 +116,7 @@ extern "C" void Init_faster()
     rb_define_method(rb_cProc, "same_body?", RUBY_METHOD_FUNC(proc_same_body_p), 1);
     rb_define_method(rb_cProc, "file", RUBY_METHOD_FUNC(proc_file), 0);
     rb_define_method(rb_cProc, "line", RUBY_METHOD_FUNC(proc_line), 0);
+    rb_define_method(rb_cIO, "clearerr", RUBY_METHOD_FUNC(io_clearerr), 0);
 
     Init_value_set();
     Init_swap();
