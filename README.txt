@@ -13,6 +13,12 @@ This work is licensed under the BSD license. See License.txt for details
 Utilrb is yet another Ruby toolkit, in the spirit of facets. It includes all
 the standard class extensions I use in my own projects like Genom.rb.
 
+== Installation
+The only dependency Utilrb has is flexmock if you want to run tests. It is
+available as a gem, so you can run
+
+  gem install flexmock
+
 == Utilrb's C extension
 Utilrb includes a C extension in ext/. It is optional, but some of the
 functionalities will be disabled if it is not present. Trying to require
