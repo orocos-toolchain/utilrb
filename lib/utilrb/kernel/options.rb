@@ -44,6 +44,7 @@ module Kernel
     # as an empty option hash, all keys are converted into symbols.
     #
     def validate_options(options, known_options)
+	options ||= Hash.new
 	opt, unknown = Kernel.filter_options(options.to_hash, known_options)
 	unless unknown.empty?
 	    not_valid = unknown.keys.map { |m| "'#{m}'" }.join(" ")
