@@ -1,5 +1,5 @@
-require 'facet/module/dirname'
-require 'facet/kernel/constant'
+require 'facets/module/dirname'
+require 'facets/kernel/constant'
 class Logger
     # Define a hierarchy of loggers mapped to the module hierarchy.
     # It defines the #logger accessor which either returns the logger

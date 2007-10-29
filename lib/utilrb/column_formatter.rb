@@ -54,7 +54,7 @@ class ColumnFormatter
 	    
 	    while !names.empty? && (line_w < screen_width)
 		col_n = names.shift
-		col_w = width[col_n]
+		col_w = width[col_n] || 0
 		line_n << col_n
 		line_w += col_w
 		format << "% #{col_w}s"
