@@ -20,10 +20,18 @@ class Time
 	    h, m = nil, h
 	end
 
+	if m
+	    m =~ /^0*(\d*)$/
+	    m = $1
+	end
 	m = if !m || m.empty? then 0
 	    else Integer(m)
 	    end
 
+	if h
+	    h =~ /^0*(\d*)$/
+	    h = $1
+	end
 	h = if !h || h.empty? then 0
 	    else Integer(h)
 	    end
