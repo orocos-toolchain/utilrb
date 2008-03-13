@@ -1,0 +1,5 @@
+*.swp
+ext/*.o
+ext/*.so
+ext/Makefile
+lib/utilrb/faster.so
