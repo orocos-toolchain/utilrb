@@ -4,8 +4,10 @@ require 'utilrb/object'
 
 class TC_Object < Test::Unit::TestCase
     def test_address
+	assert_equal("2aaaab38b398", Object.address_from_id(0x1555559c59cc).to_s(16))
+
 	foo = Object.new
-	foo.to_s =~ /#<Object:0x([0-9a-f]+)>/
+	foo.to_s =~ /#<Object:0x0*([0-9a-f]+)>/
 	foo_address = $1
 	assert_equal(foo_address, foo.address.to_s(16), "#{foo} #{foo.address.to_s(16)} #{foo.object_id.to_s(16)}")
     end
