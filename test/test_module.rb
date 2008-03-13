@@ -43,31 +43,31 @@ class TC_Module < Test::Unit::TestCase
     end
 
     def test_attr_enumerable
-	klass = Class.new do
-	    attr_enumerable(:mapped, :map) { Hash.new }
-	end
+        klass = Class.new do
+            attr_enumerable(:mapped, :map) { Hash.new }
+        end
 
-	obj = klass.new
-	obj.map[:a] = [10, 20]
-	obj.map[:b] = 10
-	assert_equal( [[:a, [10, 20]], [:b, 10]].to_set, obj.enum_for(:each_mapped).to_set )
-	assert_equal( [10, 20], obj.enum_for(:each_mapped, :a).to_a )
+        obj = klass.new
+        obj.map[:a] = [10, 20]
+        obj.map[:b] = 10
+        assert_equal( [[:a, [10, 20]], [:b, 10]].to_set, obj.enum_for(:each_mapped).to_set )
+        assert_equal( [10, 20], obj.enum_for(:each_mapped, :a).to_a )
     end
 
     def test_inherited_enumerable_module
-	m = Module.new do
-	    inherited_enumerable(:signature, :signatures) { Array.new }
-	end
-	k = Class.new do
-	    include m
-	    inherited_enumerable(:child_attribute) { Array.new }
-	end
+        m = Module.new do
+            inherited_enumerable(:signature, :signatures) { Array.new }
+        end
+        k = Class.new do
+            include m
+            inherited_enumerable(:child_attribute) { Array.new }
+        end
 
-	# Add another attribute *after* k has been defined
-	m.class_eval do
-	    inherited_enumerable(:mapped, :map, :map => true) { Hash.new }
-	end
-	check_inherited_enumerable(m, k)
+        # Add another attribute *after* k has been defined
+        m.class_eval do
+            inherited_enumerable(:mapped, :map, :map => true) { Hash.new }
+        end
+        check_inherited_enumerable(m, k)
     end
 
     def test_inherited_enumerable_class
@@ -125,23 +125,23 @@ class TC_Module < Test::Unit::TestCase
     end
 
     def test_has_ancestor
-	mod       = Module.new
-	parent    = Class.new do
-	    include mod
-	end
-	child     = Class.new(parent)
-	singleton = child.new.singleton_class
+        mod       = Module.new
+        parent    = Class.new do
+            include mod
+        end
+        child     = Class.new(parent)
+        singleton = child.new.singleton_class
 
-	assert(child.has_ancestor?(parent))
-	assert(child.has_ancestor?(mod))
-	assert(parent.has_ancestor?(mod))
+        assert(child.has_ancestor?(parent))
+        assert(child.has_ancestor?(mod))
+        assert(parent.has_ancestor?(mod))
 
-	assert(singleton.has_ancestor?(parent), singleton.superclass)
-	assert(singleton.has_ancestor?(mod))
-	assert(singleton.has_ancestor?(child))
+        assert(singleton.has_ancestor?(parent), singleton.superclass)
+        assert(singleton.has_ancestor?(mod))
+        assert(singleton.has_ancestor?(child))
 
-	assert(!parent.has_ancestor?(child))
-	assert(!parent.has_ancestor?(singleton))
+        assert(!parent.has_ancestor?(child))
+        assert(!parent.has_ancestor?(singleton))
     end
 end
 
