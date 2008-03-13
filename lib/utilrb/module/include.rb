@@ -1,5 +1,7 @@
 class Module
-    unless (method(:__instance_include__) rescue nil)
+    begin
+	method(:__instance_include__)
+    rescue NameError
 	alias :__instance_include__  :include
     end
 
