@@ -1,6 +1,7 @@
 require 'test_config'
 
 require 'utilrb/object'
+require 'utilrb/module/attr_predicate'
 
 class TC_Object < Test::Unit::TestCase
     def test_address
@@ -55,13 +56,28 @@ class TC_Object < Test::Unit::TestCase
     end
 
     def test_singleton_class
-	klass	= Class.new
+	klass	= Class.new do
+	    def bla; 0 end
+	end
+
 	object	= klass.new
+
+	singleton = class << object
+	    class << self
+		def bla
+		    "a"
+		end
+	    end
+	    self
+	end
+
 	assert(! object.has_singleton?)
 	assert_equal(object, object.singleton_class.singleton_instance)
 	assert(object.has_singleton?)
 	assert_equal(klass, object.singleton_class.superclass)
+
 	assert_equal([object.singleton_class, klass, Object], object.singleton_class.ancestors[0, 3])
+	assert_equal([klass, Object], klass.ancestors[0, 2])
     end
 
     def test_attr_predicate
