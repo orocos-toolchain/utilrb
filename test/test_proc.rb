@@ -19,7 +19,7 @@ Utilrb.require_faster('TC_Proc') do
 	    end
 
 	    def test_line
-		assert_equal(8, block_to_proc.first.line)
+		assert_equal(10, block_to_proc.first.line)
 	    end
 
 	    def test_file
