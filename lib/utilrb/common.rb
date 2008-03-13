@@ -1,5 +1,8 @@
 module Utilrb
-    VERSION = "1.2" unless defined? Utilrb::VERSION
+    unless defined? Utilrb::VERSION
+	VERSION = "1.2"
+	RUBY_IS_19 = (RUBY_VERSION >= "1.9")
+    end
 
     unless defined? UTILRB_FASTER_MODE
 	if ENV['UTILRB_FASTER_MODE'] == 'no'

@@ -32,14 +32,15 @@ class Object
     # defined, which returns the object instance the class is the singleton
     # of.
     def singleton_class
-	if defined? @singleton_class
-	    return @singleton_class
-	else
+	unless defined? @singleton_class
 	    klass = class << self; self end
-	    instance = self
-	    klass.class_exec do
-		unless RUBY_VERSION >= "1.9"
-		    @superclass		= instance.class
+	    klass.instance_variable_set(:@singleton_instance, self)
+	    @singleton_class = klass
+
+	    unless Utilrb::RUBY_IS_19
+		instance = self
+		klass.class_eval do
+		    @superclass = instance.class
 		    class << self
 			attr_reader :superclass
 			def name
@@ -47,12 +48,11 @@ class Object
 			end
 		    end
 		end
-
-		@singleton_instance = instance
 	    end
-
-	    @singleton_class = klass
+	    klass
 	end
+
+	@singleton_class
     end
 end
 
