@@ -13,7 +13,6 @@ class TC_PkgConfig < Test::Unit::TestCase
 
     PkgConfig = Utilrb::PkgConfig
     def test_find_package
-	STDERR.puts ENV['PKG_CONFIG_PATH']
 	assert_raises(PkgConfig::NotFound) { PkgConfig.new('does_not_exist') }
 	assert_nothing_raised { PkgConfig.new('test_pkgconfig') }
     end
