@@ -54,7 +54,7 @@ class TC_Enumerable < Test::Unit::TestCase
 	assert_equal(nil, [].random_element)
 
 	# Test on non-empty collection which defines #size
-	set = Hash[*(1..100).map { |i| [(?a + i).to_s, i] }.flatten]
+	set = Hash[*(1..100).map { |i| [i.to_s, i] }.flatten]
 	100.times { set.delete(set.random_element.first) }
 	assert(set.empty?)
 	assert_equal(nil, {}.random_element)
