@@ -14,19 +14,20 @@ class Module
     # * if it is included in a Class, the ClassExtension module
     #   extends the class.
     def include(mod)
-	__instance_include__ mod
-	return unless mod.const_defined?(:ClassExtension)
-
-	if is_a?(Module) && !is_a?(Class)
-	    unless const_defined?(:ClassExtension)
-		const_set(:ClassExtension, Module.new)
+	if mod.const_defined?(:ClassExtension)
+	    if !is_a?(Class)
+		unless const_defined?(:ClassExtension)
+		    const_set(:ClassExtension, Module.new)
+		end
+		const_get(:ClassExtension).class_eval do
+		    __instance_include__ mod.const_get(:ClassExtension)
+		end
+	    else
+		extend mod.const_get(:ClassExtension)
 	    end
-	    const_get(:ClassExtension).class_eval do
-		__instance_include__ mod.const_get(:ClassExtension)
-	    end
-	else
-	    extend mod.const_get(:ClassExtension)
 	end
+
+	__instance_include__ mod
     end
 end
 
