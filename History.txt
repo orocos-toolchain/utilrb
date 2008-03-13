@@ -1,5 +1,12 @@
 === Version 1.2
 
+* misc fixes to Time#to_hms and Time.from_hms
+* migrate to facets >= 2.0
+* fix Object#address on 64bit architectures
+* added a few new methods:
+  - IO#clearerr
+  - socket-related tools (see Socket)
+
 === Version 1.1
 
 * changes and fixes:
