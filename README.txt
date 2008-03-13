@@ -37,14 +37,5 @@ loading. Set it to +no+ to disable the extension, to +yes+ to force it
 (an error is generated if the extension is not available). If the variable
 is not set, the extension is loaded if available.
 
-== TODO
-* put the +block+ argument in front in Module#define_method_with_block. This
-  would allow to do 
-
-    define_method_with_block(:bla) do |block, *args| 
-    end
-
-  [DONE 20061101125259-1e605-fef189550540b8e096f0bbe6c219d892bf3e13fc.gz]
-
 == CHANGES
 :include: Changes.txt
