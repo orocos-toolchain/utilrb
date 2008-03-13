@@ -1,5 +1,5 @@
-Copyright (c) 2006-2007 LAAS/CNRS <openrobots@laas.fr>
-	      2006-2007 Sylvain Joyeux <sylvain.joyeux@laas.fr>
+Copyright (c) 2006-2008 LAAS/CNRS <openrobots@laas.fr>
+	      2006-2008 Sylvain Joyeux <sylvain.joyeux@laas.fr>
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without

@@ -3,7 +3,7 @@ Utilrb
     http://www.laas.fr/~sjoyeux/darcs/utilrb (dev repository)
     http://www.laas.fr/~sjoyeux/research.php
 
-Copyright (c) 2006 
+Copyright (c) 2006-2008
     Sylvain Joyeux <sylvain.joyeux@m4x.org>
     LAAS/CNRS <openrobots@laas.fr>
 
