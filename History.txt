@@ -1,5 +1,6 @@
 === Version 1.2
 
+* compatibility with ruby 1.9
 * misc fixes to Time#to_hms and Time.from_hms
 * migrate to facets >= 2.0
 * fix Object#address on 64bit architectures
