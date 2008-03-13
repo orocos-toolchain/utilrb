@@ -1,4 +1,8 @@
-#include "ruby_internals.h"
+#ifdef RUBY_IS_19
+#include "ruby_internals-1.9.h"
+#else
+#include "ruby_internals-1.8.h"
+#endif
 
 /*
  * Kernel.swap!(obj1, obj2, *args)

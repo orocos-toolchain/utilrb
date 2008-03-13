@@ -1,7 +1,11 @@
 #include <ruby.h>
 #include <set>
-#include "ruby_internals.h"
-#include <rubyio.h>
+
+#ifdef RUBY_IS_19
+#include "ruby_internals-1.9.h"
+#else
+#include "ruby_internals-1.8.h"
+#endif
 
 using namespace std;
 
