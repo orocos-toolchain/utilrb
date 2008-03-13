@@ -1,7 +1,7 @@
 Utilrb
     http://utilrb.rubyforge.org
-    http://www.laas.fr/~sjoyeux/darcs/utilrb (dev repository)
-    http://www.laas.fr/~sjoyeux/research.php
+    http://www.rubyforge.org/projects/utilrb
+    http://github.com/doudou/util-rb (git repository)
 
 Copyright (c) 2006-2008
     Sylvain Joyeux <sylvain.joyeux@m4x.org>
