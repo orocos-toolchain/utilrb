@@ -5,10 +5,10 @@ class Object
     def address; Object.address_from_id(object_id) end
 
     # Converts the object_id of a non-immediate object
-    # to its 32 bits address
+    # to its memory address
     def self.address_from_id(id)
-	id = 0xFFFFFFFF - ~id if id < 0
-	(id * 2) & 0xFFFFFFFF
+	id = 0xFFFFFFFFFFFFFFFF - ~id if id < 0
+	(id * 2) & 0xFFFFFFFFFFFFFFFF
     end
 end
 

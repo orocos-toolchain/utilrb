@@ -7,7 +7,7 @@ class TC_Object < Test::Unit::TestCase
 	foo = Object.new
 	foo.to_s =~ /#<Object:0x([0-9a-f]+)>/
 	foo_address = $1
-	assert_equal(foo_address, foo.address.to_s(16), "#{foo} #{foo.address} #{foo.object_id}")
+	assert_equal(foo_address, foo.address.to_s(16), "#{foo} #{foo.address.to_s(16)} #{foo.object_id.to_s(16)}")
     end
 
     def check_attribute(object)
