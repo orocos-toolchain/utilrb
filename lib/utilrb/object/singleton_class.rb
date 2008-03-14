@@ -1,3 +1,4 @@
+require 'utilrb/common'
 require 'utilrb/object/address'
 
 class Class
