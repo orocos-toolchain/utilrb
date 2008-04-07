@@ -23,6 +23,12 @@ class TC_Module < Test::Unit::TestCase
         assert(k.respond_to?(:tag))
     end
 
+    def test_define_or_reuse
+	mod = Module.new
+	new_mod = mod.define_or_reuse(:Foo) { Module.new }
+	assert_equal(new_mod, mod.define_or_reuse(:Foo) { flunk("block called in #define_under") })
+    end
+
     def test_define_method_with_block
 	FlexMock.use do |mock|
 	    mock.should_receive(:called).once
