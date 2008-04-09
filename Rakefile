@@ -1,5 +1,6 @@
 require 'rake'
 require 'rake/rdoctask'
+
 # FIX: Hoe always calls rdoc with -d, and diagram generation fails here
 class Rake::RDocTask
     alias __option_list__ option_list
@@ -10,20 +11,24 @@ class Rake::RDocTask
     end
 end
 
-require 'hoe'
 require './lib/utilrb/common'
 
-Hoe.new('utilrb', Utilrb::VERSION) do |p|
-    p.author = "Sylvain Joyeux"
-    p.email = "sylvain.joyeux@m4x.org"
+begin
+    require 'hoe'
+    Hoe.new('utilrb', Utilrb::VERSION) do |p|
+        p.author = "Sylvain Joyeux"
+        p.email = "sylvain.joyeux@m4x.org"
 
-    p.summary = 'Yet another Ruby toolkit'
-    p.description = p.paragraphs_of('README.txt', 3..6).join("\n\n")
-    p.url         = p.paragraphs_of('README.txt', 0).first.split(/\n/)[1..-1]
-    p.changes     = p.paragraphs_of('History.txt', 0..1).join("\n\n")
+        p.summary = 'Yet another Ruby toolkit'
+        p.description = p.paragraphs_of('README.txt', 3..6).join("\n\n")
+        p.url         = p.paragraphs_of('README.txt', 0).first.split(/\n/)[1..-1]
+        p.changes     = p.paragraphs_of('History.txt', 0..1).join("\n\n")
 
-    p.extra_deps << 'facets'
-    p.rdoc_pattern = /(ext\/.*cc$|lib)|txt/
+        p.extra_deps << 'facets'
+        p.rdoc_pattern = /(ext\/.*cc$|lib)|txt/
+    end
+rescue LoadError
+    puts "cannot load the Hoe gem, distribution is disabled"
 end
 
 desc "builds Utilrb's C extension"
