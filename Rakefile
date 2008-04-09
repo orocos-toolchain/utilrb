@@ -41,6 +41,18 @@ task :setup do
     FileUtils.ln_sf "../../ext/faster.so", "lib/utilrb/faster.so"
 end
 
+task :clean do
+    puts "Cleaning extension in ext/"
+    FileUtils.rm_f "lib/utilrb/faster.so"
+    if File.file?(File.join('ext', 'Makefile'))
+        Dir.chdir("ext") do
+            system("make clean")
+        end
+    end
+    FileUtils.rm_f "ext/Makefile"
+    FileUtils.rm_f "lib/utilrb/faster.so"
+end
+
 task :full_test do
     ENV['UTILRB_FASTER_MODE'] = 'no'
     system("testrb test/")
