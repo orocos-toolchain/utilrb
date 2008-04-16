@@ -1,4 +1,4 @@
-require 'facets/module/dirname'
+require 'facets/module/spacename'
 require 'facets/kernel/constant'
 class Logger
     # Define a hierarchy of loggers mapped to the module hierarchy.
@@ -23,7 +23,7 @@ class Logger
         def logger
             return @logger if defined?(@logger) && @logger
 	    @logger = if kind_of?(Module)
-			  constant(self.dirname).logger
+			  constant(self.spacename).logger
 		      else
 			  self.class.logger
 		      end
