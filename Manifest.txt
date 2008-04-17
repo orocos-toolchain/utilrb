@@ -65,6 +65,7 @@ lib/utilrb/time/to_hms.rb
 lib/utilrb/unbound_method.rb
 lib/utilrb/unbound_method/call.rb
 lib/utilrb/value_set.rb
+patches/gc_live_objects.patch
 test/data/test_pkgconfig.pc
 test/test_array.rb
 test/test_config.rb
