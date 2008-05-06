@@ -1,4 +1,4 @@
-Changes.txt
+History.txt
 License.txt
 Manifest.txt
 README.txt
@@ -7,7 +7,8 @@ bm/allocation.rb
 bm/speed.rb
 ext/extconf.rb
 ext/faster.cc
-ext/ruby_internals.h
+ext/ruby_internals-1.8.h
+ext/ruby_internals-1.9.h
 ext/swap.cc
 ext/value_set.cc
 lib/utilrb.rb
@@ -15,6 +16,8 @@ lib/utilrb/array.rb
 lib/utilrb/array/to_s.rb
 lib/utilrb/column_formatter.rb
 lib/utilrb/common.rb
+lib/utilrb/dir.rb
+lib/utilrb/dir/empty.rb
 lib/utilrb/enumerable.rb
 lib/utilrb/enumerable/null.rb
 lib/utilrb/enumerable/random_element.rb
@@ -44,6 +47,7 @@ lib/utilrb/module/attr_enumerable.rb
 lib/utilrb/module/attr_predicate.rb
 lib/utilrb/module/cached_enum.rb
 lib/utilrb/module/define_method.rb
+lib/utilrb/module/define_or_reuse.rb
 lib/utilrb/module/include.rb
 lib/utilrb/module/inherited_enumerable.rb
 lib/utilrb/object.rb
@@ -54,6 +58,8 @@ lib/utilrb/objectstats.rb
 lib/utilrb/pkgconfig.rb
 lib/utilrb/set.rb
 lib/utilrb/set/to_s.rb
+lib/utilrb/socket/tcp_server.rb
+lib/utilrb/socket/tcp_socket.rb
 lib/utilrb/time.rb
 lib/utilrb/time/to_hms.rb
 lib/utilrb/unbound_method.rb
@@ -62,6 +68,7 @@ lib/utilrb/value_set.rb
 test/data/test_pkgconfig.pc
 test/test_array.rb
 test/test_config.rb
+test/test_dir.rb
 test/test_enumerable.rb
 test/test_exception.rb
 test/test_gc.rb
