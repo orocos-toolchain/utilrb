@@ -76,8 +76,11 @@ class TC_Object < Test::Unit::TestCase
 	assert(object.has_singleton?)
 	assert_equal(klass, object.singleton_class.superclass)
 
-	assert_equal([object.singleton_class, klass, Object], object.singleton_class.ancestors[0, 3])
-	assert_equal([klass, Object], klass.ancestors[0, 2])
+
+        Utilrb.if_ext do
+            assert_equal([object.singleton_class, klass, Object], object.singleton_class.ancestors[0, 3])
+            assert_equal([klass, Object], klass.ancestors[0, 2])
+        end
     end
 
     def test_attr_predicate

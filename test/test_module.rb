@@ -93,7 +93,9 @@ class TC_Module < Test::Unit::TestCase
 	assert(object.singleton_class.respond_to?(:signatures))
 	object.singleton_class.signatures << :in_singleton
 	assert_equal([:in_singleton], object.singleton_class.signatures)
-        assert_equal([:in_singleton, :in_derived, :in_base], object.singleton_class.enum_for(:each_signature).to_a)
+        Utilrb.if_ext do
+            assert_equal([:in_singleton, :in_derived, :in_base], object.singleton_class.enum_for(:each_signature).to_a)
+        end
     end
 
     def check_inherited_enumerable(base, derived)

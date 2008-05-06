@@ -48,7 +48,7 @@ class Object
     end
 end
 
-Utilrb.unless_faster do
+Utilrb.unless_ext do
     module Enumerable
 	# call-seq:
 	#  each_uniq { |obj| ... }

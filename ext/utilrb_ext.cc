@@ -119,7 +119,7 @@ static VALUE proc_line(VALUE self)
 extern "C" void Init_value_set();
 extern "C" void Init_swap();
 
-extern "C" void Init_faster()
+extern "C" void Init_utilrb_ext()
 {
     rb_define_method(rb_mEnumerable, "each_uniq", RUBY_METHOD_FUNC(enumerable_each_uniq), 0);
     rb_define_method(rb_mKernel, "is_singleton?", RUBY_METHOD_FUNC(kernel_is_singleton_p), 0);

@@ -1,6 +1,6 @@
 require 'utilrb/common'
 class Module
-    Utilrb.if_faster do
+    Utilrb.if_ext do
 	# Check if +klass+ is an ancestor of this class/module
 	#
 	# It works for singleton classes as well:
@@ -15,7 +15,7 @@ class Module
 	    self <= klass || (is_singleton? && superclass.has_ancestor?(klass))
 	end
     end
-    Utilrb.unless_faster do
+    Utilrb.unless_ext do
 	def has_ancestor?(klass) # :nodoc:
 	    self <= klass || superclass == klass || superclass < klass
 	end

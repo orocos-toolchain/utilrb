@@ -1,7 +1,7 @@
 require 'utilrb/common'
 require 'utilrb/object/singleton_class'
 
-Utilrb.unless_faster do
+Utilrb.unless_ext do
     class Object
 	# call-seq:
 	#   attribute :name => default_value
@@ -37,7 +37,7 @@ Utilrb.unless_faster do
     end
 end
 
-Utilrb.if_faster do
+Utilrb.if_ext do
     class Object
 	def attribute(attr_def, &init) # :nodoc:
 	    if Hash === attr_def

@@ -2,7 +2,7 @@ require 'test_config'
 
 require 'utilrb'
 
-Utilrb.require_faster('TC_Proc') do
+Utilrb.require_ext('TC_Proc') do
     if RUBY_VERSION =~ /^1\.8/
 	class TC_Proc < Test::Unit::TestCase
 	    def block_to_proc_helper(&block); block end

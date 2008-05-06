@@ -45,7 +45,7 @@ class TC_Kernel < Test::Unit::TestCase
 	assert_nothing_raised { check_arity(object.method(:arity_1_more), 2) }
     end
 
-    Utilrb.require_faster('is_singleton?') do
+    Utilrb.require_ext('is_singleton?') do
 	def test_is_singleton
 	    klass = Class.new
 	    singl_klass = (class << klass; self end)
@@ -57,7 +57,7 @@ class TC_Kernel < Test::Unit::TestCase
 	end
     end
 
-    Utilrb.require_faster('test_swap') do
+    Utilrb.require_ext('test_swap') do
 	def test_swap
 	    obj = Array.new
 	    Kernel.swap!(obj, Hash.new)

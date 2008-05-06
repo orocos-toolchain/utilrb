@@ -6,7 +6,7 @@ Rakefile
 bm/allocation.rb
 bm/speed.rb
 ext/extconf.rb
-ext/faster.cc
+ext/utilrb_ext.cc
 ext/ruby_internals-1.8.h
 ext/ruby_internals-1.9.h
 ext/swap.cc

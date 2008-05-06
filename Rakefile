@@ -15,18 +15,18 @@ require './lib/utilrb/common'
 
 begin
     require 'hoe'
-    Hoe.new('utilrb', Utilrb::VERSION) do |p|
-        p.author = "Sylvain Joyeux"
-        p.email = "sylvain.joyeux@m4x.org"
+    config = Hoe.new('utilrb', Utilrb::VERSION) do |p|
+        p.developer("Sylvain Joyeux", "sylvain.joyeux@m4x.org")
 
         p.summary = 'Yet another Ruby toolkit'
         p.description = p.paragraphs_of('README.txt', 3..6).join("\n\n")
         p.url         = p.paragraphs_of('README.txt', 0).first.split(/\n/)[1..-1]
         p.changes     = p.paragraphs_of('History.txt', 0..1).join("\n\n")
 
-        p.extra_deps << 'facets >= 2.4.0'
+        p.extra_deps << ['facets', '>= 2.4.0'] << 'rake'
         p.rdoc_pattern = /(ext\/.*cc$|lib)|txt/
     end
+    config.spec.extensions << 'ext/extconf.rb'
 rescue LoadError
     puts "cannot load the Hoe gem, distribution is disabled"
 end
@@ -38,25 +38,25 @@ task :setup do
 	    raise "cannot build the C extension"
 	end
     end
-    FileUtils.ln_sf "../../ext/faster.so", "lib/utilrb/faster.so"
+    FileUtils.ln_sf "../ext/utilrb_ext.so", "lib/utilrb_ext.so"
 end
 
 task :clean do
     puts "Cleaning extension in ext/"
-    FileUtils.rm_f "lib/utilrb/faster.so"
+    FileUtils.rm_f "lib/utilrb_ext.so"
     if File.file?(File.join('ext', 'Makefile'))
         Dir.chdir("ext") do
             system("make clean")
         end
     end
     FileUtils.rm_f "ext/Makefile"
-    FileUtils.rm_f "lib/utilrb/faster.so"
+    FileUtils.rm_f "lib/utilrb_ext.so"
 end
 
 task :full_test do
-    ENV['UTILRB_FASTER_MODE'] = 'no'
+    ENV['UTILRB_EXT_MODE'] = 'no'
     system("testrb test/")
-    ENV['UTILRB_FASTER_MODE'] = 'yes'
+    ENV['UTILRB_EXT_MODE'] = 'yes'
     system("testrb test/")
 end
 

@@ -8,12 +8,14 @@ class Class
 
     attr_reader :singleton_instance
 
-    def ancestors
-	if is_singleton?
-	    __ancestors__.unshift(self) 
-	else
-	    __ancestors__
-	end
+    Utilrb.require_ext("Object#ancestors") do
+        def ancestors
+            if is_singleton?
+                __ancestors__.unshift(self) 
+            else
+                __ancestors__
+            end
+        end
     end
 end
 

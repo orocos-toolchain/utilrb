@@ -4,46 +4,46 @@ module Utilrb
 	RUBY_IS_19 = (RUBY_VERSION >= "1.9")
     end
 
-    unless defined? UTILRB_FASTER_MODE
-	if ENV['UTILRB_FASTER_MODE'] == 'no'
-	    UTILRB_FASTER_MODE = nil
+    unless defined? UTILRB_EXT_MODE
+	if ENV['UTILRB_EXT_MODE'] == 'no'
+	    UTILRB_EXT_MODE = nil
 	    STDERR.puts "Utilrb: not loading the C extension"
 	else
 	    begin
-		require 'utilrb/faster'
-		UTILRB_FASTER_MODE = true
-		STDERR.puts "Utilrb: loaded C extension" if ENV['UTILRB_FASTER_MODE']
+		require 'utilrb_ext'
+		UTILRB_EXT_MODE = true
+		STDERR.puts "Utilrb: loaded C extension" if ENV['UTILRB_EXT_MODE']
 	    rescue LoadError => e
 		raise unless e.message =~ /no such file to load/
-		if ENV['UTILRB_FASTER_MODE'] == 'yes'
+		if ENV['UTILRB_EXT_MODE'] == 'yes'
 		    raise LoadError, "unable to load Util.rb C extension: #{e.message}"
 		else
-		    UTILRB_FASTER_MODE = nil
+		    UTILRB_EXT_MODE = nil
 		end
 	    end
 	end
     end
 
-    # Yields if the faster extension is not present
+    # Yields if the extension is not present
     # This is used by Utilrb libraries to provide a 
     # Ruby version if the C extension is not loaded
-    def self.unless_faster # :yield:
-	unless UTILRB_FASTER_MODE
+    def self.unless_ext # :yield:
+	unless UTILRB_EXT_MODE
 	    return yield if block_given?
 	end
     end
 
-    # Yields if the faster extension is present. This is used for Ruby code
+    # Yields if the extension is present. This is used for Ruby code
     # which depends on methods in the C extension
-    def self.if_faster(&block)
-	require_faster(nil, &block)
+    def self.if_ext(&block)
+	require_ext(nil, &block)
     end
 
-    # Yields if the faster extension is present, and 
+    # Yields if the extension is present, and 
     # issue a warning otherwise. This is used for Ruby
     # code which depends on methods in the C extension
-    def self.require_faster(name)
-	if UTILRB_FASTER_MODE
+    def self.require_ext(name)
+	if UTILRB_EXT_MODE
 	    yield if block_given?
 	elsif name
 	    STDERR.puts "Utilrb: not loading #{name} since the C extension is not available"

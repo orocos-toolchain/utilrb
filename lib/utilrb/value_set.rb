@@ -1,7 +1,7 @@
 require 'utilrb/common'
 require 'utilrb/enumerable/to_s_helper'
 
-Utilrb.require_faster("ValueSet") do
+Utilrb.require_ext("ValueSet") do
     class ValueSet
 	def <<(obj); insert(obj) ; self end
 	alias :| :union

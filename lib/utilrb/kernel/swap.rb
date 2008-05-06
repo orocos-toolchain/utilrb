@@ -1,2 +1,2 @@
 require 'utilrb/common'
-Utilrb.require_faster('Kernel#swap!')
+Utilrb.require_ext('Kernel#swap!')

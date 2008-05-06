@@ -60,7 +60,7 @@ class TC_Enumerable < Test::Unit::TestCase
 	assert_equal(nil, {}.random_element)
     end
 
-    Utilrb.require_faster('test_value_set') do
+    Utilrb.require_ext('test_value_set') do
 	def test_value_set
 	    a = [1, 3, 3, 4, 6, 8].to_value_set
 	    b = [1, 2, 4, 3, 11, 11].to_value_set

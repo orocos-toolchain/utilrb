@@ -6,5 +6,5 @@ if RUBY_VERSION >= "1.9"
 end
 
 $LDFLAGS += "-module"
-create_makefile("faster")
+create_makefile("utilrb_ext")
 

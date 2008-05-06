@@ -1,5 +1,6 @@
+coverage.html
 *.swp
 ext/*.o
 ext/*.so
 ext/Makefile
-lib/utilrb/faster.so
+lib/utilrb_ext.so
