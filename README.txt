@@ -38,4 +38,4 @@ loading. Set it to +no+ to disable the extension, to +yes+ to force it
 is not set, the extension is loaded if available.
 
 == CHANGES
-:include: Changes.txt
+:include: History.txt

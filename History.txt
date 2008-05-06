@@ -1,12 +1,13 @@
 === Version 1.2
 
-* compatibility with ruby 1.9
+* compatibility with ruby 1.9. Some feature are specific 1.8:
+  IO#clearerr, Proc#line, Proc#file and Proc#same_body?.
 * misc fixes to Time#to_hms and Time.from_hms
-* migrate to facets >= 2.0
+* migrate to facets >= 2.4.0
 * fix Object#address on 64bit architectures
-* added a few new methods:
-  - IO#clearerr
+* new functionality:
   - socket-related tools (see Socket)
+  - Dir#empty?
 
 === Version 1.1
 
