@@ -1,3 +1,8 @@
+=== Version 1.3
+
+* added Utilrb::WeakRef, a much leaner version of the standard WeakRef:
+  implemented in C++, not a subclass of Delegate (delegate is very costly)
+
 === Version 1.2
 
 * compatibility with ruby 1.9. Some feature are specific 1.8:

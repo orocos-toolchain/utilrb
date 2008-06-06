@@ -8,6 +8,8 @@
 #include "ruby_internals-1.8.h"
 #endif
 
+static VALUE mUtilrb;
+
 using namespace std;
 
 static VALUE enumerable_each_uniq_i(VALUE i, VALUE* memo)
@@ -116,11 +118,17 @@ static VALUE proc_line(VALUE self)
 
 #endif
 
+static VALUE kernel_is_immediate(VALUE klass, VALUE object)
+{ return IMMEDIATE_P(object) ? Qtrue : Qfalse; }
+
 extern "C" void Init_value_set();
 extern "C" void Init_swap();
+extern "C" void Init_weakref(VALUE mUtilrb);
 
 extern "C" void Init_utilrb_ext()
 {
+    mUtilrb = rb_define_module("Utilrb");
+
     rb_define_method(rb_mEnumerable, "each_uniq", RUBY_METHOD_FUNC(enumerable_each_uniq), 0);
     rb_define_method(rb_mKernel, "is_singleton?", RUBY_METHOD_FUNC(kernel_is_singleton_p), 0);
 #ifndef RUBY_IS_19
@@ -130,7 +138,10 @@ extern "C" void Init_utilrb_ext()
     rb_define_method(rb_cIO, "clearerr", RUBY_METHOD_FUNC(io_clearerr), 0);
 #endif
 
+    rb_define_singleton_method(rb_mKernel, "immediate?", RUBY_METHOD_FUNC(kernel_is_immediate), 1);
+
     Init_value_set();
     Init_swap();
+    Init_weakref(mUtilrb);
 }
 
