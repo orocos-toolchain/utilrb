@@ -1,6 +1,6 @@
 module Utilrb
     unless defined? Utilrb::VERSION
-	VERSION = "1.2"
+	VERSION = "1.3"
 	RUBY_IS_19 = (RUBY_VERSION >= "1.9")
     end
 
