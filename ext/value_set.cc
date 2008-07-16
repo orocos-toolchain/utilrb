@@ -2,9 +2,6 @@
 #include <set>
 #include <algorithm>
 
-#include <boost/tuple/tuple.hpp>
-
-using namespace boost;
 using namespace std;
 
 static VALUE cValueSet;
@@ -250,8 +247,7 @@ static VALUE value_set_difference(VALUE vself, VALUE vother)
 static VALUE value_set_insert(VALUE vself, VALUE v)
 {
     ValueSet& self  = get_wrapped_set(vself);
-    bool exists;
-    tie(tuples::ignore, exists) = self.insert(v);
+    bool exists = self.insert(v).second;
     return exists ? Qtrue : Qfalse;
 }
 /* call-seq:
