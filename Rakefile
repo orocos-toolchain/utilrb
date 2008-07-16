@@ -28,7 +28,10 @@ begin
     end
     config.spec.extensions << 'ext/extconf.rb'
 rescue LoadError
-    puts "cannot load the Hoe gem, distribution is disabled"
+    STDERR.puts "cannot load the Hoe gem. Distribution is disabled"
+rescue Exception => e
+    STDERR.puts "cannot load the Hoe gem, or Hoe fails. Distribution is disabled"
+    STDERR.puts "error message is: #{e.message}"
 end
 
 desc "builds Utilrb's C extension"
