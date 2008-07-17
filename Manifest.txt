@@ -6,11 +6,12 @@ Rakefile
 bm/allocation.rb
 bm/speed.rb
 ext/extconf.rb
-ext/utilrb_ext.cc
 ext/ruby_internals-1.8.h
 ext/ruby_internals-1.9.h
 ext/swap.cc
+ext/utilrb_ext.cc
 ext/value_set.cc
+ext/weakref.cc
 lib/utilrb.rb
 lib/utilrb/array.rb
 lib/utilrb/array/to_s.rb
@@ -65,6 +66,7 @@ lib/utilrb/time/to_hms.rb
 lib/utilrb/unbound_method.rb
 lib/utilrb/unbound_method/call.rb
 lib/utilrb/value_set.rb
+lib/utilrb/weakref.rb
 patches/gc_live_objects.patch
 test/data/test_pkgconfig.pc
 test/test_array.rb
@@ -84,3 +86,4 @@ test/test_proc.rb
 test/test_set.rb
 test/test_time.rb
 test/test_unbound_method.rb
+test/test_weakref.rb
