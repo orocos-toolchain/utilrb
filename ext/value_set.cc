@@ -106,7 +106,7 @@ static VALUE value_set_to_value_set(VALUE self) { return self; }
 static VALUE value_set_dup(VALUE vself, VALUE vother)
 {
     ValueSet const& self  = get_wrapped_set(vself);
-    VALUE vresult = rb_funcall(cValueSet, id_new, 0);
+    VALUE vresult = rb_funcall2(cValueSet, id_new, 0, NULL);
     ValueSet& result = get_wrapped_set(vresult);
     for (ValueSet::const_iterator it = self.begin(); it != self.end(); ++it)
 	result.insert(result.end(), *it);
@@ -142,7 +142,7 @@ static VALUE value_set_union(VALUE vself, VALUE vother)
 	rb_raise(rb_eArgError, "expected a ValueSet");
     ValueSet const& other = get_wrapped_set(vother);
     
-    VALUE vresult = rb_funcall(cValueSet, id_new, 0);
+    VALUE vresult = rb_funcall2(cValueSet, id_new, 0, NULL);
     ValueSet& result = get_wrapped_set(vresult);
     std::set_union(self.begin(), self.end(), other.begin(), other.end(), 
 	    std::inserter(result, result.end()));
@@ -179,7 +179,7 @@ static VALUE value_set_intersection(VALUE vself, VALUE vother)
 	rb_raise(rb_eArgError, "expected a ValueSet");
     ValueSet const& other = get_wrapped_set(vother);
     
-    VALUE vresult = rb_funcall(cValueSet, id_new, 0);
+    VALUE vresult = rb_funcall2(cValueSet, id_new, 0, NULL);
     ValueSet& result = get_wrapped_set(vresult);
     std::set_intersection(self.begin(), self.end(), other.begin(), other.end(), 
 	    std::inserter(result, result.end()));
@@ -230,7 +230,7 @@ static VALUE value_set_difference(VALUE vself, VALUE vother)
 	rb_raise(rb_eArgError, "expected a ValueSet");
     ValueSet const& other = get_wrapped_set(vother);
     
-    VALUE vresult = rb_funcall(cValueSet, id_new, 0);
+    VALUE vresult = rb_funcall2(cValueSet, id_new, 0, NULL);
     ValueSet& result = get_wrapped_set(vresult);
     std::set_difference(self.begin(), self.end(), other.begin(), other.end(), 
 	    std::inserter(result, result.end()));
@@ -307,13 +307,6 @@ static VALUE value_set_initialize_copy(VALUE vself, VALUE vother)
 
 
 
-static VALUE enumerable_to_value_set_i(VALUE i, VALUE* memo)
-{
-    ValueSet& result = *reinterpret_cast<ValueSet*>(memo);
-    result.insert(i);
-    return Qnil;
-}
-
 /* call-seq:
  *  to_value_set    => value_set
  *
@@ -321,15 +314,22 @@ static VALUE enumerable_to_value_set_i(VALUE i, VALUE* memo)
  */
 static VALUE array_to_value_set(VALUE self)
 {
-    VALUE vresult = rb_funcall(cValueSet, id_new, 0);
+    VALUE vresult = rb_funcall2(cValueSet, id_new, 0, NULL);
     ValueSet& result = get_wrapped_set(vresult);
 
-    VALUE* ptr = RARRAY(self)->ptr;
-    long size  = RARRAY(self)->len;
+    long size  = rb_ary_size(self);
     for (int i = 0; i < size; ++i)
-	result.insert(ptr[i]);
+	result.insert(rb_ary_entry(self, i));
 
     return vresult;
+}
+
+#ifndef RUBINIUS
+static VALUE enumerable_to_value_set_i(VALUE i, VALUE* memo)
+{
+    ValueSet& result = *reinterpret_cast<ValueSet*>(memo);
+    result.insert(i);
+    return Qnil;
 }
 
 /* call-seq:
@@ -339,12 +339,13 @@ static VALUE array_to_value_set(VALUE self)
  */
 static VALUE enumerable_to_value_set(VALUE self)
 {
-    VALUE vresult = rb_funcall(cValueSet, id_new, 0);
+    VALUE vresult = rb_funcall2(cValueSet, id_new, 0, NULL);
     ValueSet& result = get_wrapped_set(vresult);
 
     rb_iterate(rb_each, self, RUBY_METHOD_FUNC(enumerable_to_value_set_i), reinterpret_cast<VALUE>(&result));
     return vresult;
 }
+#endif
 
 /*
  * Document-class: ValueSet
@@ -357,7 +358,9 @@ static VALUE enumerable_to_value_set(VALUE self)
 
 extern "C" void Init_value_set()
 {
+#ifndef RUBINIUS
     rb_define_method(rb_mEnumerable, "to_value_set", RUBY_METHOD_FUNC(enumerable_to_value_set), 0);
+#endif
     rb_define_method(rb_cArray, "to_value_set", RUBY_METHOD_FUNC(array_to_value_set), 0);
 
     cValueSet = rb_define_class("ValueSet", rb_cObject);
