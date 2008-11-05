@@ -4,7 +4,6 @@
 #ifdef RUBY_IS_19
 #include "ruby_internals-1.9.h"
 #else
-#include <rubyio.h>
 #include "ruby_internals-1.8.h"
 #endif
 
@@ -33,21 +32,6 @@ static VALUE enumerable_each_uniq(VALUE self)
 	    RUBY_METHOD_FUNC(enumerable_each_uniq_i), (VALUE)&seen);
     return self;
 }
-
-#ifndef RUBY_IS_19
-/* call-seq:
- *  io.clearerr => nil 
- *
- * Clear all error flags on the IO
- */
-static VALUE io_clearerr(VALUE self)
-{
-    OpenFile* file;
-    file = RFILE(self)->fptr;
-    clearerr(file->f);
-    return Qnil;
-}
-#endif
 
 /* call-seq:
  *  Kernel.is_singleton?(object)
@@ -135,7 +119,6 @@ extern "C" void Init_utilrb_ext()
     rb_define_method(rb_cProc, "same_body?", RUBY_METHOD_FUNC(proc_same_body_p), 1);
     rb_define_method(rb_cProc, "file", RUBY_METHOD_FUNC(proc_file), 0);
     rb_define_method(rb_cProc, "line", RUBY_METHOD_FUNC(proc_line), 0);
-    rb_define_method(rb_cIO, "clearerr", RUBY_METHOD_FUNC(io_clearerr), 0);
 #endif
 
     rb_define_singleton_method(rb_mKernel, "immediate?", RUBY_METHOD_FUNC(kernel_is_immediate), 1);
