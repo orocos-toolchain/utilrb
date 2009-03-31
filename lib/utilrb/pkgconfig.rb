@@ -32,6 +32,18 @@ module Utilrb
 	    nil
 	end
 
+        # Returns the list of include directories listed in the Cflags: section
+        # of the pkgconfig file
+        def include_dirs
+            cflags_only_I.split("-I")[1..-1] || []
+        end
+
+        # Returns the list of library directories listed in the Libs: section
+        # of the pkgconfig file
+        def library_dirs
+            libs_only_L.split("-L")[1..-1] || []
+        end
+
 	ACTIONS = %w{cflags cflags-only-I cflags-only-other 
 		    libs libs-only-L libs-only-l libs-only-other static}
 	ACTIONS.each { |action| define_action(action) }
