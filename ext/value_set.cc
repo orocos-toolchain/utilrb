@@ -317,7 +317,7 @@ static VALUE array_to_value_set(VALUE self)
     VALUE vresult = rb_funcall2(cValueSet, id_new, 0, NULL);
     ValueSet& result = get_wrapped_set(vresult);
 
-    long size  = rb_ary_size(self);
+    long size  = RARRAY_LEN(self);
     for (int i = 0; i < size; ++i)
 	result.insert(rb_ary_entry(self, i));
 
