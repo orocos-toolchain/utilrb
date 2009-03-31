@@ -1,3 +1,5 @@
+require 'shellwords'
+
 module Utilrb
     # Access to information from pkg-config(1)
     class PkgConfig
@@ -35,13 +37,13 @@ module Utilrb
         # Returns the list of include directories listed in the Cflags: section
         # of the pkgconfig file
         def include_dirs
-            cflags_only_I.split("-I")[1..-1] || []
+            Shellwords.shellsplit(cflags_only_I).map { |v| v[2..-1] }
         end
 
         # Returns the list of library directories listed in the Libs: section
         # of the pkgconfig file
         def library_dirs
-            libs_only_L.split("-L")[1..-1] || []
+            Shellwords.shellsplit(libs_only_L).map { |v| v[2..-1] }
         end
 
 	ACTIONS = %w{cflags cflags-only-I cflags-only-other 
