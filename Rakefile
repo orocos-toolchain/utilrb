@@ -24,7 +24,6 @@ begin
         p.changes     = p.paragraphs_of('History.txt', 0..1).join("\n\n")
 
         p.extra_deps << ['facets', '>= 2.4.0'] << 'rake'
-        p.rdoc_pattern = /(ext\/.*cc$|lib)|txt/
     end
     config.spec.extensions << 'ext/extconf.rb'
 rescue LoadError
