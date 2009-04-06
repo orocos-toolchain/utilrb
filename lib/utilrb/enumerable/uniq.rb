@@ -2,9 +2,15 @@ require 'utilrb/common'
 require 'enumerator'
 require 'set'
 
+enumerator = if defined?(Enumerable::Enumerator)
+                 Enumerable::Enumerator
+             else
+                 Enumerator
+             end
+
 # Enumerator object which removes duplicate entries. 
 # See also Object#enum_uniq and Enumerable#each_uniq
-class UniqEnumerator < Enumerable::Enumerator
+class UniqEnumerator < enumerator
     # Creates the enumerator on +obj+ using the method +enum_with+ to
     # enumerate. The method will be called with the arguments in +args+.
     #

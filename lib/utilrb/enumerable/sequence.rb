@@ -20,11 +20,17 @@ class SequenceEnumerator
     include Enumerable
 end
 
-class Enumerable::Enumerator # :nodoc
+enumerator = if defined?(Enumerable::Enumerator)
+                 Enumerable::Enumerator
+             else
+                 Enumerator
+             end
+
+enumerator.class_eval do # :nodoc
     # Builds a sequence of enumeration object.
     #	([1, 2].enum_for + [2, 3].enum_for).to_a # => [1, 2, 2, 3]
     def +(other_enumerator) # :nodoc
-	SequenceEnumerator.new << self << other_enumerator
+        SequenceEnumerator.new << self << other_enumerator
     end
 end
 
