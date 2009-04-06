@@ -1,7 +1,11 @@
 #include <set>
 #include <map>
 #include <ruby.h>
+#ifdef RUBY_IS_19
+#include <ruby/intern.h>
+#else
 #include <intern.h>
+#endif
 
 using std::set;
 using std::map;
@@ -46,20 +50,23 @@ static VALUE do_object_finalize(VALUE mod, VALUE obj_id)
         ObjSet::iterator const end = ref_set->second.end();
         for (; it != end; ++it)
         {
-            /* During GC, objects are garbage collected and *then* the finalizers are called. It means that, even though *it is referenced in from_obj_id, it may be invalid.
+            /* During GC, objects are garbage collected and *then* the
+             * finalizers are called. It means that, even though *it is
+             * referenced in from_obj_id, it may be invalid.
              *
-             * When an object is marked for deferred finalization, its flags
-             * are reset to a special value (flags = FL_MARK). FL_FINALIZE
-             * should therefore not be set on it anymore.
+             * When an object is marked for deferred finalization, FL_MARK is
+             * set on it, while the other objects have FL_MARK reset. I.e., we
+             * can detect finalized objects because they are marked during the
+             * call to finalizers.
              */
-            if (FL_TEST(*it, FL_FINALIZE))
+            if (!FL_TEST(*it, FL_MARK))
             {
                 WeakRef& ref = get_weakref(*it);
                 ref.obj = Qundef;
             }
+
             from_ref_id.erase(rb_obj_id(*it));
         }
-
         from_obj_id.erase(obj_id);
     }
     return Qnil;
