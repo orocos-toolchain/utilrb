@@ -57,6 +57,21 @@ module Utilrb
 		super(varname, *args, &proc)
 	    end
 	end
+
+        def self.each_package(regex = nil)
+            `pkg-config --list-all`.chomp.split.
+                each do |line|
+                    line =~ /^([^\s]+)/
+                    name = $1
+                    if regex
+                        if regex === name
+                            yield(name)
+                        end
+                    else
+                        yield(name)
+                    end
+                end
+        end
     end
 end
 
