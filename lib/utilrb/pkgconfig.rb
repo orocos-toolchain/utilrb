@@ -58,6 +58,11 @@ module Utilrb
 	    end
 	end
 
+        # Returns true if there is a package with this name
+        def self.has_package?(name)
+            enum_for(:each_package, name).find { true }
+        end
+
         def self.each_package(regex = nil)
             `pkg-config --list-all`.chomp.split.
                 each do |line|
