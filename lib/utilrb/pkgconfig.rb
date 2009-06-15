@@ -2,11 +2,43 @@ require 'shellwords'
 
 module Utilrb
     # Access to information from pkg-config(1)
+    #
+    # This class allows to enumerate the pkg-config packages available, and
+    # create a PkgConfig object that allows to get access to the pkgconfig
+    # information.
+    #
+    # Create a new pkgconfig object with
+    #
+    #   pkg = PkgConfig.new(name)
+    #
+    # It raises PkgConfig::NotFound if the package is not available.
+    #
+    # Then, the classical include directory and library directory flags can be
+    # listed with
+    #
+    #   pkg.include_dirs
+    #   pkg.library_dirs
+    #
+    # Standard fields are available with
+    #
+    #   pkg.cflags
+    #   pkg.cflags_only_I
+    #   pkg.cflags_only_other
+    #   pkg.libs
+    #   pkg.libs_only_L
+    #   pkg.libs_only_l
+    #   pkg.libs_only_other
+    #   pkg.static
+    #
+    # Arbitrary variables defined in the .pc file can be accessed with
+    # 
+    #   pkg.prefix
+    #   pkg.libdir
+    #
     class PkgConfig
 	class NotFound < RuntimeError
 	    attr_reader :name
 	    def initialize(name); @name = name end
-	    def to_s; "#{name} is not available to pkg-config" end
 	end
 	
 	# The module name
@@ -18,7 +50,7 @@ module Utilrb
 	# Raises PkgConfig::NotFound if the module does not exist
 	def initialize(name)
 	    if !system("pkg-config --exists #{name}")
-		raise NotFound.new(name)
+		raise NotFound.new(name), "#{name} is not available to pkg-config"
 	    end
 	    
 	    @name    = name
@@ -27,7 +59,7 @@ module Utilrb
 	    @variables = Hash.new
 	end
 
-	def self.define_action(action)
+	def self.define_action(action) # :nodoc:
 	    define_method(action.gsub(/-/, '_')) do 
 		@actions[action] ||= `pkg-config --#{action} #{name}`.chomp.strip
 	    end
@@ -50,7 +82,7 @@ module Utilrb
 		    libs libs-only-L libs-only-l libs-only-other static}
 	ACTIONS.each { |action| define_action(action) }
 
-	def method_missing(varname, *args, &proc)
+	def method_missing(varname, *args, &proc) # :nodoc:
 	    if args.empty?
 		@variables[varname] ||= `pkg-config --variable=#{varname} #{name}`.chomp.strip
 	    else
@@ -63,6 +95,8 @@ module Utilrb
             enum_for(:each_package, name).find { true }
         end
 
+        # Yields the package names of available packages. If +regex+ is given,
+        # lists only the names that match the regular expression.
         def self.each_package(regex = nil)
             `pkg-config --list-all`.chomp.split.
                 each do |line|
