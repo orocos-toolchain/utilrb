@@ -19,6 +19,18 @@ Utilrb.require_ext('TC_WeakRef') do
             assert_raises(ArgumentError) { Utilrb::WeakRef.new(ref) }
         end
 
+        def create_deep_pair(lvl)
+            if lvl == 0
+                100.times do
+                    obj = Object.new
+                    WeakRef.new(obj)
+                    obj = nil
+                end
+            else
+                create_deep_pair(lvl - 1)
+            end
+        end
+
         def create_deep_ref(lvl)
             if lvl == 0
                 obj = Object.new
@@ -38,17 +50,24 @@ Utilrb.require_ext('TC_WeakRef') do
             end
         end
 
-        def test_finalization
+        def test_finalized_objects
             refs, obj_id = create_deep_ref(100)
             GC.start
             for ref in refs
                 assert_raises(WeakRef::RefError) { ref.get }
             end
             assert_equal(nil, WeakRef.refcount(obj_id))
+        end
 
+        def test_finalized_refs
             obj, ref_id = create_deep_obj(100)
             GC.start
             assert_raises(RangeError) { ObjectSpace._id2ref(ref_id) }
+        end
+
+        def test_finalization_ordering_crash
+            create_deep_pair(100)
+            GC.start
         end
     end
 end

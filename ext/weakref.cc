@@ -12,6 +12,7 @@ static VALUE cRefError;
 /* Weakref internal structure. +obj+ is Qnil before initialization and Qundef
  * after finalization */
 struct WeakRef {
+    VALUE ruby_ref;
     VALUE obj;
 };
 
@@ -22,12 +23,25 @@ typedef map< VALUE, VALUE > ObjFromRefID;
 RefFromObjID from_obj_id;
 ObjFromRefID from_ref_id;
 
-static void weakref_free(WeakRef const* set) { delete set; }
+static void weakref_free(WeakRef const* ref)
+{
+    VALUE ref_id = rb_obj_id(ref->ruby_ref);
+    ObjFromRefID::iterator obj_it = from_ref_id.find(ref_id);
+    if (obj_it != from_ref_id.end())
+    {
+        VALUE obj_id = rb_obj_id(obj_it->second);
+        RefFromObjID::iterator ref_set = from_obj_id.find(obj_id);
+        ref_set->second.erase(ref->ruby_ref);
+        from_ref_id.erase(obj_it);
+    }
+    delete ref;
+}
 static VALUE weakref_alloc(VALUE klass)
 {
     WeakRef* ref = new WeakRef;
     ref->obj = Qnil;
-    return Data_Wrap_Struct(klass, NULL, weakref_free, ref);
+    ref->ruby_ref = Data_Wrap_Struct(klass, NULL, weakref_free, ref);
+    return ref->ruby_ref;
 }
 
 static WeakRef& get_weakref(VALUE self)
@@ -46,17 +60,15 @@ static VALUE do_object_finalize(VALUE mod, VALUE obj_id)
         ObjSet::iterator const end = ref_set->second.end();
         for (; it != end; ++it)
         {
-            /* During GC, objects are garbage collected and *then* the finalizers are called. It means that, even though *it is referenced in from_obj_id, it may be invalid.
-             *
-             * When an object is marked for deferred finalization, its flags
-             * are reset to a special value (flags = FL_MARK). FL_FINALIZE
-             * should therefore not be set on it anymore.
-             */
-            if (FL_TEST(*it, FL_FINALIZE))
-            {
-                WeakRef& ref = get_weakref(*it);
-                ref.obj = Qundef;
-            }
+            // Do NOT use Data_Wrap_Struct here, it would break on recent Ruby
+            // interpreters. The reason is that the object type is reset during
+            // GC -- and the call to free functions is deferred.
+            //
+            // So, at this point, we're sure we have a RDATA in *it (otherwise
+            // weakref_free would have been called), but we can't use
+            // Data_Wrap_Struct because that would crash.
+            WeakRef& ref = *reinterpret_cast<WeakRef*>(RDATA(*it)->data);;
+            ref.obj = Qundef;
             from_ref_id.erase(rb_obj_id(*it));
         }
 
@@ -65,21 +77,8 @@ static VALUE do_object_finalize(VALUE mod, VALUE obj_id)
     return Qnil;
 }
 
-static VALUE do_weakref_finalize(VALUE mod, VALUE ref_id)
-{
-    ObjFromRefID::iterator obj_it = from_ref_id.find(ref_id);
-    if (obj_it != from_ref_id.end())
-    {
-        VALUE obj_id = rb_obj_id(obj_it->second);
-        RefFromObjID::iterator ref_set = from_obj_id.find(obj_id);
-        ref_set->second.erase(ref_id & ~FIXNUM_FLAG);
-        from_ref_id.erase(obj_it);
-    }
-    return Qnil;
-}
-
 // Note: the Ruby code has already registered +do_object_finalize+ as the
-// finalizer for +obj+, and +do_weakref_finalize+ for +self+.
+// finalizer for +obj+.
 //
 // It is forbidden to make a weakref-of-weakref or a weakref of an immediate
 // object
@@ -134,7 +133,6 @@ extern "C" void Init_weakref(VALUE mUtilrb)
     rb_define_alloc_func(cWeakRef, weakref_alloc);
 
     rb_define_singleton_method(cWeakRef, "do_object_finalize", RUBY_METHOD_FUNC(do_object_finalize), 1);
-    rb_define_singleton_method(cWeakRef, "do_weakref_finalize", RUBY_METHOD_FUNC(do_weakref_finalize), 1);
     rb_define_singleton_method(cWeakRef, "refcount", RUBY_METHOD_FUNC(refcount), 1);
     rb_define_method(cWeakRef, "do_initialize", RUBY_METHOD_FUNC(weakref_do_initialize), 1);
     rb_define_method(cWeakRef, "get", RUBY_METHOD_FUNC(weakref_get), 0);
