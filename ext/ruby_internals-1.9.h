@@ -12,8 +12,33 @@
 
 #include <ruby.h>
 #include <ruby/intern.h>
-#include <ruby/node.h>
 #include <ruby/re.h>
+
+typedef struct RNode {
+    unsigned long flags;
+    char *nd_file;
+    union {
+	struct RNode *node;
+	ID id;
+	VALUE value;
+	VALUE (*cfunc)(ANYARGS);
+	ID *tbl;
+    } u1;
+    union {
+	struct RNode *node;
+	ID id;
+	long argc;
+	VALUE value;
+    } u2;
+    union {
+	struct RNode *node;
+	ID id;
+	long state;
+	struct global_entry *entry;
+	long cnt;
+	VALUE value;
+    } u3;
+} NODE;
 
 typedef struct RVALUE {
     union {
@@ -35,11 +60,9 @@ typedef struct RVALUE {
 	struct RFile   file;
 	struct RNode   node;
 	struct RMatch  match;
+	struct RRational rational;
+	struct RComplex complex;
     } as;
-#ifdef GC_DEBUG
-    char *file;
-    int   line;
-#endif
 } RVALUE;
 
 static const size_t SLOT_SIZE = sizeof(RVALUE);

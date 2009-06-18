@@ -33,10 +33,11 @@ rescue Exception => e
     STDERR.puts "error message is: #{e.message}"
 end
 
+RUBY = RbConfig::CONFIG['RUBY_INSTALL_NAME']
 desc "builds Utilrb's C extension"
 task :setup do
     Dir.chdir("ext") do
-	if !system("ruby extconf.rb") || !system("make")
+	if !system("#{RUBY} extconf.rb") || !system("make")
 	    raise "cannot build the C extension"
 	end
     end

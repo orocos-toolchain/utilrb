@@ -52,6 +52,7 @@ Utilrb.require_ext('TC_WeakRef') do
 
         def test_finalized_objects
             refs, obj_id = create_deep_ref(100)
+            create_deep_ref(200) # erase the stack ...
             GC.start
             for ref in refs
                 assert_raises(WeakRef::RefError) { ref.get }
@@ -61,8 +62,14 @@ Utilrb.require_ext('TC_WeakRef') do
 
         def test_finalized_refs
             obj, ref_id = create_deep_obj(100)
+            create_deep_ref(100) # erase the stack ...
             GC.start
-            assert_raises(RangeError) { ObjectSpace._id2ref(ref_id) }
+            assert_raises(RangeError) do
+                ref = ObjectSpace._id2ref(ref_id)
+                if !ref.kind_of?(WeakRef)
+                    raise RangeError
+                end
+            end
         end
 
         def test_finalization_ordering_crash

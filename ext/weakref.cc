@@ -1,7 +1,11 @@
 #include <set>
 #include <map>
 #include <ruby.h>
+#ifdef RUBY_IS_19
+#include <ruby/intern.h>
+#else
 #include <intern.h>
+#endif
 
 using std::set;
 using std::map;
@@ -71,7 +75,6 @@ static VALUE do_object_finalize(VALUE mod, VALUE obj_id)
             ref.obj = Qundef;
             from_ref_id.erase(rb_obj_id(*it));
         }
-
         from_obj_id.erase(obj_id);
     }
     return Qnil;
