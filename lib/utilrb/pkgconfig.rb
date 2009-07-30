@@ -92,7 +92,8 @@ module Utilrb
 
         # Returns true if there is a package with this name
         def self.has_package?(name)
-            enum_for(:each_package, name).find { true }
+            `pkg-config --exists "#{name}"`
+	    $?.exitstatus == 0
         end
 
         # Yields the package names of available packages. If +regex+ is given,
