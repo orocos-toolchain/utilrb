@@ -15,19 +15,26 @@ require './lib/utilrb/common'
 
 begin
     require 'hoe'
-    config = Hoe.new('utilrb', Utilrb::VERSION) do |p|
-        p.developer("Sylvain Joyeux", "sylvain.joyeux@m4x.org")
-
-        p.summary = 'Yet another Ruby toolkit'
-        p.description = p.paragraphs_of('README.txt', 3..6).join("\n\n")
-        p.url         = p.paragraphs_of('README.txt', 0).first.split(/\n/)[1..-1]
-        p.changes     = p.paragraphs_of('History.txt', 0..1).join("\n\n")
-
-        p.extra_deps << ['facets', '>= 2.4.0'] << 'rake'
-    end
-    config.spec.extensions << 'ext/extconf.rb'
-rescue LoadError
+rescue LoadError => e
     STDERR.puts "cannot load the Hoe gem. Distribution is disabled"
+    STDERR.puts "error message is: #{e.message}"
+end
+
+begin
+    hoe_spec = Hoe.spec 'utilrb' do
+        developer "Sylvain Joyeux", "sylvain.joyeux@m4x.org"
+        extra_deps <<
+            ['facets', '>= 2.4.0'] <<
+            ['rake', '>= 0']
+
+        extra_dev_deps <<
+            ['flexmock', '>= 0.8.6']
+
+        self.summary = 'Yet another Ruby toolkit'
+        self.description = paragraphs_of('README.txt', 3..5).join("\n\n")
+    end
+    hoe_spec.spec.extensions << 'ext/extconf.rb'
+
 rescue Exception => e
     STDERR.puts "cannot load the Hoe gem, or Hoe fails. Distribution is disabled"
     STDERR.puts "error message is: #{e.message}"
