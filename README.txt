@@ -1,7 +1,9 @@
-Utilrb
-    http://utilrb.rubyforge.org
-    http://www.rubyforge.org/projects/utilrb
-    http://github.com/doudou/util-rb (git repository)
+= Utilrb
+http://utilrb.rubyforge.org
+http://www.rubyforge.org/projects/utilrb
+http://github.com/doudou/util-rb (git repository)
+
+== License
 
 Copyright (c) 2006-2008
     Sylvain Joyeux <sylvain.joyeux@m4x.org>
@@ -10,10 +12,12 @@ Copyright (c) 2006-2008
 This work is licensed under the BSD license. See License.txt for details
 
 == What is Utilrb ?
+
 Utilrb is yet another Ruby toolkit, in the spirit of facets. It includes all
-the standard class extensions I use in my own projects like Genom.rb.
+the standard class extensions I use in other projects.
 
 == Installation
+
 The only dependency Utilrb has is flexmock if you want to run tests. It is
 available as a gem, so you can run
 

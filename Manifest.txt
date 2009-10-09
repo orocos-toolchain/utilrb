@@ -69,6 +69,7 @@ lib/utilrb/value_set.rb
 lib/utilrb/weakref.rb
 patches/gc_live_objects.patch
 test/data/test_pkgconfig.pc
+test/data/test_pkgconfig_empty.pc
 test/test_array.rb
 test/test_config.rb
 test/test_dir.rb
