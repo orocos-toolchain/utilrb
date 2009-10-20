@@ -1,3 +1,14 @@
 <package>
-    <rosdep name="ruby" />
+  <description brief="Ruby toolkit">
+    This library is a collection of useful Ruby classes
+  </description>
+  <author>Sylvain Joyeux/sylvain.joyeux@m4x.org</author>
+  <copyright>
+      LAAS-CNRS/openrobots@laas.fr
+      DFKI/robotik@dfki.de
+      Sylvain Joyeux/sylvain.joyeux@m4x.org
+  </copyright>
+  <license>CeCILL-B (BSD-like)</license>
+
+  <rosdep name="ruby" />
 </package>
