@@ -92,8 +92,7 @@ module Utilrb
 
         # Returns true if there is a package with this name
         def self.has_package?(name)
-            `pkg-config --exists "#{name}"`
-	    $?.exitstatus == 0
+            system("pkg-config", "--exists", name)
         end
 
         # Yields the package names of available packages. If +regex+ is given,
