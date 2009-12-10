@@ -61,6 +61,10 @@ class Module
         else
             class_eval <<-EOF
             def each_#{name}
+	        if !block_given?
+	            return enum_for(:each_#{name})
+		end
+
 		for klass in ancestors
 		    if klass.instance_variable_defined?(:@#{attribute_name})
 			klass.#{attribute_name}.#{options[:enum_with]} { |el| yield(el) }
