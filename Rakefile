@@ -51,6 +51,16 @@ task :setup do
     FileUtils.ln_sf "../ext/utilrb_ext.so", "lib/utilrb_ext.so"
 end
 
+Rake.clear_tasks(/publish_docs/)
+task 'publish_docs' => 'redocs' do
+    if !system('./update_github')
+        raise "cannot update the gh-pages branch for GitHub"
+    end
+    if !system('git', 'push', 'github', '+gh-pages')
+        raise "cannot push the documentation"
+    end
+end
+
 task :clean do
     puts "Cleaning extension in ext/"
     FileUtils.rm_f "lib/utilrb_ext.so"
