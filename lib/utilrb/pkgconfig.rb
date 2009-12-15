@@ -98,7 +98,12 @@ module Utilrb
         # Yields the package names of available packages. If +regex+ is given,
         # lists only the names that match the regular expression.
         def self.each_package(regex = nil)
-            `pkg-config --list-all`.chomp.split.
+            result = `pkg-config --list-all`
+            if !$? || $?.exitstatus > 0
+                raise RuntimeError, "pkg-config --list-all failed (returned $?.exitstatus), probably due to errors in installed pkg-config files"
+            end
+
+            result.chomp.split.
                 each do |line|
                     line =~ /^([^\s]+)/
                     name = $1
