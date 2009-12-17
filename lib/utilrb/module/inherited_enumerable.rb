@@ -49,6 +49,12 @@ class Module
 		end
                 self
             end
+            def find_#{name}(key)
+                each_#{name}(key, true) do |value|
+                    return value
+                end
+                nil
+            end
             def has_#{name}?(key)
 		for klass in ancestors
 		    if klass.instance_variable_defined?(:@#{attribute_name})
