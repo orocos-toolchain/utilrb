@@ -27,7 +27,9 @@ module Kernel
         end
         if block_given?
             sandbox.singleton_class.class_eval do
-                define_method(:const_missing, &block)
+                define_method(:const_missing) do |const_name|
+                    yield(const_name, @current_context)
+                end
             end
         end
                 
