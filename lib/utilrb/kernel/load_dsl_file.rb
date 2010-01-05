@@ -18,6 +18,12 @@ module Kernel
                 def method_missing(*args, &block)
                     main_object.send(*args, &block)
                 end
+                def within(object, &block)
+                    @current_context = object
+                    object.class_eval(&block)
+                ensure
+                    @current_context = nil
+                end
             end
         end
 
