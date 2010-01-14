@@ -6,6 +6,10 @@ module Kernel
     # The caller of this method should call it at the end of its definition
     # file, or the translation method may not be robust at all
     def load_dsl_file_eval(file, proxied_object, context, full_backtrace, *exceptions, &block)
+        if $LOADED_FEATURES.include?(file)
+            return false
+        end
+
         loaded_file = file.gsub(/^#{Regexp.quote(Dir.pwd)}\//, '')
         our_frame_pos = caller.size
 
@@ -40,6 +44,8 @@ module Kernel
         end
                 
         sandbox.class_eval(File.read(file))
+        $LOADED_FEATURES << file
+        true
 
     rescue Exception => e
         if exceptions.any? { |e_class| e.kind_of?(e_class) }
