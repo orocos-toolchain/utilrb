@@ -1,21 +1,5 @@
 module Kernel
-    # Load the given file by eval-ing it in the provided binding. The
-    # originality of this method is to translate errors that are detected in the
-    # eval'ed code into 
-    #
-    # The caller of this method should call it at the end of its definition
-    # file, or the translation method may not be robust at all
-    def load_dsl_file_eval(file, proxied_object, context, full_backtrace, *exceptions, &block)
-        if $LOADED_FEATURES.include?(file)
-            return false
-        end
-
-        loaded_file = file.gsub(/^#{Regexp.quote(Dir.pwd)}\//, '')
-        our_frame_pos = caller.size
-
-        if !File.readable?(file)
-            raise ArgumentError, "#{file} does not exist"
-        end
+    def create_sandbox(proxied_object, context, &block)
         sandbox = Class.new do
             class << self
                 attr_reader :main_object
@@ -43,9 +27,13 @@ module Kernel
             end
         end
                 
-        sandbox.class_eval(File.read(file))
-        $LOADED_FEATURES << file
-        true
+        sandbox
+    end
+
+    def load_dsl_filter_backtrace(file, full_backtrace = false, *exceptions)
+        our_frame_pos = caller.size
+
+        yield
 
     rescue Exception => e
         if exceptions.any? { |e_class| e.kind_of?(e_class) }
@@ -87,13 +75,13 @@ module Kernel
                     line_prefix  = $1
                     line_number  = $2
                     line_message = $3
-                    if line_message =~ /load_dsl_file_eval/
+                    if line_message =~ /_dsl_/
                         line_message = ""
                     end
 
                     "#{line_prefix}#{file}:#{line_number}#{line_message}"
                 else
-                    if line =~ /load_dsl_file_eval/
+                    if line =~ /load_dsl_file\.rb:\d+:in/
                         next
                     else
                         next(line) 
@@ -104,6 +92,37 @@ module Kernel
 
         backtrace = (filtered_backtrace + backtrace[(backtrace.size - our_frame_pos)..-1])
         raise e, message, backtrace
+    end
+
+    def eval_dsl_block(block, proxied_object, context, full_backtrace, *exceptions, &setup_block)
+        sandbox     = create_sandbox(proxied_object, context, &setup_block)
+        load_dsl_filter_backtrace(nil, full_backtrace, *exceptions) do
+            sandbox.class_eval(&block)
+            true
+        end
+    end
+
+    # Load the given file by eval-ing it in the provided binding. The
+    # originality of this method is to translate errors that are detected in the
+    # eval'ed code into 
+    #
+    # The caller of this method should call it at the end of its definition
+    # file, or the translation method may not be robust at all
+    def eval_dsl_file(file, proxied_object, context, full_backtrace, *exceptions, &block)
+        if $LOADED_FEATURES.include?(file)
+            return false
+        elsif !File.readable?(file)
+            raise ArgumentError, "#{file} does not exist"
+        end
+
+        loaded_file = file.gsub(/^#{Regexp.quote(Dir.pwd)}\//, '')
+        sandbox     = create_sandbox(proxied_object, context, &block)
+
+        load_dsl_filter_backtrace(file, full_backtrace, *exceptions) do
+            sandbox.class_eval(File.read(file))
+            $LOADED_FEATURES << file
+            true
+        end
     end
 
     # Load the given file by eval-ing it in the provided binding. The
