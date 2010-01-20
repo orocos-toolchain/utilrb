@@ -90,9 +90,22 @@ module Utilrb
 	    end
 	end
 
+        def self.each_pkgconfig_directory(&block)
+            if path = ENV['PKG_CONFIG_PATH']
+                path.split(':').each(&block)
+            end
+            yield('/usr/local/lib/pkgconfig')
+            yield('/usr/lib/pkgconfig')
+        end
+
         # Returns true if there is a package with this name
         def self.has_package?(name)
-            system("pkg-config", "--exists", name)
+            each_pkgconfig_directory do |dir|
+                if File.exists?(File.join(dir, "#{name}.pc"))
+                    return true
+                end
+            end
+            false
         end
 
         # Yields the package names of available packages. If +regex+ is given,
