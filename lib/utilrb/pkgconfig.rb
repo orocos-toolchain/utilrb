@@ -113,7 +113,7 @@ module Utilrb
         def self.each_package(regex = nil)
             each_pkgconfig_directory do |dir|
                 Dir.glob(File.join(dir, '*.pc')) do |file|
-                    file = File.basename(file)
+                    file = File.basename(file, ".pc")
                     if regex && file !~ regex
                         next
                     end
