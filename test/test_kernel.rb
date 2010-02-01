@@ -1,8 +1,12 @@
 require 'test_config'
+require 'flexmock'
+require 'tempfile'
 
 require 'utilrb/kernel/options'
 require 'utilrb/kernel/arity'
 require 'utilrb/kernel/swap'
+require 'utilrb/kernel/with_module'
+require 'utilrb/kernel/load_dsl_file'
 
 class TC_Kernel < Test::Unit::TestCase
     def test_validate_options
@@ -43,6 +47,64 @@ class TC_Kernel < Test::Unit::TestCase
 	assert_nothing_raised { check_arity(object.method(:arity_1_more), 1) }
 	assert_raises(ArgumentError) { check_arity(object.method(:arity_1_more), 0) }
 	assert_nothing_raised { check_arity(object.method(:arity_1_more), 2) }
+    end
+
+    def test_with_module
+        obj = Object.new
+        c = nil
+        mod = Module.new do
+            const_set(:Const, c = Object.new)
+        end
+
+        eval_string = "Const"
+        const_val = obj.with_module(mod, eval_string)
+        assert_equal(c, const_val)
+
+        const_val = obj.with_module(mod) do
+            Const
+        end
+        assert_equal(c, const_val)
+
+        assert_raises(NameError) { Const  }
+    end
+
+    def test_eval_dsl_file
+        mod = Module.new do
+            const_set(:KnownConstant, 10)
+        end
+
+        obj = Class.new do
+            def real_method
+                @real_method_called = true
+            end
+        end.new
+
+        Tempfile.open('test_eval_dsl_file') do |io|
+            io.puts <<-EOD
+            real_method
+            if KnownConstant != 10
+                raise ArgumentError, "invalid constant value"
+            end
+            unknown_method
+            EOD
+            io.flush
+
+            begin
+                eval_dsl_file(io.path, obj, [], false)
+                flunk("did not raise NameError for KnownConstant")
+            rescue NameError => e
+                assert e.message =~ /KnownConstant/
+                assert e.backtrace.first =~ /#{io.path}:2/
+            end
+
+            begin
+                eval_dsl_file(io.path, obj, [mod], false)
+                flunk("did not raise NoMethodError for unknown_method")
+            rescue NoMethodError => e
+                assert e.message =~ /unknown_method/
+                assert e.backtrace.first =~ /#{io.path}:5/
+            end
+        end
     end
 
     Utilrb.require_ext('is_singleton?') do
