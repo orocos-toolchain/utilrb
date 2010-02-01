@@ -1,4 +1,5 @@
-if RUBY_IS_19
+require 'utilrb/common'
+if Utilrb::RUBY_IS_19
 module Kernel
     def with_module(*consts, &blk)
         slf = blk.binding.eval('self')

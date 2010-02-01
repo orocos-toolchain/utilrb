@@ -1,3 +1,4 @@
+require 'utilrb/common'
 require 'utilrb/kernel/with_module'
 class Object
     if Utilrb::RUBY_IS_19
