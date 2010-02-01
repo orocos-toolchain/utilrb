@@ -3,6 +3,7 @@ require 'test_config'
 require 'utilrb/kernel/options'
 require 'utilrb/kernel/arity'
 require 'utilrb/kernel/swap'
+require 'utilrb/kernel/load_dsl_file'
 
 class TC_Kernel < Test::Unit::TestCase
     def test_validate_options
@@ -43,6 +44,17 @@ class TC_Kernel < Test::Unit::TestCase
 	assert_nothing_raised { check_arity(object.method(:arity_1_more), 1) }
 	assert_raises(ArgumentError) { check_arity(object.method(:arity_1_more), 0) }
 	assert_nothing_raised { check_arity(object.method(:arity_1_more), 2) }
+    end
+
+    def test_create_sandbox
+        obj = Object.new
+        mod = Module.new
+
+        nesting = obj.with_module(mod) do |const_name, current_context|
+            Module.nesting
+        end
+
+        assert(nesting.include?(mod), "the required module is not included in Module.nesting")
     end
 
     Utilrb.require_ext('is_singleton?') do

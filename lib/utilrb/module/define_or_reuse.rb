@@ -13,7 +13,9 @@ class Module
             if const_defined?(name, false)
                 const_get(name)
             else
-                const_set(name, (value || yield))
+                module_eval do
+                    const_set(name, (value || yield))
+                end
             end
         end
     else
@@ -21,7 +23,9 @@ class Module
             if const_defined?(name)
                 const_get(name)
             else
-                const_set(name, (value || yield))
+                module_eval do
+                    const_set(name, (value || yield))
+                end
             end
         end
     end
