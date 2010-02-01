@@ -6,7 +6,7 @@ end
 
 module Kernel
     def load_dsl_filter_backtrace(file, full_backtrace = false, *exceptions)
-        our_frame_pos = caller.size
+        our_frame_pos = caller.size - 1
 
         yield
 
