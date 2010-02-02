@@ -31,12 +31,15 @@ module Kernel
             end
         end.compact.join("\n")
 
+
         if message.empty?
             message = backtrace.shift
             if message =~ /^(\s*[^\s]+:\d+:)\s*(.*)/
                 location = $1
                 message  = $2
                 backtrace.unshift location
+            else
+                backtrace.unshift message
             end
         end
 
@@ -54,35 +57,38 @@ module Kernel
                         line_message = ""
                     end
 
-                    "#{line_prefix}#{file}:#{line_number}#{line_message}"
+                    result = "#{line_prefix}#{file}:#{line_number}#{line_message}"
                 else
                     if line =~ /(load_dsl_file\.rb|with_module\.rb):\d+:/
                         next
                     else
-                        next(line) 
+                        result = line
                     end
                 end
+                result
 
             end.compact
 
-        backtrace = (filtered_backtrace + backtrace[(backtrace.size - our_frame_pos)..-1])
+
+        backtrace = (filtered_backtrace[0, 1] + filtered_backtrace + backtrace[(backtrace.size - our_frame_pos)..-1])
         raise e, message, backtrace
     end
 
     def eval_dsl_block(block, proxied_object, context, full_backtrace, *exceptions)
-        sandbox = Class.new do
-            class << self
-                attr_reader :main_object
-            end
+        # sandbox = Class.new do
+        #     attr_reader :main_object
 
-            def self.method_missing(*m, &block)
-                main_object.send(*m, &block)
-            end
-        end
-        sandbox.instance_variable_set(:@main_object, proxied_object)
+        #     def method_missing(*m, &block)
+        #         main_object.send(*m, &block)
+        #     end
+        #     def initialize(main_object)
+        #         @main_object = main_object
+        #     end
+        # end
+        # sandbox = sandbox.new(proxied_object)
 
         load_dsl_filter_backtrace(nil, full_backtrace, *exceptions) do
-            sandbox.with_module(*context, &block)
+            proxied_object.with_module(*context, &block)
             true
         end
     end

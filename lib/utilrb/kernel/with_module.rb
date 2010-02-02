@@ -2,9 +2,11 @@ require 'utilrb/common'
 module Kernel
     if Utilrb::RUBY_IS_19
     def with_module(*consts, &blk)
-        slf = blk.binding.eval('self')
+        slf = self
+
         l = if !block_given? && consts.last.respond_to?(:to_str)
-                lambda { slf.instance_eval(consts.pop) }
+                eval_string = consts.pop
+                lambda { slf.instance_eval(eval_string) }
             else
                 lambda { slf.instance_eval(&blk) }
             end
