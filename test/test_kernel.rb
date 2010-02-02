@@ -51,19 +51,24 @@ class TC_Kernel < Test::Unit::TestCase
 
     def test_with_module
         obj = Object.new
-        c = nil
-        mod = Module.new do
-            const_set(:Const, c = Object.new)
+        c0, c1 = nil
+        mod0 = Module.new do
+            const_set(:Const, c0 = Object.new)
+        end
+        mod1 = Module.new do
+            const_set(:Const, c1 = Object.new)
         end
 
         eval_string = "Const"
-        const_val = obj.with_module(mod, eval_string)
-        assert_equal(c, const_val)
+        const_val = obj.with_module(mod0, mod1, eval_string)
+        assert_equal(c0, const_val)
+        const_val = obj.with_module(mod1, mod0, eval_string)
+        assert_equal(c1, const_val)
 
-        const_val = obj.with_module(mod) do
-            Const
-        end
-        assert_equal(c, const_val)
+        const_val = obj.with_module(mod0, mod1) { Const }
+        assert_equal(c0, const_val)
+        const_val = obj.with_module(mod1, mod0) { Const }
+        assert_equal(c1, const_val)
 
         assert_raises(NameError) { Const  }
     end
