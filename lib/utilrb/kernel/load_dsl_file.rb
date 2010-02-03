@@ -75,18 +75,6 @@ module Kernel
     end
 
     def eval_dsl_block(block, proxied_object, context, full_backtrace, *exceptions)
-        # sandbox = Class.new do
-        #     attr_reader :main_object
-
-        #     def method_missing(*m, &block)
-        #         main_object.send(*m, &block)
-        #     end
-        #     def initialize(main_object)
-        #         @main_object = main_object
-        #     end
-        # end
-        # sandbox = sandbox.new(proxied_object)
-
         load_dsl_filter_backtrace(nil, full_backtrace, *exceptions) do
             proxied_object.with_module(*context, &block)
             true
@@ -106,22 +94,31 @@ module Kernel
             raise ArgumentError, "#{file} does not exist"
         end
 
-        sandbox = Class.new do
-            class << self
-                attr_reader :main_object
-            end
-
-            def self.method_missing(*m, &block)
-                main_object.send(*m, &block)
-            end
-        end
-        sandbox.instance_variable_set(:@main_object, proxied_object)
-
         loaded_file = file.gsub(/^#{Regexp.quote(Dir.pwd)}\//, '')
         load_dsl_filter_backtrace(file, full_backtrace, *exceptions) do
-            args = context.dup
-            args << File.read(file)
-            sandbox.with_module(*args)
+            file_content = File.read(file)
+            sandbox = with_module(*context) do
+                Class.new do
+                    attr_reader :main_object
+                    def initialize(main_object)
+                        @main_object = main_object
+                    end
+
+                    def method_missing(*m, &block)
+                        main_object.send(*m, &block)
+                    end
+
+                    class_eval <<-EOD
+                    def __dsl_content; #{file_content}
+                    end
+                    EOD
+                end
+            end
+            sandbox = sandbox.new(proxied_object)
+
+            sandbox.with_module(*context) do
+                __dsl_content
+            end
             $LOADED_FEATURES << file
             true
         end

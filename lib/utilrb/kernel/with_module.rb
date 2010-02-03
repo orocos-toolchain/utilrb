@@ -11,7 +11,7 @@ module Kernel
                 lambda { slf.instance_eval(&blk) }
             end
 
-        consts.reverse.inject(l) {|l, k| lambda { k.class_eval(&l) } }.call
+        consts.inject(l) {|l, k| lambda { k.class_eval(&l) } }.call
     end
     else
     module WithModuleConstResolutionExtension

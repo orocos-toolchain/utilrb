@@ -73,7 +73,7 @@ class TC_Kernel < Test::Unit::TestCase
         assert_raises(NameError) { Const  }
     end
 
-    def test_eval_dsl_file
+    def test_evaldsl_file
         mod = Module.new do
             const_set(:KnownConstant, 10)
         end
@@ -98,8 +98,8 @@ class TC_Kernel < Test::Unit::TestCase
                 eval_dsl_file(io.path, obj, [], false)
                 flunk("did not raise NameError for KnownConstant")
             rescue NameError => e
-                assert e.message =~ /KnownConstant/
-                assert e.backtrace.first =~ /#{io.path}:2/
+                assert e.message =~ /KnownConstant/, e.message
+                assert e.backtrace.first =~ /#{io.path}:2/, "wrong backtrace: #{e.backtrace.join("\n")}"
             end
 
             begin
@@ -107,7 +107,7 @@ class TC_Kernel < Test::Unit::TestCase
                 flunk("did not raise NoMethodError for unknown_method")
             rescue NoMethodError => e
                 assert e.message =~ /unknown_method/
-                assert e.backtrace.first =~ /#{io.path}:5/
+                assert e.backtrace.first =~ /#{io.path}:5/, "wrong backtrace: #{e.backtrace.join("\n")}"
             end
         end
     end
