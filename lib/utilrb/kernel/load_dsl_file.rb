@@ -1,8 +1,6 @@
 require 'utilrb/common'
-if Utilrb::RUBY_IS_19
-    require 'utilrb/object/singleton_class'
-    require 'utilrb/kernel/with_module'
-end
+require 'utilrb/object/singleton_class'
+require 'utilrb/kernel/with_module'
 
 module Kernel
     def load_dsl_filter_backtrace(file, full_backtrace = false, *exceptions)
