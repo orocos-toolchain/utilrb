@@ -73,12 +73,20 @@ class TC_Kernel < Test::Unit::TestCase
         assert_raises(NameError) { Const  }
     end
 
-    def test_evaldsl_file
-        mod = Module.new do
-            const_set(:KnownConstant, 10)
+    module Mod
+        module Submod
+            class Klass
+            end
         end
 
+        const_set(:KnownConstant, 10)
+    end
+
+    def test_evaldsl_file
         obj = Class.new do
+            def real_method_called?; !!@real_method_called end
+            def name(value)
+            end
             def real_method
                 @real_method_called = true
             end
@@ -90,24 +98,59 @@ class TC_Kernel < Test::Unit::TestCase
             if KnownConstant != 10
                 raise ArgumentError, "invalid constant value"
             end
+            class Submod::Klass
+                def my_method
+                end
+            end
+            name('test')
             unknown_method
             EOD
             io.flush
 
             begin
                 eval_dsl_file(io.path, obj, [], false)
+                assert(obj.real_method_called?, "the block has not been evaluated")
                 flunk("did not raise NameError for KnownConstant")
             rescue NameError => e
                 assert e.message =~ /KnownConstant/, e.message
-                assert e.backtrace.first =~ /#{io.path}:2/, "wrong backtrace: #{e.backtrace.join("\n")}"
+                assert e.backtrace.first =~ /#{io.path}:2/, "wrong backtrace when checking constant resolution: #{e.backtrace.join("\n")}"
             end
 
             begin
-                eval_dsl_file(io.path, obj, [mod], false)
+                eval_dsl_file(io.path, obj, [Mod], false)
                 flunk("did not raise NoMethodError for unknown_method")
             rescue NoMethodError => e
                 assert e.message =~ /unknown_method/
-                assert e.backtrace.first =~ /#{io.path}:5/, "wrong backtrace: #{e.backtrace.join("\n")}"
+                assert e.backtrace.first =~ /#{io.path}:10/, "wrong backtrace when checking method resolution: #{e.backtrace.join("\n")}"
+            end
+
+            # instance_methods returns strings on 1.8 and symbols on 1.9. Conver
+            # to strings to have the right assertion on both
+            methods = Mod::Submod::Klass.instance_methods(false).map(&:to_s)
+            assert(methods.include?('my_method'), "the 'class K' statement did not refer to the already defined class")
+        end
+    end
+
+    def test_eval_dsl_file_does_not_allow_class_definition
+        obj = Class.new do
+            def real_method
+                @real_method_called = true
+            end
+        end.new
+
+        Tempfile.open('test_eval_dsl_file') do |io|
+            io.puts <<-EOD
+            class NewClass
+            end
+            EOD
+            io.flush
+
+            begin
+                eval_dsl_file(io.path, obj, [], false)
+                flunk("NewClass has been defined")
+            rescue NameError => e
+                assert e.message =~ /NewClass/, e.message
+                assert e.backtrace.first =~ /#{io.path}:1/, "wrong backtrace when checking constant definition detection: #{e.backtrace.join("\n")}"
             end
         end
     end

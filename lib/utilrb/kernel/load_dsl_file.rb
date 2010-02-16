@@ -49,7 +49,7 @@ module Kernel
 
                 if line =~ /^(.*)\(eval\):(\d+)(:.*)?/
                     line_prefix  = $1
-                    line_number  = $2
+                    line_number  = Integer($2) - 1
                     line_message = $3
                     if line_message =~ /_dsl_/ || line_message =~ /with_module/
                         line_message = ""
@@ -93,29 +93,49 @@ module Kernel
         loaded_file = file.gsub(/^#{Regexp.quote(Dir.pwd)}\//, '')
         load_dsl_filter_backtrace(file, full_backtrace, *exceptions) do
             file_content = File.read(file)
-            sandbox = with_module(*context) do
-                Class.new do
-                    attr_reader :main_object
-                    def initialize(main_object)
-                        @main_object = main_object
-                    end
-
+            sandbox, code = with_module(*context) do
+                k = Class.new do
+                    attr_accessor :main_object
+                    def initialize(obj); @main_object = obj end
                     def method_missing(*m, &block)
                         main_object.send(*m, &block)
                     end
-
-                    class_eval <<-EOD
-                    def __dsl_content; #{file_content}
-                    end
-                    EOD
                 end
-            end
-            sandbox = sandbox.new(proxied_object)
 
-            sandbox.with_module(*context) do
-                __dsl_content
+                p = eval <<-EOD
+                Proc.new do
+                    #{file_content}
+                end
+                EOD
+                [k, p]
             end
-            $LOADED_FEATURES << file
+
+            old_constants, new_constants = nil
+            if !Utilrb::RUBY_IS_19
+                old_constants = Kernel.constants
+            end
+
+            sandbox = sandbox.new(proxied_object)
+            sandbox.with_module(*context) do
+                old_constants = singleton_class.constants
+                instance_eval(&code)
+                new_constants = singleton_class.constants
+            end
+
+            # Check if the user defined new constants by using class K and/or
+            # mod Mod
+            if !Utilrb::RUBY_IS_19
+                new_constants = Kernel.constants
+            end
+
+            new_constants -= old_constants
+            if !new_constants.empty?
+                file_lines = file_content.split("\n").each_with_index.to_a
+                error = new_constants.map do |name|
+                    file_lines.find { |text, idx| text =~ /#{name}/ }
+                end.sort_by { |_, idx| idx }.first
+                raise NameError, "#{error[0]} does not exist. You cannot define new constants in this context", ["#{file}:#{error[1] + 1}", *caller]
+            end
             true
         end
     end

@@ -30,9 +30,10 @@ module Kernel
     end
 
     def with_module(*consts, &block)
-        Object.extend WithModuleConstResolutionExtension
         Thread.current[:__with_module__] ||= Array.new
         Thread.current[:__with_module__].push consts
+        Kernel.send(:extend, WithModuleConstResolutionExtension)
+        Object.extend WithModuleConstResolutionExtension
 
         eval_string =
             if !block_given? && consts.last.respond_to?(:to_str)
