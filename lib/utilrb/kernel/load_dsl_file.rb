@@ -91,52 +91,21 @@ module Kernel
         end
 
         loaded_file = file.gsub(/^#{Regexp.quote(Dir.pwd)}\//, '')
-        load_dsl_filter_backtrace(file, full_backtrace, *exceptions) do
-            file_content = File.read(file)
-            sandbox, code = with_module(*context) do
-                k = Class.new do
-                    attr_accessor :main_object
-                    def initialize(obj); @main_object = obj end
-                    def method_missing(*m, &block)
-                        main_object.send(*m, &block)
-                    end
-                end
-
-                p = eval <<-EOD
-                Proc.new do
-                    #{file_content}
-                end
-                EOD
-                [k, p]
+        file_content = File.read(file)
+        code = with_module(*context) do
+            eval <<-EOD
+            Proc.new do
+                #{file_content}
             end
+            EOD
+        end
 
-            old_constants, new_constants = nil
-            if !Utilrb::RUBY_IS_19
-                old_constants = Kernel.constants
-            end
-
-            sandbox = sandbox.new(proxied_object)
-            sandbox.with_module(*context) do
-                old_constants = singleton_class.constants
-                instance_eval(&code)
-                new_constants = singleton_class.constants
-            end
-
-            # Check if the user defined new constants by using class K and/or
-            # mod Mod
-            if !Utilrb::RUBY_IS_19
-                new_constants = Kernel.constants
-            end
-
-            new_constants -= old_constants
-            if !new_constants.empty?
-                file_lines = file_content.split("\n").each_with_index.to_a
-                error = new_constants.map do |name|
-                    file_lines.find { |text, idx| text =~ /#{name}/ }
-                end.compact.sort_by { |_, idx| idx }.first
-                raise NameError, "#{error[0]} does not exist. You cannot define new constants in this context", ["#{file}:#{error[1] + 1}", *caller]
-            end
-            true
+        begin
+            dsl_exec(proxied_object, context, full_backtrace, *exceptions, &code)
+        rescue NameError => e
+            file_lines = file_content.split("\n").each_with_index.to_a
+            error = file_lines.find { |text, idx| text =~ /#{e.name}/ }
+            raise e, e.message, ["#{file}:#{error[1] + 1}", *caller]
         end
     end
 
@@ -154,7 +123,7 @@ module Kernel
     def dsl_exec(proxied_object, context, full_backtrace, *exceptions, &code)
         load_dsl_filter_backtrace("", full_backtrace, *exceptions) do
             sandbox = with_module(*context) do
-                k = Class.new do
+                Class.new do
                     attr_accessor :main_object
                     def initialize(obj); @main_object = obj end
                     def method_missing(*m, &block)
@@ -182,12 +151,10 @@ module Kernel
             end
 
             new_constants -= old_constants
+            new_constants.delete_if { |n| n.to_s == 'WithModuleConstResolutionExtension' }
             if !new_constants.empty?
-                file_lines = file_content.split("\n").each_with_index.to_a
-                error = new_constants.map do |name|
-                    file_lines.find { |text, idx| text =~ /#{name}/ }
-                end.sort_by { |_, idx| idx }.first
-                raise NameError, "#{error[0]} does not exist. You cannot define new constants in this context", ["#{file}:#{error[1] + 1}", *caller]
+                msg = "#{new_constants.first} does not exist. You cannot define new constants in this context"
+                raise NameError.new(msg, new_constants.first)
             end
             true
         end
