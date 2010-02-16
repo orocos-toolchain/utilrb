@@ -133,7 +133,7 @@ module Kernel
                 file_lines = file_content.split("\n").each_with_index.to_a
                 error = new_constants.map do |name|
                     file_lines.find { |text, idx| text =~ /#{name}/ }
-                end.sort_by { |_, idx| idx }.first
+                end.compact.sort_by { |_, idx| idx }.first
                 raise NameError, "#{error[0]} does not exist. You cannot define new constants in this context", ["#{file}:#{error[1] + 1}", *caller]
             end
             true
