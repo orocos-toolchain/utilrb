@@ -47,7 +47,7 @@ module Kernel
                     next
                 end
 
-                if line =~ /^(.*)\(eval\):(\d+)(:.*)?/
+                if file && line =~ /^(.*)\(eval\):(\d+)(:.*)?/
                     line_prefix  = $1
                     line_number  = Integer($2) - 1
                     line_message = $3
@@ -101,7 +101,7 @@ module Kernel
         end
 
         begin
-            dsl_exec(proxied_object, context, full_backtrace, *exceptions, &code)
+            dsl_exec_common(file, proxied_object, context, full_backtrace, *exceptions, &code)
         rescue NameError => e
             file_lines = file_content.split("\n").each_with_index.to_a
             error = file_lines.find { |text, idx| text =~ /#{e.name}/ }
@@ -121,7 +121,11 @@ module Kernel
     end
 
     def dsl_exec(proxied_object, context, full_backtrace, *exceptions, &code)
-        load_dsl_filter_backtrace("", full_backtrace, *exceptions) do
+        dsl_exec_common(nil, proxied_object, context, full_backtrace, *exceptions, &code)
+    end
+
+    def dsl_exec_common(file, proxied_object, context, full_backtrace, *exceptions, &code)
+        load_dsl_filter_backtrace(file, full_backtrace, *exceptions) do
             sandbox = with_module(*context) do
                 Class.new do
                     attr_accessor :main_object
