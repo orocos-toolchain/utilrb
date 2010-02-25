@@ -105,7 +105,11 @@ module Kernel
         rescue NameError => e
             file_lines = file_content.split("\n").each_with_index.to_a
             error = file_lines.find { |text, idx| text =~ /#{e.name}/ }
-            raise e, e.message, ["#{file}:#{error[1] + 1}", *caller]
+            if error
+                raise e, e.message, ["#{file}:#{error[1] + 1}", *caller]
+            else
+                raise e
+            end
         end
     end
 
