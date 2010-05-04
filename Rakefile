@@ -40,6 +40,9 @@ rescue Exception => e
     STDERR.puts "error message is: #{e.message}"
 end
 
+Rake.clear_tasks(/^default$/)
+task :default => :setup
+
 RUBY = RbConfig::CONFIG['RUBY_INSTALL_NAME']
 desc "builds Utilrb's C extension"
 task :setup do
