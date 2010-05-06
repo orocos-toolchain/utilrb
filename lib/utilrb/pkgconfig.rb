@@ -49,7 +49,7 @@ module Utilrb
 	# Create a PkgConfig object for the package +name+
 	# Raises PkgConfig::NotFound if the module does not exist
 	def initialize(name)
-	    if !system("pkg-config --exists #{name}")
+            if !PkgConfig.has_package?(name)
 		raise NotFound.new(name), "#{name} is not available to pkg-config"
 	    end
 	    
