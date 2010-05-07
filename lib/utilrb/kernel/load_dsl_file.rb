@@ -3,17 +3,41 @@ require 'utilrb/object/singleton_class'
 require 'utilrb/kernel/with_module'
 
 module Kernel
+    def self.backtrace_remove_first_occurence_of(e, rx)
+        # Remove the first occurence of eval_dsl_file_content in the backtrace
+        backtrace = e.backtrace.dup
+        found = false
+        backtrace.delete_if do |line|
+            break if found
+            line =~ rx
+            found = true
+        end
+        raise e, e.message, e.backtrace
+    end
+
     def load_dsl_filter_backtrace(file, full_backtrace = false, *exceptions)
-        our_frame_pos = caller.size - 1
+        # Compute the position of the dsl-loading method that called us, so that
+        # we don't touch anything below that while we are filtering the
+        # backtrace
+        if !full_backtrace
+            callers = caller
+            our_frame_pos = caller.size
+            callers.each do |line|
+                if line != /load_dsl_file\.rb/
+                    our_frame_pos -= 1
+                else
+                    break
+                end
+            end
+        end
 
         yield
 
     rescue Exception => e
+        raise e if full_backtrace
         if exceptions.any? { |e_class| e.kind_of?(e_class) }
             raise e
         end
-
-        raise e if full_backtrace
 
         backtrace = e.backtrace.dup
         message   = e.message.dup
