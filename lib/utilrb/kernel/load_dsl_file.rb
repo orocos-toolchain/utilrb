@@ -105,11 +105,10 @@ module Kernel
 
     def eval_dsl_file_content(file, file_content, proxied_object, context, full_backtrace, *exceptions, &block)
         code = with_module(*context) do
-            eval <<-EOD
-            Proc.new do
-                #{file_content}
-            end
+            code =  <<-EOD
+            Proc.new { #{file_content} }
             EOD
+            eval code, binding, file, 0
         end
 
         begin
