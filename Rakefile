@@ -21,7 +21,7 @@ begin
     Rake.clear_tasks(/publish_docs/)
 
 rescue Exception => e
-    if !e.message =~ /\.rubyforge/
+    if e.message !~ /\.rubyforge/
         STDERR.puts "cannot load the Hoe gem, or Hoe fails. Distribution is disabled"
         STDERR.puts "error message is: #{e.message}"
     end
