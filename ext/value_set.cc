@@ -166,6 +166,26 @@ static VALUE value_set_merge(VALUE vself, VALUE vother)
 }
 
 /* call-seq:
+ *   set.intersection!(other)	=> set
+ *
+ * Computes the intersection of +set+ and +other+, and modifies +self+ to be
+ * that interesection. This operation is O(N + M) if +other+ is a ValueSet
+ */
+static VALUE value_set_intersection_bang(VALUE vself, VALUE vother)
+{
+    ValueSet& self  = get_wrapped_set(vself);
+    if (!RTEST(rb_obj_is_kind_of(vother, cValueSet)))
+	rb_raise(rb_eArgError, "expected a ValueSet");
+    ValueSet const& other = get_wrapped_set(vother);
+    
+    ValueSet result;
+    std::set_intersection(self.begin(), self.end(), other.begin(), other.end(), 
+	    std::inserter(result, result.end()));
+    self.swap(result);
+    return vself;
+}
+
+/* call-seq:
  *   set.intersection(other)	=> intersection_set
  *   set & other		=> intersection_set
  *
@@ -217,11 +237,31 @@ static VALUE value_set_intersects(VALUE vself, VALUE vother)
 }
 
 /* call-seq:
+ *   set.difference!(other)	=> set
+ *
+ * Modifies +set+ so that it is the set of all elements of +set+ not in +other+.
+ * This operation is O(N + M).
+ */
+static VALUE value_set_difference_bang(VALUE vself, VALUE vother)
+{
+    ValueSet& self  = get_wrapped_set(vself);
+    if (!RTEST(rb_obj_is_kind_of(vother, cValueSet)))
+	rb_raise(rb_eArgError, "expected a ValueSet");
+    ValueSet const& other = get_wrapped_set(vother);
+    
+    ValueSet result;
+    std::set_difference(self.begin(), self.end(), other.begin(), other.end(), 
+	    std::inserter(result, result.end()));
+    self.swap(result);
+    return vself;
+}
+
+/* call-seq:
  *   set.difference(other)	=> difference_set
  *   set - other		=> difference_set
  *
  * Computes the set of all elements of +set+ not in +other+. This operation
- * is O(N + M) if +other+ is a ValueSet
+ * is O(N + M).
  */
 static VALUE value_set_difference(VALUE vself, VALUE vother)
 {
@@ -371,8 +411,10 @@ extern "C" void Init_value_set()
     rb_define_method(cValueSet, "include_all?", RUBY_METHOD_FUNC(value_set_include_all_p), 1);
     rb_define_method(cValueSet, "union", RUBY_METHOD_FUNC(value_set_union), 1);
     rb_define_method(cValueSet, "intersection", RUBY_METHOD_FUNC(value_set_intersection), 1);
+    rb_define_method(cValueSet, "intersection!", RUBY_METHOD_FUNC(value_set_intersection_bang), 1);
     rb_define_method(cValueSet, "intersects?", RUBY_METHOD_FUNC(value_set_intersects), 1);
     rb_define_method(cValueSet, "difference", RUBY_METHOD_FUNC(value_set_difference), 1);
+    rb_define_method(cValueSet, "difference!", RUBY_METHOD_FUNC(value_set_difference_bang), 1);
     rb_define_method(cValueSet, "insert", RUBY_METHOD_FUNC(value_set_insert), 1);
     rb_define_method(cValueSet, "merge", RUBY_METHOD_FUNC(value_set_merge), 1);
     rb_define_method(cValueSet, "delete", RUBY_METHOD_FUNC(value_set_delete), 1);
