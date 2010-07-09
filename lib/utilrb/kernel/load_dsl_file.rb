@@ -142,6 +142,7 @@ module Kernel
 
     # Same than eval_dsl_file, but will not load the same file twice
     def load_dsl_file(file, *args, &block)
+        file = File.expand_path(file)
         if $LOADED_FEATURES.include?(file)
             return false
         end
