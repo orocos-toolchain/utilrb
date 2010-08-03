@@ -67,6 +67,7 @@ module Kernel
 
         filtered_backtrace = backtrace[0, backtrace.size - our_frame_pos].
             map do |line|
+                line.gsub! /:in `.*dsl.*'/, ''
                 if line =~ /load_dsl_file.*(method_missing|send)/
                     next
                 end
