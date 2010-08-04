@@ -67,6 +67,7 @@ module Kernel
 
         filtered_backtrace = backtrace[0, backtrace.size - our_frame_pos].
             map do |line|
+                line.gsub! /:in `.*dsl.*'/, ''
                 if line =~ /load_dsl_file.*(method_missing|send)/
                     next
                 end
@@ -115,7 +116,7 @@ module Kernel
             dsl_exec_common(file, proxied_object, context, full_backtrace, *exceptions, &code)
         rescue NameError => e
             file_lines = file_content.split("\n").each_with_index.to_a
-            error = file_lines.find { |text, idx| text =~ /#{e.name}/ }
+            error = file_lines.find { |text, idx| text =~ /#{e.class.name}/ }
             if error
                 raise e, e.message, ["#{file}:#{error[1] + 1}", *caller]
             else
