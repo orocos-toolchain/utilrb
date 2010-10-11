@@ -170,7 +170,7 @@ module Kernel
             end
 
             old_constants, new_constants = nil
-            if !Utilrb::RUBY_IS_19
+            if !Utilrb::RUBY_IS_191
                 old_constants = Kernel.constants
             end
 
@@ -183,7 +183,7 @@ module Kernel
 
             # Check if the user defined new constants by using class K and/or
             # mod Mod
-            if !Utilrb::RUBY_IS_19
+            if !Utilrb::RUBY_IS_191
                 new_constants = Kernel.constants
             end
 

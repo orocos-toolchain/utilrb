@@ -1,6 +1,6 @@
 require 'utilrb/common'
 module Kernel
-    if Utilrb::RUBY_IS_19
+    if Utilrb::RUBY_IS_191
     def with_module(*consts, &blk)
         slf = self
 
