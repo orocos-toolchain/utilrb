@@ -109,7 +109,7 @@ module Kernel
             code =  <<-EOD
             Proc.new { #{file_content} }
             EOD
-            eval code, binding, file, 0
+            eval code, binding, file, 1
         end
 
         begin
