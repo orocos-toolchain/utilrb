@@ -1,7 +1,8 @@
 module Utilrb
     unless defined? Utilrb::VERSION
 	VERSION = "1.3.4"
-	RUBY_IS_19 = (RUBY_VERSION >= "1.9")
+        RUBY_IS_19  = (RUBY_VERSION >= "1.9.2")
+        RUBY_IS_191 = (RUBY_VERSION >= "1.9") && (RUBY_VERSION < "1.9.2")
     end
 
     unless defined? UTILRB_EXT_MODE

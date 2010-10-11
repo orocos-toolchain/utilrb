@@ -116,7 +116,7 @@ module Kernel
             dsl_exec_common(file, proxied_object, context, full_backtrace, *exceptions, &code)
         rescue NameError => e
             file_lines = file_content.split("\n").each_with_index.to_a
-            error = file_lines.find { |text, idx| text =~ /#{e.class.name}/ }
+            error = file_lines.find { |text, idx| text =~ /#{e.name}/ }
             if error
                 raise e, e.message, ["#{file}:#{error[1] + 1}", *caller]
             else
@@ -170,7 +170,7 @@ module Kernel
             end
 
             old_constants, new_constants = nil
-            if !Utilrb::RUBY_IS_19
+            if !Utilrb::RUBY_IS_191
                 old_constants = Kernel.constants
             end
 
@@ -183,7 +183,7 @@ module Kernel
 
             # Check if the user defined new constants by using class K and/or
             # mod Mod
-            if !Utilrb::RUBY_IS_19
+            if !Utilrb::RUBY_IS_191
                 new_constants = Kernel.constants
             end
 

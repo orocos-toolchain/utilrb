@@ -55,34 +55,6 @@ class TC_Object < Test::Unit::TestCase
 	assert_same(obj1.block, obj2.block)
     end
 
-    def test_singleton_class
-	klass	= Class.new do
-	    def bla; 0 end
-	end
-
-	object	= klass.new
-
-	singleton = class << object
-	    class << self
-		def bla
-		    "a"
-		end
-	    end
-	    self
-	end
-
-	assert(! object.has_singleton?)
-	assert_equal(object, object.singleton_class.singleton_instance)
-	assert(object.has_singleton?)
-	assert_equal(klass, object.singleton_class.superclass)
-
-
-        Utilrb.if_ext do
-            assert_equal([object.singleton_class, klass, Object], object.singleton_class.ancestors[0, 3])
-            assert_equal([klass, Object], klass.ancestors[0, 2])
-        end
-    end
-
     def test_attr_predicate
 	klass = Class.new do
 	    attr_predicate :working

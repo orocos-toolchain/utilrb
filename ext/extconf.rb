@@ -5,6 +5,6 @@ if RUBY_VERSION >= "1.9"
     $CFLAGS += " -DRUBY_IS_19"
 end
 
-$LDFLAGS += "-module"
+$LDFLAGS += " -module"
 create_makefile("utilrb_ext")
 
