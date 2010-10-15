@@ -153,9 +153,19 @@ module Kernel
 
             sandbox = sandbox.new(proxied_object)
             sandbox.with_module(*context) do
-                old_constants = singleton_class.constants
+                old_constants =
+                    if respond_to?(:constants)
+                        constants
+                    else  self.class.constants
+                    end
+
                 instance_eval(&code)
-                new_constants = singleton_class.constants
+
+                new_constants =
+                    if respond_to?(:constants)
+                        constants
+                    else  self.class.constants
+                    end
             end
 
             # Check if the user defined new constants by using class K and/or
