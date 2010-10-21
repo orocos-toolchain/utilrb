@@ -22,8 +22,8 @@ begin
 
 rescue Exception => e
     if e.message !~ /\.rubyforge/
-        STDERR.puts "cannot load the Hoe gem, or Hoe fails. Distribution is disabled"
-        STDERR.puts "error message is: #{e.message}"
+        STDERR.puts "WARN: cannot load the Hoe gem, or Hoe fails. Publishing tasks are disabled"
+        STDERR.puts "WARN: error message is: #{e.message}"
     end
 end
 
