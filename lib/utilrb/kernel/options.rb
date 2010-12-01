@@ -17,11 +17,20 @@ module Kernel
     #   filter_options(nil, known_options) -> default_options, {}
     #
     def filter_options(options, option_spec)
+        unknown_options = Hash.new
+        options = options.dup
+        options.delete_if do |key, value|
+            if !key.respond_to?(:to_sym)
+                unknown_options[key] = value
+                true
+            end
+        end
+
         options     = (options.to_hash || Hash.new).to_sym_keys
 	# cannot use #to_sym_keys as option_spec can be an array
 	option_spec = option_spec.inject({}) { |h, (k, v)| h[k.to_sym] = v; h }
 
-	unknown_options = options.slice(*(options.keys - option_spec.keys))
+	unknown_options.merge!(options.slice(*(options.keys - option_spec.keys)))
 	known_options   = options.slice(*option_spec.keys)
 
         # Set default values defined in the spec

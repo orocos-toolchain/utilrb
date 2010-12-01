@@ -82,7 +82,7 @@ module Kernel
 
                     result = "#{line_prefix}#{file}:#{line_number}#{line_message}"
                 else
-                    if line =~ /(load_dsl_file\.rb|with_module\.rb):\d+:/
+                    if line =~ /(load_dsl_file\.rb|with_module\.rb):\d+/
                         next
                     else
                         result = line
