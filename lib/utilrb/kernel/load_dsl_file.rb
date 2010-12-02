@@ -122,7 +122,7 @@ module Kernel
             file_lines = file_content.split("\n").each_with_index.to_a
             error = file_lines.find { |text, idx| text =~ /#{e.name}/ }
             if error
-                raise e, e.message, ["#{file}:#{error[1] + 1}", *caller]
+                raise e, e.message, ["#{file}:#{error[1] + 1}", *e.backtrace]
             else
                 raise e
             end
