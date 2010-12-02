@@ -114,6 +114,8 @@ module Kernel
 
         begin
             dsl_exec_common(file, proxied_object, context, full_backtrace, *exceptions, &code)
+        rescue NoMethodError => e
+            raise e
         rescue NameError => e
             if full_backtrace
                 raise e
