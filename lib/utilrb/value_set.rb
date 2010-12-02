@@ -24,5 +24,17 @@ Utilrb.require_ext("ValueSet") do
 	def self._load(str)
 	    Marshal.load(str).to_value_set
 	end
+
+        def eql?(obj)
+            self == obj
+        end
+
+        def hash
+            result = ValueSet.hash / size
+            for obj in self
+                result = result ^ obj.hash
+            end
+            result
+        end
     end
 end
