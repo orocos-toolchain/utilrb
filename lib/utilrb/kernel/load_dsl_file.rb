@@ -115,6 +115,10 @@ module Kernel
         begin
             dsl_exec_common(file, proxied_object, context, full_backtrace, *exceptions, &code)
         rescue NameError => e
+            if full_backtrace
+                raise e
+            end
+
             file_lines = file_content.split("\n").each_with_index.to_a
             error = file_lines.find { |text, idx| text =~ /#{e.name}/ }
             if error
