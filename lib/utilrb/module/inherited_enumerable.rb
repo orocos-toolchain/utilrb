@@ -11,6 +11,11 @@ class Module
 
 	options[:enum_with] ||= :each
 
+        class_eval <<-EOF
+        def all_#{name}; each_#{name}.to_a end
+        def self_#{name}; @#{attribute_name} end
+        EOF
+
         if options[:map]
             class_eval <<-EOF
             def each_#{name}(key = nil, uniq = true)
