@@ -72,24 +72,11 @@ module Kernel
                     next
                 end
 
-                if file && line =~ /^(.*)\(eval\):(\d+)(:.*)?/
-                    line_prefix  = $1
-                    line_number  = Integer($2) - 1
-                    line_message = $3
-                    if line_message =~ /_dsl_/ || line_message =~ /with_module/
-                        line_message = ""
-                    end
-
-                    result = "#{line_prefix}#{file}:#{line_number}#{line_message}"
+                if line =~ /(load_dsl_file\.rb|with_module\.rb):\d+/
+                    next
                 else
-                    if line =~ /(load_dsl_file\.rb|with_module\.rb):\d+/
-                        next
-                    else
-                        result = line
-                    end
+                    line
                 end
-                result
-
             end.compact
 
 
@@ -112,23 +99,7 @@ module Kernel
             eval code, binding, file, 1
         end
 
-        begin
-            dsl_exec_common(file, proxied_object, context, full_backtrace, *exceptions, &code)
-        rescue NoMethodError => e
-            raise e
-        rescue NameError => e
-            if full_backtrace
-                raise e
-            end
-
-            file_lines = file_content.split("\n").each_with_index.to_a
-            error = file_lines.find { |text, idx| text =~ /#{e.name}/ }
-            if error
-                raise e, e.message, ["#{file}:#{error[1] + 1}", *e.backtrace]
-            else
-                raise e
-            end
-        end
+        dsl_exec_common(file, proxied_object, context, full_backtrace, *exceptions, &code)
     end
 
     # Load the given file by eval-ing it in the provided binding. The
