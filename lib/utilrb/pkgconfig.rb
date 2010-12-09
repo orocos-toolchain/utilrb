@@ -36,6 +36,32 @@ module Utilrb
     #   pkg.libdir
     #
     class PkgConfig
+        class << self
+            attr_reader :cache
+
+            def clear_cache
+                cache.clear
+            end
+        end
+        @cache = Hash.new
+
+        def self.new(name)
+            if cache.has_key?(name)
+                pkg = cache[name]
+                if !pkg
+                    raise NotFound.new(name), "#{name} is not a known pkg-config package"
+                end
+                pkg
+            else
+                begin
+                    cache[name] = super
+                rescue Exception => e
+                    cache[name] = nil
+                    raise
+                end
+            end
+        end
+
 	class NotFound < RuntimeError
 	    attr_reader :name
 	    def initialize(name); @name = name end
@@ -44,7 +70,9 @@ module Utilrb
 	# The module name
 	attr_reader :name
 	# The module version
-	attr_reader :version
+        def version
+            @version ||= `pkg-config --modversion #{name}`.chomp.strip
+        end
 
 	# Create a PkgConfig object for the package +name+
 	# Raises PkgConfig::NotFound if the module does not exist
@@ -54,7 +82,6 @@ module Utilrb
 	    end
 	    
 	    @name    = name
-	    @version = `pkg-config --modversion #{name}`.chomp.strip
 	    @actions = Hash.new
 	    @variables = Hash.new
 	end
