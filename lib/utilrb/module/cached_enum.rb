@@ -1,3 +1,4 @@
+require 'utilrb/object/attribute'
 module CachedValuesSupport
     attribute(:cached_variables) { Set.new }
     def initialize_copy(other)
