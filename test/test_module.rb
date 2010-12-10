@@ -23,10 +23,20 @@ class TC_Module < Test::Unit::TestCase
         assert(k.respond_to?(:tag))
     end
 
+    Foo = 42
+
     def test_define_or_reuse
 	mod = Module.new
-	new_mod = mod.define_or_reuse(:Foo) { Module.new }
+        klass = Class.new
+
+	new_mod = mod.define_or_reuse(:Foo) { klass.new }
+        assert_kind_of(klass, new_mod)
 	assert_equal(new_mod, mod.define_or_reuse(:Foo) { flunk("block called in #define_under") })
+
+        # Now try with a constant that is widely available
+	new_mod = mod.define_or_reuse('Signal') { klass.new }
+        assert_kind_of(klass, new_mod)
+	assert_equal(new_mod, mod.define_or_reuse('Signal') { flunk("block called in #define_under") })
     end
 
     def test_define_method_with_block

@@ -1,5 +1,5 @@
 class Module
-    if Utilrb::RUBY_IS_191
+    if Utilrb::RUBY_IS_191 || Utilrb::RUBY_IS_19
         # :call-seq
         #   define_or_reuse(name, value)   ->              value
         #   define_or_reuse(name) { ... }  ->              value
