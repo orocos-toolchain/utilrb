@@ -20,7 +20,7 @@ class TC_PkgConfig < Test::Unit::TestCase
     def test_load
 	pkg = PkgConfig.new('test_pkgconfig')
 	assert_equal('test_pkgconfig', pkg.name)
-	assert_equal('4.2', pkg.version)
+	assert_equal([4, 2], pkg.version)
 
 	assert_equal('a_prefix', pkg.prefix)
 	assert_equal(%w{-Ia_prefix/include -O3}.to_set, pkg.cflags.split.to_set)
@@ -44,5 +44,39 @@ class TC_PkgConfig < Test::Unit::TestCase
 	assert_equal('', pkg.libs_only_L)
 	assert_equal('', pkg.libs_only_l)
         assert_equal([], pkg.library_dirs)
+    end
+
+    def test_comparison_with_cpkgconfig
+        PkgConfig.each_package do |name|
+            pkg = begin PkgConfig.new(name)
+                  rescue PkgConfig::NotFound
+                      `pkg-config --cflags #{name}`
+                      if $? == 0
+                          raise
+                      else
+                          puts "can be loaded by neither the ruby nor the C versions"
+                          next
+                      end
+                  end
+
+            failed = false
+            PkgConfig::ACTIONS.each do |action_name|
+                method_name = action_name.gsub(/-/, '_')
+
+                pure_ruby  = pkg.send(method_name)
+                cpkgconfig = pkg.send("pkgconfig_#{method_name}")
+                if Shellwords.shellsplit(pure_ruby).to_set != Shellwords.shellsplit(cpkgconfig).to_set
+                    failed = true
+                    puts "#{name} #{action_name}"
+                    puts "  pure ruby:  #{pure_ruby}"
+                    puts "  cpkgconfig: #{cpkgconfig}"
+                end
+            end
+            if failed
+                puts "contents:"
+                puts pkg.file.join("\n")
+                assert(false, "result from pkg-config and the PkgConfig class differ")
+            end
+        end
     end
 end

@@ -1,3 +1,4 @@
+require 'set'
 require 'shellwords'
 
 module Utilrb
@@ -36,29 +37,75 @@ module Utilrb
     #   pkg.libdir
     #
     class PkgConfig
+        PACKAGE_NAME_RX = /[\w\-\.]+/
+        VAR_NAME_RX     = /\w+/
+        FIELD_NAME_RX   = /[\w\.\-]+/
+
         class << self
-            attr_reader :cache
+            attr_reader :loaded_packages
 
             def clear_cache
                 cache.clear
             end
         end
-        @cache = Hash.new
+        @loaded_packages = Hash.new
 
-        def self.new(name)
-            if cache.has_key?(name)
-                pkg = cache[name]
-                if !pkg
-                    raise NotFound.new(name), "#{name} is not a known pkg-config package"
+        def self.load(path)
+            pkg_name = File.basename(path, ".pc")
+            pkg = Class.instance_method(:new).bind(PkgConfig).call(pkg_name)
+            pkg.load(path)
+            pkg
+        end
+
+        # Returns the pkg-config object that matches the given name, and
+        # optionally a version string
+        def self.get(name, version_spec = nil)
+            if !(candidates = loaded_packages[name])
+                paths = find_all_package_files(name)
+                if paths.empty?
+                    raise NotFound.new(name), "cannot find the pkg-config specification for #{name}"
                 end
-                pkg
+
+                candidates = loaded_packages[name] = Array.new
+                paths.each do |p|
+                    candidates << PkgConfig.load(p)
+                end
+            end
+
+            # Now try to find a matching spec
+            find_matching_version(candidates, version_spec)
+        end
+
+        def self.new(name, version_spec = nil)
+            get(name, version_spec)
+        end
+
+        # Returns the first package in +candidates+ that match the given version
+        # spec
+        def self.find_matching_version(candidates, version_spec)
+            if version_spec
+                version_spec =~ /([<>=]+)\s*([\d\.]+)/
+                op, requested_version = $1, $2
+
+                requested_op =
+                    if op == "=" then [0]
+                    elsif op == ">" then [1]
+                    elsif op == "<" then [-1]
+                    elsif op == "<=" then [-1, 0]
+                    elsif op == ">=" then [1, 0]
+                    end
+
+                requested_version = requested_version.split('.').map { |v| Integer(v) }
+
+                result = candidates.find do |pkg|
+                    requested_op.include?(pkg.version <=> requested_version)
+                end
+                if !result
+                    raise NotFound.new(name), "no version of #{name} match #{version_spect}. Available versions are: #{candidates.map(&:raw_version).join(", ")}"
+                end
+                result
             else
-                begin
-                    cache[name] = super
-                rescue Exception => e
-                    cache[name] = nil
-                    raise
-                end
+                candidates.first
             end
         end
 
@@ -66,32 +113,181 @@ module Utilrb
 	    attr_reader :name
 	    def initialize(name); @name = name end
 	end
+
+        attr_reader :file
+        attr_reader :path
 	
 	# The module name
 	attr_reader :name
-	# The module version
-        def version
-            @version ||= `pkg-config --modversion #{name}`.chomp.strip
-        end
+        attr_reader :description
+        # The module version as a string
+        attr_reader :raw_version
+        # The module version, as an array of integers
+        attr_reader :version
+
+        # Information extracted from the file
+        attr_reader :variables
+        attr_reader :fields
 
 	# Create a PkgConfig object for the package +name+
 	# Raises PkgConfig::NotFound if the module does not exist
 	def initialize(name)
-            if !PkgConfig.has_package?(name)
-		raise NotFound.new(name), "#{name} is not available to pkg-config"
-	    end
-	    
 	    @name    = name
-	    @actions = Hash.new
+	    @fields    = Hash.new
 	    @variables = Hash.new
 	end
 
-	def self.define_action(action) # :nodoc:
-	    define_method(action.gsub(/-/, '_')) do 
-		@actions[action] ||= `pkg-config --#{action} #{name}`.chomp.strip
-	    end
+        # Helper method that expands ${word} in +value+ using the name to value
+        # map +variables+
+        #
+        # +current+ is a string that describes what we are expanding. It is used
+        # to detect recursion in expansion of variables, and to give meaningful
+        # errors to the user
+        def expand_variables(value, variables, current)
+            value = value.gsub(/\$\{(\w+)\}/) do |rx|
+                expand_name = $1
+                if expand_name == current
+                    raise "error in pkg-config file #{path}: #{current} contains a reference to itself"
+                elsif !(expanded = variables[expand_name])
+                    raise "error in pkg-config file #{path}: #{current} contains a reference to #{expand_name} but there is no such variable"
+                end
+                expanded
+            end
+            value
+        end
+
+        def self.parse_dependencies(string)
+            if string =~ /,/
+                packages = string.split(',')
+            else
+                packages = []
+                words = string.split(' ')
+                while !words.empty?
+                    w = words.shift
+                    if w =~ /[<>=]/
+                        packages[-1] += " #{w} #{words.shift}"
+                    else
+                        packages << w
+                    end
+                end
+            end
+
+            result = packages.map do |dep|
+                dep = dep.strip
+                if dep =~ /^(#{PACKAGE_NAME_RX})\s*([=<>]+.*)/
+                    PkgConfig.get($1, $2.strip)
+                else
+                    PkgConfig.get(dep)
+                end
+            end
+            result
+        end
+
+        SHELL_VARS = %w{Cflags Libs Libs.private}
+
+        # Loads the information contained in +path+
+        def load(path)
+            @path = path
+            @file = File.readlines(path).map(&:strip)
+
+            raw_variables = Hash.new
+            raw_fields    = Hash.new
+            file.each do |line|
+                line.gsub! /\s*#.*$/, ''
+                next if line.empty?
+
+                case line
+                when /^(#{VAR_NAME_RX})\s*=(.*)/
+                    raw_variables[$1] = $2.strip
+                when /^(#{FIELD_NAME_RX}):\s*(.*)/
+                    raw_fields[$1] = $2.strip
+                else
+                    raise NotImplementedError, "cannot parse pkg-config line #{line.inspect}"
+                end
+            end
+
+            # Resolve the variables
+            while variables.size != raw_variables.size
+                raw_variables.each do |name, value|
+                    value = expand_variables(value, raw_variables, name)
+                    raw_variables[name] = value
+                    if value !~ /\$\{#{VAR_NAME_RX}\}/
+                        variables[name] = value
+                    end
+                end
+            end
+
+            # Shell-split the fields, and expand the variables in them
+            raw_fields.each do |name, value|
+                if SHELL_VARS.include?(name) 
+                    value = Shellwords.shellsplit(value)
+                    value.map! do |v|
+                        expand_variables(v, variables, name)
+                    end
+                else
+                    value = expand_variables(value, variables, name)
+                end
+
+                fields[name] = value
+            end
+
+            # Initialize the main flags
+            @raw_version = (fields['Version'] || '')
+            @version = raw_version.split('.').map { |v| Integer(v) if v =~ /^\d+$/ }.compact
+            @description = (fields['Description'] || '')
+
+            # Get the requires/conflicts
+            @requires  = PkgConfig.parse_dependencies(fields['Requires'] || '')
+            @requires_private  = PkgConfig.parse_dependencies(fields['Requires.private'] || '')
+            @conflicts = PkgConfig.parse_dependencies(fields['Conflicts'] || '')
+
+            # And finally resolve the compilation flags
+            @cflags = fields['Cflags'] || []
+            @requires.each do |pkg|
+                @cflags.concat(pkg.raw_cflags)
+            end
+            @requires_private.each do |pkg|
+                @cflags.concat(pkg.raw_cflags)
+            end
+            @cflags.uniq!
+            @cflags.delete('-I/usr/include')
+            @ldflags = Hash.new
+            @ldflags[false] = fields['Libs'] || []
+            @ldflags[false].delete('-L/usr/lib')
+            @ldflags[false].uniq!
+            @ldflags[true] = @ldflags[false] + (fields['Libs.private'] || [])
+            @ldflags[true].delete('-L/usr/lib')
+            @ldflags[true].uniq!
+
+            @ldflags_with_requires = {
+                true => @ldflags[true].dup,
+                false => @ldflags[false].dup
+            }
+            @requires.each do |pkg|
+                @ldflags_with_requires[true].concat(pkg.raw_ldflags_with_requires[true])
+                @ldflags_with_requires[false].concat(pkg.raw_ldflags_with_requires[false])
+            end
+            @requires_private.each do |pkg|
+                @ldflags_with_requires[true].concat(pkg.raw_ldflags_with_requires[true])
+            end
+        end
+
+	def self.define_pkgconfig_action(action) # :nodoc:
+            class_eval <<-EOD
+            def pkgconfig_#{action.gsub(/-/, '_')}(static = false)
+                if static
+                    `pkg-config --#{action} --static \#{name}`.strip
+                else
+                    `pkg-config --#{action} \#{name}`.strip
+                end
+            end
+            EOD
 	    nil
 	end
+
+        def pkgconfig_variable(varname)
+            `pkg-config --variable=#{varname}`.strip
+        end
 
         # Returns the list of include directories listed in the Cflags: section
         # of the pkgconfig file
@@ -106,12 +302,52 @@ module Utilrb
         end
 
 	ACTIONS = %w{cflags cflags-only-I cflags-only-other 
-		    libs libs-only-L libs-only-l libs-only-other static}
-	ACTIONS.each { |action| define_action(action) }
+		    libs libs-only-L libs-only-l libs-only-other}
+	ACTIONS.each { |action| define_pkgconfig_action(action) }
+
+        def raw_cflags
+            @cflags
+        end
+
+        def cflags
+            @cflags.join(" ")
+        end
+
+        def cflags_only_I
+            @cflags.grep(/^-I/).join(" ")
+        end
+
+        def cflags_only_other
+            @cflags.find_all { |s| s !~ /^-I/ }.join(" ")
+        end
+
+        def raw_ldflags
+            @ldflags
+        end
+
+        def raw_ldflags_with_requires
+            @ldflags_with_requires
+        end
+
+        def libs(static = false)
+            @ldflags_with_requires[static].join(" ")
+        end
+
+        def libs_only_L(static = false)
+            @ldflags_with_requires[static].grep(/^-L/).join(" ")
+        end
+
+        def libs_only_l(static = false)
+            @ldflags_with_requires[static].grep(/^-l/).join(" ")
+        end
+
+        def libs_only_other(static = false)
+            @ldflags[static].find_all { |s| s !~ /^-[lL]/ }.join(" ")
+        end
 
 	def method_missing(varname, *args, &proc) # :nodoc:
 	    if args.empty?
-		@variables[varname] ||= `pkg-config --variable=#{varname} #{name}`.chomp.strip
+                variables[varname.to_s]
 	    else
 		super(varname, *args, &proc)
 	    end
@@ -123,29 +359,38 @@ module Utilrb
             end
             yield('/usr/local/lib/pkgconfig')
             yield('/usr/lib/pkgconfig')
+            yield('/usr/share/pkgconfig')
+        end
+
+        # Returns true if there is a package with this name
+        def self.find_all_package_files(name)
+            result = []
+            each_pkgconfig_directory do |dir|
+                path = File.join(dir, "#{name}.pc")
+                if File.exists?(path)
+                    result << path
+                end
+            end
+            result
         end
 
         # Returns true if there is a package with this name
         def self.has_package?(name)
-            each_pkgconfig_directory do |dir|
-                if File.exists?(File.join(dir, "#{name}.pc"))
-                    return true
-                end
-            end
-            false
+            !find_all_package_files(name).empty?
         end
 
         # Yields the package names of available packages. If +regex+ is given,
         # lists only the names that match the regular expression.
         def self.each_package(regex = nil)
+            seen = Set.new
             each_pkgconfig_directory do |dir|
                 Dir.glob(File.join(dir, '*.pc')) do |file|
-                    file = File.basename(file, ".pc")
-                    if regex && file !~ regex
-                        next
-                    end
+                    pkg_name = File.basename(file, ".pc")
+                    next if seen.include?(pkg_name)
+                    next if regex && pkg_name !~ regex
 
-                    yield(file)
+                    seen << pkg_name
+                    yield(pkg_name)
                 end
             end
         end
