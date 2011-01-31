@@ -40,9 +40,6 @@ static VALUE kernel_is_singleton_p(VALUE self)
     else
 	return Qfalse;
 }
-
-static VALUE kernel_is_immediate(VALUE klass, VALUE object)
-{ return IMMEDIATE_P(object) ? Qtrue : Qfalse; }
 #endif
 
 extern "C" void Init_value_set();
@@ -56,8 +53,6 @@ extern "C" void Init_utilrb_ext()
 #ifndef RUBINIUS
     rb_define_method(rb_mEnumerable, "each_uniq", RUBY_METHOD_FUNC(enumerable_each_uniq), 0);
     rb_define_method(rb_mKernel, "is_singleton?", RUBY_METHOD_FUNC(kernel_is_singleton_p), 0);
-
-    rb_define_singleton_method(rb_mKernel, "immediate?", RUBY_METHOD_FUNC(kernel_is_immediate), 1);
 
     Init_weakref(mUtilrb);
 #endif
