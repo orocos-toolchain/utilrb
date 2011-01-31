@@ -133,7 +133,12 @@ class TC_Kernel < Test::Unit::TestCase
                 flunk("did not raise NameError for KnownConstant")
             rescue NameError => e
                 assert e.message =~ /KnownConstant/, e.message
-                assert e.backtrace.first =~ /#{io.path}:2/, "wrong backtrace when checking constant resolution: #{e.backtrace.join("\n")}"
+
+                backtrace = e.backtrace.dup
+                while backtrace.first =~ /const_missing/
+                    backtrace.shift
+                end
+                assert backtrace.first =~ /#{io.path}:2/, "wrong backtrace when checking constant resolution: #{backtrace.join("\n")}"
             end
 
             begin
@@ -141,7 +146,12 @@ class TC_Kernel < Test::Unit::TestCase
                 flunk("did not raise NoMethodError for unknown_method")
             rescue NoMethodError => e
                 assert e.message =~ /unknown_method/
-                assert e.backtrace.first =~ /#{io.path}:10/, "wrong backtrace when checking method resolution: #{e.backtrace.join("\n")}"
+
+                backtrace = e.backtrace.dup
+                while backtrace.first =~ /method_missing/
+                    backtrace.shift
+                end
+                assert backtrace.first =~ /#{io.path}:10/, "wrong backtrace when checking method resolution: #{backtrace.join("\n")}"
             end
 
             # instance_methods returns strings on 1.8 and symbols on 1.9. Conver
@@ -191,7 +201,12 @@ class TC_Kernel < Test::Unit::TestCase
         rescue NameError => e
             assert e.message =~ /KnownConstant/, e.message
             expected = "test_kernel.rb:7"
-            assert e.backtrace.first =~ /#{expected}/, "wrong backtrace when checking constant resolution: #{e.backtrace[0]}, expected #{expected}"
+
+            backtrace = e.backtrace.dup
+            while backtrace.first =~ /const_missing/
+                backtrace.shift
+            end
+            assert backtrace.first =~ /#{expected}/, "wrong backtrace when checking constant resolution: #{backtrace[0]}, expected #{expected}"
         end
 
         begin
@@ -200,7 +215,12 @@ class TC_Kernel < Test::Unit::TestCase
         rescue NoMethodError => e
             assert e.message =~ /unknown_method/
             expected = "test_kernel.rb:15"
-            assert e.backtrace.first =~ /#{expected}/, "wrong backtrace when checking method resolution: #{e.backtrace[0]}, expected #{expected}"
+
+            backtrace = e.backtrace.dup
+            while backtrace.first =~ /method_missing/
+                backtrace.shift
+            end
+            assert backtrace.first =~ /#{expected}/, "wrong backtrace when checking method resolution: #{backtrace[0]}, expected #{expected}"
         end
 
         # instance_methods returns strings on 1.8 and symbols on 1.9. Conver
