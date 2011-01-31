@@ -214,15 +214,5 @@ class TC_Kernel < Test::Unit::TestCase
 	    assert(singl_klass.is_singleton?)
 	end
     end
-
-    Utilrb.require_ext('test_swap') do
-	def test_swap
-	    obj = Array.new
-	    Kernel.swap!(obj, Hash.new)
-	    assert_instance_of Hash, obj
-
-	    GC.start
-	end
-    end
 end
 
