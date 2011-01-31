@@ -3,6 +3,12 @@ require 'test_config'
 require 'utilrb/objectstats'
 require 'utilrb/hash/to_s'
 
+if !defined? Utilrb::ObjectStats
+    # ObjectStats is pretty useless on Rubinius as there are no ways to disable
+    # GC (it seems)
+    return
+end
+
 class TC_ObjectStats < Test::Unit::TestCase
     def teardown
 	GC.enable

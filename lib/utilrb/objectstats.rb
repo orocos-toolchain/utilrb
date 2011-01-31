@@ -1,3 +1,7 @@
+if defined?(RUBY_ENGINE) && RUBY_ENGINE == "rbx"
+    return
+end
+
 require 'utilrb/gc/force'
 require 'utilrb/object/attribute'
 require 'utilrb/column_formatter'
