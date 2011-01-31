@@ -1,3 +1,7 @@
+if defined?(RUBY_ENGINE) && RUBY_ENGINE == 'rbx'
+    return
+end
+
 require 'test/unit/testcase'
 require 'utilrb/weakref'
 

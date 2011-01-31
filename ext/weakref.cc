@@ -1,3 +1,4 @@
+#ifndef RUBY_IS_RBX
 #include <set>
 #include <map>
 #include <ruby.h>
@@ -140,4 +141,4 @@ extern "C" void Init_weakref(VALUE mUtilrb)
     rb_define_method(cWeakRef, "do_initialize", RUBY_METHOD_FUNC(weakref_do_initialize), 1);
     rb_define_method(cWeakRef, "get", RUBY_METHOD_FUNC(weakref_get), 0);
 }
-
+#endif // RUBY_IS_RBX

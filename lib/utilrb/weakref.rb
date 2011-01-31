@@ -16,3 +16,8 @@ Utilrb.require_ext("Utilrb::WeakRef") do
     end
 end
 
+if !defined?(Utilrb::WeakRef)
+    # If utilrb's weakref implementation is not available, use ruby's core one
+    Utilrb::WeakRef = ::WeakRef
+end
+
