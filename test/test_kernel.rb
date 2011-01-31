@@ -1,3 +1,20 @@
+# This block MUST stay at the very beginning of the file
+#
+# The tests refer to the line numbers, so putting it anywhere else gives
+# headaches
+TC_Kernel_DSL_EXEC_BLOCK = Proc.new do
+    real_method
+    if KnownConstant != 10
+        raise ArgumentError, "invalid constant value"
+    end
+    class Submod::Klass
+        def my_method
+        end
+    end
+    name('test')
+    unknown_method
+end
+
 require 'test_config'
 require 'flexmock'
 require 'tempfile'
@@ -7,8 +24,11 @@ require 'utilrb/kernel/arity'
 require 'utilrb/kernel/swap'
 require 'utilrb/kernel/with_module'
 require 'utilrb/kernel/load_dsl_file'
+require 'utilrb/object/is_singleton_p'
 
 class TC_Kernel < Test::Unit::TestCase
+    DSL_EXEC_BLOCK = TC_Kernel_DSL_EXEC_BLOCK
+
     def test_validate_options
         valid_options   = [ :a, :b, :c ]
         valid_test      = { :a => 1, :c => 2 }
@@ -146,26 +166,12 @@ class TC_Kernel < Test::Unit::TestCase
             io.flush
 
             begin
-                eval_dsl_file(io.path, obj, [], false)
+                eval_dsl_file(io.path, obj, [], true)
                 flunk("NewClass has been defined")
             rescue NameError => e
                 assert e.message =~ /NewClass/, e.message
-                assert e.backtrace.first =~ /#{io.path}:1/, "wrong backtrace when checking constant definition detection: #{e.backtrace[0]}, expected #{io.path}:1"
             end
         end
-    end
-
-    DSL_EXEC_BLOCK = Proc.new do
-        real_method
-        if KnownConstant != 10
-            raise ArgumentError, "invalid constant value"
-        end
-        class Submod::Klass
-            def my_method
-            end
-        end
-        name('test')
-        unknown_method
     end
 
     def test_dsl_exec
@@ -184,7 +190,7 @@ class TC_Kernel < Test::Unit::TestCase
             flunk("did not raise NameError for KnownConstant")
         rescue NameError => e
             assert e.message =~ /KnownConstant/, e.message
-            expected = "test_kernel.rb:160"
+            expected = "test_kernel.rb:7"
             assert e.backtrace.first =~ /#{expected}/, "wrong backtrace when checking constant resolution: #{e.backtrace[0]}, expected #{expected}"
         end
 
@@ -193,7 +199,7 @@ class TC_Kernel < Test::Unit::TestCase
             flunk("did not raise NoMethodError for unknown_method")
         rescue NoMethodError => e
             assert e.message =~ /unknown_method/
-            expected = "test_kernel.rb:168"
+            expected = "test_kernel.rb:15"
             assert e.backtrace.first =~ /#{expected}/, "wrong backtrace when checking method resolution: #{e.backtrace[0]}, expected #{expected}"
         end
 
