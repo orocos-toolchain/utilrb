@@ -5,7 +5,6 @@ static VALUE mUtilrb;
 
 using namespace std;
 
-#ifndef RUBINIUS
 static VALUE enumerable_each_uniq_i(VALUE i, VALUE* memo)
 { 
     set<VALUE>& seen = *reinterpret_cast< set<VALUE>* >(memo); 
@@ -28,6 +27,7 @@ static VALUE enumerable_each_uniq(VALUE self)
     return self;
 }
 
+#ifndef RUBINIUS
 /* call-seq:
  *  Kernel.is_singleton?(object)
  *
@@ -50,10 +50,11 @@ extern "C" void Init_utilrb_ext()
 {
     mUtilrb = rb_define_module("Utilrb");
 
-#ifndef RUBINIUS
     rb_define_method(rb_mEnumerable, "each_uniq", RUBY_METHOD_FUNC(enumerable_each_uniq), 0);
-    rb_define_method(rb_mKernel, "is_singleton?", RUBY_METHOD_FUNC(kernel_is_singleton_p), 0);
 
+#ifndef RUBINIUS
+    // we don't need C code for Rubinius
+    rb_define_method(rb_mKernel, "is_singleton?", RUBY_METHOD_FUNC(kernel_is_singleton_p), 0);
     Init_weakref(mUtilrb);
 #endif
 
