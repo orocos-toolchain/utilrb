@@ -11,7 +11,7 @@ class Logger
         def puts(msg)
             print msg
             logger.send(level, @buffer)
-            @buffer.clear
+            @buffer = ''
         end
         def print(msg)
             @buffer << msg
