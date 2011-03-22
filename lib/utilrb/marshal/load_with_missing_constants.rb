@@ -1,4 +1,29 @@
 module Marshal
+    if defined? BasicObject
+        class BlackHole < BasicObject
+        end
+    end
+
+    class BlackHole
+        class << self
+            :name
+        end
+
+        def initialize(*args)
+        end
+
+        attr_reader :__content__
+        def method_missing(*args)
+        end
+        def self._load(*args)
+            hole = BlackHole.new
+            hole.instance_variable_set(:@__content__, args)
+        end
+
+        def self.method_missing(*args)
+        end
+    end
+
     def self.load_with_missing_constants(str_or_io)
         self.load(str_or_io)
     rescue Exception => e
