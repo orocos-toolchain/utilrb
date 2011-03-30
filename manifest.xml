@@ -9,4 +9,6 @@
       Sylvain Joyeux/sylvain.joyeux@m4x.org
   </copyright>
   <license>CeCILL-B (BSD-like)</license>
+  
+  <rosdep name="ruby"/>
 </package>
