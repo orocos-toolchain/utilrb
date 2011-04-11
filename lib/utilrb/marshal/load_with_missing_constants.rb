@@ -25,6 +25,10 @@ module Marshal
     end
 
     def self.load_with_missing_constants(str_or_io)
+        if str_or_io.respond_to?(:tell)
+            original_pos = str_or_io.tell
+        end
+
         self.load(str_or_io)
     rescue Exception => e
         case e.message
@@ -33,6 +37,10 @@ module Marshal
             missing = names.pop
             base = names.inject(Object) { |m, n| m.const_get(n) }
             base.const_set(missing, Module.new)
+
+            if original_pos
+                str_or_io.seek(original_pos)
+            end
             retry
         when /undefined class\/module ((?:\w+::)+)(\w+)$/
             mod, klass   = $1, $2
@@ -43,6 +51,10 @@ module Marshal
                 @name = full_name
             end
             mod.const_set(klass, blackhole)
+
+            if original_pos
+                str_or_io.seek(original_pos)
+            end
             retry
         end
         raise
