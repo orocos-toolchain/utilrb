@@ -20,13 +20,29 @@ class Logger
     # be returned.
     module Hierarchy
         attr_writer :logger
+
+        def has_own_logger?
+            defined?(@logger) && @logger
+        end
+
+        def make_own_logger(new_level = nil)
+            if !has_own_logger?
+                @logger = self.logger.dup
+            end
+            if new_level
+                @logger.level = new_level
+            end
+            @logger
+        end
+
         def logger
             return @logger if defined?(@logger) && @logger
-	    @logger = if kind_of?(Module)
-			  constant(self.spacename).logger
-		      else
-			  self.class.logger
-		      end
+	    @logger =
+                if kind_of?(Module)
+                    constant(self.spacename).logger
+                else
+                    self.class.logger
+                end
         end
     end
 end
