@@ -29,11 +29,10 @@ end
 
 task :default => :setup
 
-RUBY = RbConfig::CONFIG['RUBY_INSTALL_NAME']
 desc "builds Utilrb's C extension"
 task :setup do
     Dir.chdir("ext") do
-	if !system("#{RUBY} extconf.rb") || !system("make")
+	if !system("#{FileUtils::RUBY} extconf.rb") || !system("make")
 	    raise "cannot build the C extension"
 	end
     end
