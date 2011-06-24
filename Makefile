@@ -4,8 +4,7 @@ include $(shell rosstack find orocos_toolchain_ros)/env.mk
 install: gems
 	rake
 gems:
-	gem install rake flexmock nokogiri facets
-	gem install hoe --version 2.8.0
+	if [ -d ../rtt_gems ]; then gem install ../rtt_gems/*.gem; else gem install rake flexmock nokogiri facets; gem install hoe --version 2.8.0; fi
 	touch gems
 clean:
 	rake clean
