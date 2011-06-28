@@ -1,6 +1,6 @@
 ifdef ROS_ROOT
 default: install
-include $(shell rosstack find orocos_toolchain_ros)/env.mk
+include $(shell rosstack find orocos_toolchain)/env.mk
 install: gems
 	rake
 gems:
