@@ -109,10 +109,22 @@ module Utilrb
             end
         end
 
+        # Exception raised when a request pkg-config file is not found
 	class NotFound < RuntimeError
+            # The name of the pkg-config package
 	    attr_reader :name
+
 	    def initialize(name); @name = name end
 	end
+
+        # Exception raised when invalid data is found in a pkg-config file
+        class Invalid < RuntimeError
+            # The name of the pkg-config package
+	    attr_reader :name
+
+	    def initialize(name); @name = name end
+        end
+
 
         attr_reader :file
         attr_reader :path
@@ -311,13 +323,21 @@ module Utilrb
         # Returns the list of include directories listed in the Cflags: section
         # of the pkgconfig file
         def include_dirs
-            Shellwords.shellsplit(cflags_only_I).map { |v| v[2..-1] }
+            result = Shellwords.shellsplit(cflags_only_I).map { |v| v[2..-1] }
+            if result.any?(&:empty?)
+                raise Invalid, "empty include directory (-I without argument) found in pkg-config package #{name}"
+            end
+            result
         end
 
         # Returns the list of library directories listed in the Libs: section
         # of the pkgconfig file
         def library_dirs
-            Shellwords.shellsplit(libs_only_L).map { |v| v[2..-1] }
+            result = Shellwords.shellsplit(libs_only_L).map { |v| v[2..-1] }
+            if result.any?(&:empty?)
+                raise Invalid, "empty link directory (-L without argument) found in pkg-config package #{name}"
+            end
+            result
         end
 
 	ACTIONS = %w{cflags cflags-only-I cflags-only-other 
