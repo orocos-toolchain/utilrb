@@ -192,10 +192,29 @@ module Utilrb
 
             raw_variables = Hash.new
             raw_fields    = Hash.new
-            file.each do |line|
+
+            running_line = nil
+            @file = file.map do |line|
                 line.gsub! /\s*#.*$/, ''
+                line = line.strip
                 next if line.empty?
 
+                value = line.gsub(/\\$/, '')
+                if running_line
+                    running_line << " " << value
+                end
+
+                if line =~ /\\$/
+                    running_line ||= value
+                elsif running_line
+                    running_line = nil
+                else
+                    value
+                end
+            end.compact
+
+
+            file.each do |line|
                 case line
                 when /^(#{VAR_NAME_RX})\s*=(.*)/
                     raw_variables[$1] = $2.strip
