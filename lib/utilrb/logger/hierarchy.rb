@@ -35,9 +35,12 @@ class Logger
             defined?(@logger) && @logger
         end
 
-        def make_own_logger(new_level = nil)
+        def make_own_logger(new_progname = nil, new_level = nil)
             if !has_own_logger?
                 @logger = self.logger.dup
+            end
+            if new_progname
+                @logger.progname = new_progname
             end
             if new_level
                 @logger.level = new_level
@@ -45,9 +48,18 @@ class Logger
             @logger
         end
 
+        def reset_own_logger
+            @logger = nil
+        end
+
         def logger
-            return @logger if defined?(@logger) && @logger
-	    @logger =
+            if defined?(@logger) && @logger
+                return @logger 
+            elsif defined?(@default_logger) && @default_logger
+                return @default_logger
+            end
+
+	    @default_logger ||=
                 if kind_of?(Module)
                     constant(self.spacename).logger
                 else
