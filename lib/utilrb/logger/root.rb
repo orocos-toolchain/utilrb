@@ -17,7 +17,7 @@ class Logger
                 mod.instance_variable_set(:@logger, logger)
             end
 
-            attr_reader :logger
+            attr_accessor :logger
         end
     end
 end
