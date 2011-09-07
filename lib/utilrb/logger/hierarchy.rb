@@ -1,8 +1,11 @@
 require 'facets/module/spacename'
 require 'facets/kernel/constant'
 require 'utilrb/object/singleton_class'
+require 'utilrb/logger/forward'
+
 class Logger
     # Define a hierarchy of loggers mapped to the module hierarchy.
+    #
     # It defines the #logger accessor which either returns the logger
     # attribute of the module, if one is defined, or its parent logger
     # attribute.
@@ -21,6 +24,12 @@ class Logger
     # be returned.
     module Hierarchy
         attr_writer :logger
+
+        def self.included(obj)
+            if obj.singleton_class.ancestors.include?(Logger::Forward)
+                obj.send(:include, Logger::Forward)
+            end
+        end
 
         def self.extended(obj)
             if obj.kind_of?(Module)
