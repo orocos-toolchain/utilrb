@@ -26,5 +26,13 @@ class TC_Hash < Test::Unit::TestCase
 	values = $1.split(", ")
 	assert_equal(["1 => 2", "2 => 3", "3 => ..."].to_set, values.to_set)
     end
+
+    def test_map_value
+        base = { 'a' => 1, 'b' => 2 }
+        result = base.map_value { |k, v| v += 1 }
+
+        assert_equal({ 'a' => 1, 'b' => 2 }, base)
+        assert_equal({ 'a' => 2, 'b' => 3 }, result)
+    end
 end
 
