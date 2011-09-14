@@ -14,6 +14,14 @@ class Logger
                 def #{level}(*args, &proc); logger.#{level}(*args, &proc) end
             EOF
         end
+
+        def log_nest(size, level = nil, &block)
+            logger.nest(size, level, &block)
+        end
+
+        def log_pp(level, object, *first_line_format)
+            logger.log_pp(level, object, *first_line_format)
+        end
     end
 end
 
