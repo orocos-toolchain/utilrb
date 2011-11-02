@@ -2,7 +2,7 @@ require 'rake'
 require './lib/utilrb/common'
 require './lib/utilrb/rake_common'
 
-Utilrb::Rake.if_hoe_available do
+Utilrb::Rake.hoe do
     hoe_spec = Hoe.spec 'utilrb' do
         developer "Sylvain Joyeux", "sylvain.joyeux@m4x.org"
         extra_deps <<
