@@ -413,6 +413,16 @@ module Utilrb
             result
         end
 
+        def self.available_package_names
+            result = []
+            each_pkgconfig_directory do |dir|
+                Dir.glob(File.join(dir, "*.pc")) do |path|
+                    result << File.basename(path, ".pc")
+                end
+            end
+            result
+        end
+
         # Returns true if there is a package with this name
         def self.has_package?(name)
             !find_all_package_files(name).empty?
