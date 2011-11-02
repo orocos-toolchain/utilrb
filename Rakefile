@@ -1,9 +1,8 @@
 require 'rake'
 require './lib/utilrb/common'
+require './lib/utilrb/rake_common'
 
-begin
-    require 'hoe'
-
+Utilrb::Rake.if_hoe_available do
     hoe_spec = Hoe.spec 'utilrb' do
         developer "Sylvain Joyeux", "sylvain.joyeux@m4x.org"
         extra_deps <<
@@ -19,12 +18,6 @@ begin
     hoe_spec.spec.extensions << 'ext/extconf.rb'
     Rake.clear_tasks(/^default$/)
     Rake.clear_tasks(/publish_docs/)
-
-rescue Exception => e
-    if e.message !~ /\.rubyforge/
-        STDERR.puts "WARN: cannot load the Hoe gem, or Hoe fails. Publishing tasks are disabled"
-        STDERR.puts "WARN: error message is: #{e.message}"
-    end
 end
 
 task :default => :setup
@@ -37,15 +30,6 @@ task :setup do
 	end
     end
     FileUtils.ln_sf "../ext/utilrb_ext.so", "lib/utilrb_ext.so"
-end
-
-task 'publish_docs' => 'redocs' do
-    if !system('./update_github')
-        raise "cannot update the gh-pages branch for GitHub"
-    end
-    if !system('git', 'push', 'github', '+gh-pages')
-        raise "cannot push the documentation"
-    end
 end
 
 task :clean do
