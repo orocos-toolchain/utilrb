@@ -13,15 +13,18 @@ class Logger
     # This module is usually used in conjunction with the Logger::Root method:
     # 
     #   module First
-    #     include Logger.Root("First", :INFO)
+    #     extend Logger.Root("First", :INFO)
     #
     #     module Second
-    #       include Hierarchy
+    #       extend Hierarchy
     #     end
     #   end
     #
     # Second.logger will return First.logger. If we do Second.make_own_logger,
     # then a different object will be returned.
+    #
+    # "extend Hierarchy" will also add the Forward support if the parent module
+    # has it.
     module Hierarchy
         # Allows to change the logger object at this level of the hierarchy
         #

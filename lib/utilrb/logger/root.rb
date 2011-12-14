@@ -16,7 +16,7 @@ class Logger
     # Example:
     #
     #   module MyModule
-    #       include Logger.Root('MyModule', :WARN)
+    #       extend Logger.Root('MyModule', :WARN)
     #   end
     #
     #   MyModule.info "text"
