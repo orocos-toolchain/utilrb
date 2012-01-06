@@ -1,4 +1,18 @@
 class Logger
+    HAS_COLOR =
+        begin
+            require 'highline'
+            @console = HighLine.new
+        rescue LoadError
+        end
+
+    LEVEL_TO_COLOR =
+        { 'DEBUG' => :black,
+          'INFO' => :black,
+          'WARN' => :magenta,
+          'ERROR' => :red,
+          'FATAL' => [:red, :bold] }
+
     # Defines a logger on a module, allowing to use that module as a root in a
     # hierarchy (i.e. having submodules use the Logger::Hierarchy support)
     #
@@ -22,9 +36,14 @@ class Logger
     #   MyModule.info "text"
     #   MyModule.warn "warntext"
     def self.Root(progname, base_level, &block)
+        console = @console
         formatter =
             if block then lambda(&block)
-            else lambda { |severity, time, progname, msg| "#{progname}: #{msg}\n" }
+            elsif HAS_COLOR
+                lambda do |severity, time, progname, msg|
+                    console.color("#{progname}[#{severity}]: #{msg}\n", *LEVEL_TO_COLOR[severity])
+                end
+            else lambda { |severity, time, progname, msg| "#{progname}[#{severity}]: #{msg}\n" }
             end
 
         Module.new do
