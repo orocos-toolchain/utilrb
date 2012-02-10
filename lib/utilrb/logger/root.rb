@@ -7,10 +7,10 @@ class Logger
         end
 
     LEVEL_TO_COLOR =
-        { 'DEBUG' => :black,
-          'INFO' => :black,
-          'WARN' => :magenta,
-          'ERROR' => :red,
+        { 'DEBUG' => [],
+          'INFO' => [],
+          'WARN' => [:magenta],
+          'ERROR' => [:red],
           'FATAL' => [:red, :bold] }
 
     # Defines a logger on a module, allowing to use that module as a root in a
