@@ -125,8 +125,13 @@ module Kernel
             return false
         end
 
-        eval_dsl_file(file, *args, &block)
         $LOADED_FEATURES << file
+        begin
+            eval_dsl_file(file, *args, &block)
+        rescue Exception
+            $LOADED_FEATURES.delete(file)
+            raise
+        end
         true
     end
 

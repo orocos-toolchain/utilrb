@@ -203,6 +203,47 @@ class TC_Kernel < Test::Unit::TestCase
         assert(methods.include?('my_method'), "the 'class K' statement did not refer to the already defined class")
     end
 
+    def test_load_dsl_file_loaded_features_behaviour
+        eval_context = Class.new do
+            attr_reader :real_method_call_count
+            def initialize
+                @real_method_call_count = 0
+            end
+            def real_method
+                @real_method_call_count += 1
+            end
+        end
+
+        Tempfile.open('test_eval_dsl_file') do |io|
+            io.puts <<-EOD
+            real_method
+            EOD
+            io.flush
+
+            obj = eval_context.new
+            assert(Kernel.load_dsl_file(io.path, obj, [], false))
+            assert_equal(1, obj.real_method_call_count)
+            assert($LOADED_FEATURES.include?(io.path))
+            assert(!Kernel.load_dsl_file(io.path, obj, [], false))
+            assert_equal(1, obj.real_method_call_count)
+
+            $LOADED_FEATURES.delete(io.path)
+        end
+
+        Tempfile.open('test_eval_dsl_file') do |io|
+            io.puts <<-EOD
+            raise
+            EOD
+            io.flush
+
+            obj = eval_context.new
+            assert(!$LOADED_FEATURES.include?(io.path))
+            assert_raises(RuntimeError) { Kernel.load_dsl_file(io.path, obj, [], false) }
+            assert(!$LOADED_FEATURES.include?(io.path))
+            assert_equal(0, obj.real_method_call_count)
+        end
+    end
+
     Utilrb.require_ext('is_singleton?') do
 	def test_is_singleton
 	    klass = Class.new
