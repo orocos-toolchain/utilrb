@@ -91,12 +91,20 @@ module Kernel
         end
     end
 
-    def eval_dsl_file_content(file, file_content, proxied_object, context, full_backtrace, *exceptions, &block)
+    def eval_dsl(text, proxied_object, context, full_backtrace, *exceptions)
+        eval_dsl_file_content(nil, text, proxied_object, context, full_backtrace, *exceptions)
+    end
+
+    def eval_dsl_file_content(file, file_content, proxied_object, context, full_backtrace, *exceptions)
         code = with_module(*context) do
             code =  <<-EOD
             Proc.new { #{file_content} }
             EOD
-            eval code, binding, file, 1
+            if file
+                eval code, binding, file, 1
+            else
+                eval code, binding
+            end
         end
 
         dsl_exec_common(file, proxied_object, context, full_backtrace, *exceptions, &code)
