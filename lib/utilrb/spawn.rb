@@ -16,13 +16,15 @@ module Utilrb
 
         read, write = IO.pipe
         pid = fork do 
-            if !output.kind_of?(IO)
-                output_file_name = output.
-                    gsub('%p', ::Process.pid.to_s)
-                if workdir
-                    output_file_name = File.expand_path(output_file_name, workdir)
+            if output
+                if !output.kind_of?(IO)
+                    output_file_name = output.
+                        gsub('%p', ::Process.pid.to_s)
+                    if workdir
+                        output_file_name = File.expand_path(output_file_name, workdir)
+                    end
+                    output = File.open(output, 'a')
                 end
-                output = File.open(output, 'a')
             end
             
             if output
