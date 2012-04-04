@@ -233,7 +233,7 @@ module Utilrb
                 when /^(#{FIELD_NAME_RX}):\s*(.*)/
                     raw_fields[$1] = $2.strip
                 else
-                    raise NotImplementedError, "cannot parse pkg-config line #{line.inspect}"
+                    raise NotImplementedError, "#{path}: cannot parse pkg-config line #{line.inspect}"
                 end
             end
 
