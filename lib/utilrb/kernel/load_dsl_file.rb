@@ -151,6 +151,7 @@ module Kernel
         load_dsl_filter_backtrace(file, full_backtrace, *exceptions) do
             sandbox = with_module(*context) do
                 Class.new do
+                    def self.name; "" end
                     attr_accessor :main_object
                     def initialize(obj); @main_object = obj end
                     def method_missing(*m, &block)
