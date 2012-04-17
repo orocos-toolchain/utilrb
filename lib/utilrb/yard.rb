@@ -8,7 +8,12 @@ module Utilrb
 
             def process
                 name = statement.parameters[0].jump(:tstring_content, :ident).source
-                options = statement.parameters[1]
+                if statement.parameters.size == 3
+                    attr_name = statement.parameters[1].jump(:tstring_content, :ident).source
+                else
+                    attr_name = name
+                end
+                options = statement.parameters[-1]
 
                 is_map = false
                 if options
@@ -22,7 +27,7 @@ module Utilrb
                 end
 
                 push_state(:scope => :class) do
-                    object = YARD::CodeObjects::MethodObject.new(namespace, name, scope) do |o|
+                    object = YARD::CodeObjects::MethodObject.new(namespace, attr_name, scope) do |o|
                         o.dynamic = true
                         o.aliases << "self_#{name}"
                     end

@@ -32,7 +32,7 @@ module Utilrb
             task = YARD::Rake::YardocTask.new(target)
             task.files.concat(options[:include])
             task.options << '--title' << options[:title] << '--output-dir' << options[:target_dir]
-            plugins.each do |plugin_name|
+            options[:plugins].each do |plugin_name|
                 require "#{plugin_name}/yard"
             end
         when /rdoc/
