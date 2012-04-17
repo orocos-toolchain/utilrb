@@ -24,13 +24,17 @@ module Utilrb
             :include => [Dir.pwd],
             :exclude => [],
             :target_dir => 'doc',
-            :title => ''
+            :title => '',
+            :plugins => []
 
         case DOC_MODE
         when 'yard'
             task = YARD::Rake::YardocTask.new(target)
             task.files.concat(options[:include])
             task.options << '--title' << options[:title] << '--output-dir' << options[:target_dir]
+            plugins.each do |plugin_name|
+                require "#{plugin_name}/yard"
+            end
         when /rdoc/
             klass = if DOC_MODE == 'rdoc-new'
                         Rdoc::Task
