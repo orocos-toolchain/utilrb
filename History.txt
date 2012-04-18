@@ -1,3 +1,6 @@
+This changelog is not maintained anymore. To have a look at Utilrb's history,
+inspect the git log at http://gitorious.org/orocos-toolchain/utilrb.git
+
 === Version 1.4.0
 
 * release the latest git version. utilrb has not seen any release for a very
