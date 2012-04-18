@@ -6,39 +6,23 @@ module Utilrb
             handles method_call(:inherited_enumerable)
             namespace_only
 
-            def process
-                name = statement.parameters[0].jump(:tstring_content, :ident).source
-                if statement.parameters.size == 3
-                    attr_name = statement.parameters[1].jump(:tstring_content, :ident).source
-                else
-                    attr_name = name
-                end
-                options = statement.parameters[-1]
+            def self.process(handler, name, attr_name, is_map)
+                handler.send(:push_state, :scope => :class) do
+                    namespace = handler.send(:namespace)
+                    scope = handler.send(:scope)
 
-                is_map = false
-                if options
-                    options.each do |opt|
-                        key = opt.jump(:assoc)[0].jump(:ident).source
-                        value = opt.jump(:assoc)[1].jump(:ident).source
-                        if key == "map" && value == "true"
-                            is_map = true
-                        end
-                    end
-                end
-
-                push_state(:scope => :class) do
                     object = YARD::CodeObjects::MethodObject.new(namespace, attr_name, scope) do |o|
                         o.dynamic = true
                         o.aliases << "self_#{name}"
                     end
-                    register(object)
-                    key_name =
+                    handler.send(:register, object)
+                    key_name ||=
                         if object.docstring.has_tag?('key_name')
                             object.docstring.tag('key_name').text
                         else
                             'key'
                         end
-                    return_type =
+                    return_type ||=
                         if object.docstring.has_tag?('return')
                             object.docstring.tag('return').types.first
                         elsif is_map
@@ -59,26 +43,26 @@ module Utilrb
 
                     object = YARD::CodeObjects::MethodObject.new(namespace, "all_#{name}", scope)
                     object.dynamic = true 
-                    register(object)
+                    handler.send(:register, object)
                     object.docstring.replace("The union, along the class hierarchy, of all the values stored in #{name}\n@return [Array<#{value_type}>]")
 
                     if is_map
                         object = YARD::CodeObjects::MethodObject.new(namespace, "find_#{name}", scope)
                         object.dynamic = true 
-                        register(object)
+                        handler.send(:register, object)
                         object.parameters << [key_name]
                         object.docstring.replace("Looks for objects registered in #{name} under the given key, and returns the first one in the ancestor chain (i.e. the one tha thas been registered in the most specialized class)\n@return [#{value_type},nil] the found object, or nil if none is registered under that key")
 
                         object = YARD::CodeObjects::MethodObject.new(namespace, "has_#{name}?", scope)
                         object.dynamic = true 
-                        register(object)
+                        handler.send(:register, object)
                         object.parameters << [key_name]
                         object.docstring.replace("Returns true if an object is registered in #{name} anywhere in the class hierarchy\n@return [Boolean]")
                         object.signature = "def has_#{name}?(key)"
 
                         object = YARD::CodeObjects::MethodObject.new(namespace, "each_#{name}", scope)
                         object.dynamic = true 
-                        register(object)
+                        handler.send(:register, object)
                         object.parameters << [key_name, "nil"] << ["uniq", "true"]
                         object.docstring.replace("
 @overload each_#{name}(#{key_name}, uniq = true)
@@ -94,10 +78,31 @@ module Utilrb
                     else
                         object = YARD::CodeObjects::MethodObject.new(namespace, "each_#{name}", scope)
                         object.dynamic = true 
-                        register(object)
+                        handler.send(:register, object)
                         object.docstring.replace("Enumerates all objects registered in #{name}\n@return []\n@yield [element]\n@yieldparam [#{value_type}] element")
                     end
                 end
+            end
+
+            def process
+                name = statement.parameters[0].jump(:tstring_content, :ident).source
+                if statement.parameters.size == 4
+                    attr_name = statement.parameters[1].jump(:tstring_content, :ident).source
+                else
+                    attr_name = name
+                end
+                options = statement.parameters.jump(:assoc)
+
+                is_map = false
+                if options != statement.parameters
+                    key = options[0].jump(:ident).source
+                    value = options[1].jump(:ident).source
+                    if key == "map" && value == "true"
+                        is_map = true
+                    end
+                end
+
+                self.class.process(self, name, attr_name, is_map)
             end
         end
         YARD::Tags::Library.define_tag("Key for inherited_enumerable(_, :map => true)", :key_name)
