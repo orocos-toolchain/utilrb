@@ -39,7 +39,7 @@ module Utilrb
             klass = if DOC_MODE == 'rdoc-new'
                         RDoc::Task
                     else
-                        Rake::RdocTask
+                        ::Rake::RdocTask
                     end
             task = klass.new(target)
             task.rdoc_files.include(*options[:include])
