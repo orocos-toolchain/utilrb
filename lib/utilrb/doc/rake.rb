@@ -37,7 +37,7 @@ module Utilrb
             end
         when /rdoc/
             klass = if DOC_MODE == 'rdoc-new'
-                        Rdoc::Task
+                        RDoc::Task
                     else
                         Rake::RdocTask
                     end
