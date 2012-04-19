@@ -6,7 +6,8 @@ module Utilrb
             handles method_call(:inherited_enumerable)
             namespace_only
 
-            def self.process(handler, name, attr_name, is_map)
+            def self.process(handler, name, attr_name, is_map, key_name = nil, return_type = nil)
+                key_type, value_type = nil
                 handler.send(:push_state, :scope => :class) do
                     namespace = handler.send(:namespace)
                     scope = handler.send(:scope)
@@ -81,6 +82,12 @@ module Utilrb
                         handler.send(:register, object)
                         object.docstring.replace("Enumerates all objects registered in #{name}\n@return []\n@yield [element]\n@yieldparam [#{value_type}] element")
                     end
+                end
+
+                if is_map
+                    return key_type, value_type
+                else
+                    return value_type
                 end
             end
 
