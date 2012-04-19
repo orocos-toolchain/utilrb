@@ -19,9 +19,9 @@ module Utilrb
             end
         end
 
-    def self.doc(target, options = Hash.new)
+    def self.doc(target = 'doc', options = Hash.new)
         options = Kernel.validate_options options,
-            :include => [Dir.pwd],
+            :include => [File.join(Dir.pwd, 'lib', '**'), File.join(Dir.pwd, 'ext', '**')],
             :exclude => [],
             :target_dir => 'doc',
             :title => '',
@@ -45,7 +45,7 @@ module Utilrb
             task.rdoc_files.include(*options[:include])
             task.rdoc_files.exclude(*options[:exclude])
             task.title = options[:title]
-            task.rdoc_dir = options[:target_dir]
+            task.rdoc_dir = File.expand_path(options[:target_dir])
         end
     end
 end
