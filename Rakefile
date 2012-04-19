@@ -1,6 +1,7 @@
 require 'rake'
 require './lib/utilrb/common'
 require './lib/utilrb/rake_common'
+require './lib/utilrb/doc/rake'
 
 Utilrb::Rake.hoe do
     hoe_spec = Hoe.spec 'utilrb' do
@@ -17,10 +18,12 @@ Utilrb::Rake.hoe do
     end
     hoe_spec.spec.extensions << 'ext/extconf.rb'
     Rake.clear_tasks(/^default$/)
-    Rake.clear_tasks(/publish_docs/)
+    Rake.clear_tasks(/doc/)
 end
 
 task :default => :setup
+
+Utilrb.doc
 
 desc "builds Utilrb's C extension"
 task :setup do
