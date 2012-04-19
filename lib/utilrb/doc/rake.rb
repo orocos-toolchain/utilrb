@@ -19,7 +19,7 @@ module Utilrb
             end
         end
 
-    def self.doc(target = 'doc', options = Hash.new)
+    def self.doc(target = 'docs', options = Hash.new)
         options = Kernel.validate_options options,
             :include => [File.join(Dir.pwd, 'lib', '**'), File.join(Dir.pwd, 'ext', '**')],
             :exclude => [],
