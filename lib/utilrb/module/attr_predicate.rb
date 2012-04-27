@@ -11,7 +11,7 @@ class Module
 	remove_method attr_name
 
 	if writable
-	    class_eval "def #{attr_name}=(value); @#{attr_name} = !!value end"
+	    class_eval "def #{attr_name}=(value); @#{attr_name} = !!value end", __FILE__, __LINE__+1
 	end
     end
 end

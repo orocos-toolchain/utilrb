@@ -21,7 +21,7 @@ class Module
     def cached_enum(enum_name, name, with_arg)
         include CachedValuesSupport
 	if with_arg
-	    class_eval <<-EOD
+	    class_eval <<-EOD, __FILE__, __LINE__+1
 		def enum_#{name}(arg)
 		    @enum_#{name} ||= Hash.new
                     cached_variables << :@enum_#{name}
@@ -29,7 +29,7 @@ class Module
 		end
 		EOD
 	else
-	    class_eval <<-EOD
+	    class_eval <<-EOD, __FILE__, __LINE__+1
 		def enum_#{name}
                     cached_variables << :@enum_#{name}
 		    @enum_#{name} ||= enum_for(:each_#{enum_name})

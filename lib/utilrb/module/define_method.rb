@@ -19,7 +19,7 @@ class Module
     # +block+ is +nil+ if no block is given during the method call
     #
     def define_method_with_block(name, &mdef)
-	class_eval <<-EOD
+	class_eval <<-EOD, __FILE__, __LINE__+1
 	    def #{name}(*args, &block)
 		dmwb_#{name}_user_definition(block, *args) 
 	    end

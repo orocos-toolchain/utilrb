@@ -26,7 +26,7 @@ Utilrb.unless_ext do
 		end
 	    end
 
-	    class_eval <<-EOD
+	    class_eval <<-EOD, __FILE__, __LINE__+1
 	    def #{name}
 		if defined? @#{name} then @#{name}
 		else @#{name} = #{name}_defval
@@ -55,9 +55,9 @@ Utilrb.if_ext do
 		end
 	    end
 
-	    class_eval <<-EOD
+	    class_eval <<-EOD, __FILE__, __LINE__+1
 	    def #{name}
-		if defined? @#{name} then @#{name}
+		if instance_variable_defined?(:@#{name}) then @#{name}
 		else @#{name} = #{name}_defval
 		end
 	    end

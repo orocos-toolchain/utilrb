@@ -304,7 +304,7 @@ module Utilrb
         end
 
 	def self.define_pkgconfig_action(action) # :nodoc:
-            class_eval <<-EOD
+            class_eval <<-EOD, __FILE__, __LINE__+1
             def pkgconfig_#{action.gsub(/-/, '_')}(static = false)
                 if static
                     `pkg-config --#{action} --static \#{name}`.strip
