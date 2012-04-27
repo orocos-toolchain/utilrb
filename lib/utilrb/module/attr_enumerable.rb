@@ -26,7 +26,7 @@ class Module
 	class_eval do
 	    attribute(attr_name, &init_block)
 	end
-        class_eval <<-EOF
+        class_eval <<-EOF, __FILE__, __LINE__+1
             def each_#{name}(key = nil, &iterator)
                 return unless #{attr_name}
                 if key
