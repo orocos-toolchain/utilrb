@@ -5,6 +5,10 @@ if RUBY_VERSION >= "1.9"
     $CFLAGS += " -DRUBY_IS_19"
 end
 
+if ENV['RUBY_SOURCE_DIR']
+    $CFLAGS += " -DHAS_RUBY_SOURCE -I#{ENV['RUBY_SOURCE_DIR']}"
+end
+
 $LDFLAGS += " -module"
 create_makefile("utilrb_ext")
 
