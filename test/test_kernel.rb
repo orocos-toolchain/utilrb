@@ -30,7 +30,7 @@ class TC_Kernel < Test::Unit::TestCase
         assert( !new_options.has_key?(:b) )
     end
 
-    def test_arity
+    def test_arity_of_methods
 	object = Class.new do
 	    def arity_1(a); end
 	    def arity_any(*a); end
@@ -47,6 +47,42 @@ class TC_Kernel < Test::Unit::TestCase
 	assert_nothing_raised { check_arity(object.method(:arity_1_more), 1) }
 	assert_raises(ArgumentError) { check_arity(object.method(:arity_1_more), 0) }
 	assert_nothing_raised { check_arity(object.method(:arity_1_more), 2) }
+    end
+
+    def test_arity_of_blocks
+        check_arity(Proc.new { bla }, 0)
+        check_arity(Proc.new { bla }, 1)
+        check_arity(Proc.new { bla }, 2)
+
+        assert_raises(ArgumentError) { check_arity(Proc.new { |arg| bla }, 0) }
+        check_arity(Proc.new { |arg| bla }, 1)
+        assert_raises(ArgumentError) { check_arity(Proc.new { |arg| bla }, 2) }
+
+        assert_raises(ArgumentError) { check_arity(Proc.new { |arg, *args| bla }, 0) }
+        check_arity(Proc.new { |arg, *args| bla }, 1)
+        check_arity(Proc.new { |arg, *args| bla }, 2)
+
+        check_arity(Proc.new { |*args| bla }, 0)
+        check_arity(Proc.new { |*args| bla }, 1)
+        check_arity(Proc.new { |*args| bla }, 2)
+    end
+
+    def test_arity_of_lambdas
+        check_arity(lambda { bla }, 0)
+        assert_raises(ArgumentError) { check_arity(lambda { bla }, 1) }
+        assert_raises(ArgumentError) { check_arity(lambda { bla }, 2) }
+
+        assert_raises(ArgumentError) { check_arity(lambda { |arg| bla }, 0) }
+        check_arity(lambda { |arg| bla }, 1)
+        assert_raises(ArgumentError) { check_arity(lambda { |arg| bla }, 2) }
+
+        assert_raises(ArgumentError) { check_arity(lambda { |arg, *args| bla }, 0) }
+        check_arity(lambda { |arg, *args| bla }, 1)
+        check_arity(lambda { |arg, *args| bla }, 2)
+
+        check_arity(lambda { |*args| bla }, 0)
+        check_arity(lambda { |*args| bla }, 1)
+        check_arity(lambda { |*args| bla }, 2)
     end
 
     def test_with_module
