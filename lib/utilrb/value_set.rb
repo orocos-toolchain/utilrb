@@ -30,7 +30,7 @@ Utilrb.require_ext("ValueSet") do
         end
 
         def hash
-            result = ValueSet.hash / size
+            result = ValueSet.hash
             for obj in self
                 result = result ^ obj.hash
             end
