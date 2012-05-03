@@ -1,6 +1,7 @@
 class Module
     # call-seq:
     #   dsl_attribute(name)
+    #   dsl_attribute(name,name2,name3)
     #   dsl_attribute(name) { |value| ... }
     #
     # This defines a +name+ instance method on the given class which accepts zero or one argument
@@ -33,7 +34,11 @@ class Module
     #	    end
     #	 end
     #
-    def dsl_attribute(name, &filter_block)
+    def dsl_attribute(*names, &filter_block)
+        if names.size > 1 && filter_block
+            raise ArgumentError, "multiple names as argument are only supported if no block is given"
+        end
+        names.each do |name|
 	class_eval do
             if filter_block
                 define_method("__dsl_attribute__#{name}__filter__", &filter_block)
@@ -44,7 +49,7 @@ class Module
 		    instance_variable_get("@#{name}")
 		elsif filter_block
                     if filter_block.arity >= 0 && value.size != filter_block.arity
-                        raise ArgumentError, "too much arguments. Got #{value.size}, expected #{filter_block.arity}"
+                        raise ArgumentError, "too many arguments. Got #{value.size}, expected #{filter_block.arity}"
                     end
 
 		    filtered_value = send("__dsl_attribute__#{name}__filter__", *value)
@@ -60,6 +65,7 @@ class Module
 		end
 	    end
 	end
+        end
     end
 end
 
