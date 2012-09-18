@@ -7,6 +7,7 @@ Rakefile
 bm/allocation.rb
 bm/speed.rb
 ext/extconf.rb
+ext/proc.cc
 ext/ruby_internals-1.8.h
 ext/ruby_internals-1.9.h
 ext/swap.cc
@@ -75,6 +76,7 @@ lib/utilrb/object/singleton_class.rb
 lib/utilrb/objectstats.rb
 lib/utilrb/pkgconfig.rb
 lib/utilrb/rake_common.rb
+lib/utilrb/ruby_object_graph.rb
 lib/utilrb/set.rb
 lib/utilrb/set/to_s.rb
 lib/utilrb/socket/tcp_server.rb
