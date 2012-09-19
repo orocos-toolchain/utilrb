@@ -109,9 +109,13 @@ static VALUE kernel_is_immediate(VALUE klass, VALUE object)
 { return IMMEDIATE_P(object) ? Qtrue : Qfalse; }
 #endif
 
+static VALUE kernel_crash(VALUE klass)
+{ *((int*)0) = 10; }
+
 extern "C" void Init_value_set();
 extern "C" void Init_swap();
 extern "C" void Init_weakref(VALUE mUtilrb);
+extern "C" void Init_proc();
 
 extern "C" void Init_utilrb_ext()
 {
@@ -126,11 +130,14 @@ extern "C" void Init_utilrb_ext()
     rb_define_method(rb_cProc, "line", RUBY_METHOD_FUNC(proc_line), 0);
 #endif
 
+    rb_define_singleton_method(rb_mKernel, "crash!", RUBY_METHOD_FUNC(kernel_crash), 0);
     rb_define_singleton_method(rb_mKernel, "immediate?", RUBY_METHOD_FUNC(kernel_is_immediate), 1);
 
     Init_swap();
     Init_weakref(mUtilrb);
 #endif
+
+    Init_proc();
 
     Init_value_set();
 }

@@ -11,13 +11,13 @@ class Module
 
 	options[:enum_with] ||= :each
 
-        class_eval <<-EOF
+        class_eval <<-EOF, __FILE__, __LINE__+1
         def all_#{name}; each_#{name}.to_a end
         def self_#{name}; @#{attribute_name} end
         EOF
 
         if options[:map]
-            class_eval <<-EOF
+            class_eval <<-EOF, __FILE__, __LINE__+1
             def each_#{name}(key = nil, uniq = true)
 	        if !block_given?
 	            return enum_for(:each_#{name}, key, uniq)
@@ -70,7 +70,7 @@ class Module
             end
             EOF
         else
-            class_eval <<-EOF
+            class_eval <<-EOF, __FILE__, __LINE__+1
             def each_#{name}
 	        if !block_given?
 	            return enum_for(:each_#{name})

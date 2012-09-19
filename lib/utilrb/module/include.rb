@@ -13,7 +13,13 @@ class Module
     #   ClassExtension in the target, it is created)
     # * if it is included in a Class, the ClassExtension module
     #   extends the class.
-    def include(mod)
+    def include(*mods)
+        mods.each do |mod|
+            __include_single_module(mod)
+        end
+    end
+
+    def __include_single_module(mod)
 	if mod.const_defined?(:ModuleExtension)
 	    if is_a?(Module)
 		unless const_defined?(:ModuleExtension)

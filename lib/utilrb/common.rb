@@ -1,6 +1,6 @@
 module Utilrb
     unless defined? Utilrb::VERSION
-	VERSION = "1.3.4"
+	VERSION = "1.6.4"
         RUBY_IS_19  = (RUBY_VERSION >= "1.9.2")
         RUBY_IS_191 = (RUBY_VERSION >= "1.9") && (RUBY_VERSION < "1.9.2")
     end
@@ -15,7 +15,6 @@ module Utilrb
 		UTILRB_EXT_MODE = true
 		STDERR.puts "Utilrb: loaded C extension" if ENV['UTILRB_EXT_MODE']
 	    rescue LoadError => e
-		raise unless e.message =~ /no such file to load/
 		if ENV['UTILRB_EXT_MODE'] == 'yes'
 		    raise LoadError, "unable to load Util.rb C extension: #{e.message}"
 		else

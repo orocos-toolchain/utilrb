@@ -1,3 +1,4 @@
+require 'utilrb/common'
 class Module
     if Utilrb::RUBY_IS_191 || Utilrb::RUBY_IS_19
     def const_defined_here?(name)

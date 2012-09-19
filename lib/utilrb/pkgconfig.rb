@@ -109,10 +109,22 @@ module Utilrb
             end
         end
 
+        # Exception raised when a request pkg-config file is not found
 	class NotFound < RuntimeError
+            # The name of the pkg-config package
 	    attr_reader :name
+
 	    def initialize(name); @name = name end
 	end
+
+        # Exception raised when invalid data is found in a pkg-config file
+        class Invalid < RuntimeError
+            # The name of the pkg-config package
+	    attr_reader :name
+
+	    def initialize(name); @name = name end
+        end
+
 
         attr_reader :file
         attr_reader :path
@@ -192,17 +204,36 @@ module Utilrb
 
             raw_variables = Hash.new
             raw_fields    = Hash.new
-            file.each do |line|
+
+            running_line = nil
+            @file = file.map do |line|
                 line.gsub! /\s*#.*$/, ''
+                line = line.strip
                 next if line.empty?
 
+                value = line.gsub(/\\$/, '')
+                if running_line
+                    running_line << " " << value
+                end
+
+                if line =~ /\\$/
+                    running_line ||= value
+                elsif running_line
+                    running_line = nil
+                else
+                    value
+                end
+            end.compact
+
+
+            file.each do |line|
                 case line
                 when /^(#{VAR_NAME_RX})\s*=(.*)/
                     raw_variables[$1] = $2.strip
                 when /^(#{FIELD_NAME_RX}):\s*(.*)/
                     raw_fields[$1] = $2.strip
                 else
-                    raise NotImplementedError, "cannot parse pkg-config line #{line.inspect}"
+                    raise NotImplementedError, "#{path}: cannot parse pkg-config line #{line.inspect}"
                 end
             end
 
@@ -273,7 +304,7 @@ module Utilrb
         end
 
 	def self.define_pkgconfig_action(action) # :nodoc:
-            class_eval <<-EOD
+            class_eval <<-EOD, __FILE__, __LINE__+1
             def pkgconfig_#{action.gsub(/-/, '_')}(static = false)
                 if static
                     `pkg-config --#{action} --static \#{name}`.strip
@@ -292,13 +323,21 @@ module Utilrb
         # Returns the list of include directories listed in the Cflags: section
         # of the pkgconfig file
         def include_dirs
-            Shellwords.shellsplit(cflags_only_I).map { |v| v[2..-1] }
+            result = Shellwords.shellsplit(cflags_only_I).map { |v| v[2..-1] }
+            if result.any?(&:empty?)
+                raise Invalid, "empty include directory (-I without argument) found in pkg-config package #{name}"
+            end
+            result
         end
 
         # Returns the list of library directories listed in the Libs: section
         # of the pkgconfig file
         def library_dirs
-            Shellwords.shellsplit(libs_only_L).map { |v| v[2..-1] }
+            result = Shellwords.shellsplit(libs_only_L).map { |v| v[2..-1] }
+            if result.any?(&:empty?)
+                raise Invalid, "empty link directory (-L without argument) found in pkg-config package #{name}"
+            end
+            result
         end
 
 	ACTIONS = %w{cflags cflags-only-I cflags-only-other 
@@ -369,6 +408,16 @@ module Utilrb
                 path = File.join(dir, "#{name}.pc")
                 if File.exists?(path)
                     result << path
+                end
+            end
+            result
+        end
+
+        def self.available_package_names
+            result = []
+            each_pkgconfig_directory do |dir|
+                Dir.glob(File.join(dir, "*.pc")) do |path|
+                    result << File.basename(path, ".pc")
                 end
             end
             result

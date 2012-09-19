@@ -30,7 +30,7 @@ class TC_Kernel < Test::Unit::TestCase
         assert( !new_options.has_key?(:b) )
     end
 
-    def test_arity
+    def test_arity_of_methods
 	object = Class.new do
 	    def arity_1(a); end
 	    def arity_any(*a); end
@@ -47,6 +47,42 @@ class TC_Kernel < Test::Unit::TestCase
 	assert_nothing_raised { check_arity(object.method(:arity_1_more), 1) }
 	assert_raises(ArgumentError) { check_arity(object.method(:arity_1_more), 0) }
 	assert_nothing_raised { check_arity(object.method(:arity_1_more), 2) }
+    end
+
+    def test_arity_of_blocks
+        check_arity(Proc.new { bla }, 0)
+        check_arity(Proc.new { bla }, 1)
+        check_arity(Proc.new { bla }, 2)
+
+        assert_raises(ArgumentError) { check_arity(Proc.new { |arg| bla }, 0) }
+        check_arity(Proc.new { |arg| bla }, 1)
+        assert_raises(ArgumentError) { check_arity(Proc.new { |arg| bla }, 2) }
+
+        assert_raises(ArgumentError) { check_arity(Proc.new { |arg, *args| bla }, 0) }
+        check_arity(Proc.new { |arg, *args| bla }, 1)
+        check_arity(Proc.new { |arg, *args| bla }, 2)
+
+        check_arity(Proc.new { |*args| bla }, 0)
+        check_arity(Proc.new { |*args| bla }, 1)
+        check_arity(Proc.new { |*args| bla }, 2)
+    end
+
+    def test_arity_of_lambdas
+        check_arity(lambda { bla }, 0)
+        assert_raises(ArgumentError) { check_arity(lambda { bla }, 1) }
+        assert_raises(ArgumentError) { check_arity(lambda { bla }, 2) }
+
+        assert_raises(ArgumentError) { check_arity(lambda { |arg| bla }, 0) }
+        check_arity(lambda { |arg| bla }, 1)
+        assert_raises(ArgumentError) { check_arity(lambda { |arg| bla }, 2) }
+
+        assert_raises(ArgumentError) { check_arity(lambda { |arg, *args| bla }, 0) }
+        check_arity(lambda { |arg, *args| bla }, 1)
+        check_arity(lambda { |arg, *args| bla }, 2)
+
+        check_arity(lambda { |*args| bla }, 0)
+        check_arity(lambda { |*args| bla }, 1)
+        check_arity(lambda { |*args| bla }, 2)
     end
 
     def test_with_module
@@ -201,6 +237,47 @@ class TC_Kernel < Test::Unit::TestCase
         # to strings to have the right assertion on both
         methods = Mod::Submod::Klass.instance_methods(false).map(&:to_s)
         assert(methods.include?('my_method'), "the 'class K' statement did not refer to the already defined class")
+    end
+
+    def test_load_dsl_file_loaded_features_behaviour
+        eval_context = Class.new do
+            attr_reader :real_method_call_count
+            def initialize
+                @real_method_call_count = 0
+            end
+            def real_method
+                @real_method_call_count += 1
+            end
+        end
+
+        Tempfile.open('test_eval_dsl_file') do |io|
+            io.puts <<-EOD
+            real_method
+            EOD
+            io.flush
+
+            obj = eval_context.new
+            assert(Kernel.load_dsl_file(io.path, obj, [], false))
+            assert_equal(1, obj.real_method_call_count)
+            assert($LOADED_FEATURES.include?(io.path))
+            assert(!Kernel.load_dsl_file(io.path, obj, [], false))
+            assert_equal(1, obj.real_method_call_count)
+
+            $LOADED_FEATURES.delete(io.path)
+        end
+
+        Tempfile.open('test_eval_dsl_file') do |io|
+            io.puts <<-EOD
+            raise
+            EOD
+            io.flush
+
+            obj = eval_context.new
+            assert(!$LOADED_FEATURES.include?(io.path))
+            assert_raises(RuntimeError) { Kernel.load_dsl_file(io.path, obj, [], false) }
+            assert(!$LOADED_FEATURES.include?(io.path))
+            assert_equal(0, obj.real_method_call_count)
+        end
     end
 
     Utilrb.require_ext('is_singleton?') do

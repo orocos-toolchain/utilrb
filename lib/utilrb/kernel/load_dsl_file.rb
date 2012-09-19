@@ -91,12 +91,20 @@ module Kernel
         end
     end
 
-    def eval_dsl_file_content(file, file_content, proxied_object, context, full_backtrace, *exceptions, &block)
+    def eval_dsl(text, proxied_object, context, full_backtrace, *exceptions)
+        eval_dsl_file_content(nil, text, proxied_object, context, full_backtrace, *exceptions)
+    end
+
+    def eval_dsl_file_content(file, file_content, proxied_object, context, full_backtrace, *exceptions)
         code = with_module(*context) do
             code =  <<-EOD
             Proc.new { #{file_content} }
             EOD
-            eval code, binding, file, 1
+            if file
+                eval code, binding, file, 1
+            else
+                eval code, binding
+            end
         end
 
         dsl_exec_common(file, proxied_object, context, full_backtrace, *exceptions, &code)
@@ -125,8 +133,13 @@ module Kernel
             return false
         end
 
-        eval_dsl_file(file, *args, &block)
         $LOADED_FEATURES << file
+        begin
+            eval_dsl_file(file, *args, &block)
+        rescue Exception
+            $LOADED_FEATURES.delete(file)
+            raise
+        end
         true
     end
 
@@ -138,6 +151,7 @@ module Kernel
         load_dsl_filter_backtrace(file, full_backtrace, *exceptions) do
             sandbox = with_module(*context) do
                 Class.new do
+                    def self.name; "" end
                     attr_accessor :main_object
                     def initialize(obj); @main_object = obj end
                     def method_missing(*m, &block)
@@ -170,7 +184,7 @@ module Kernel
 
             # Check if the user defined new constants by using class K and/or
             # mod Mod
-            if !Utilrb::RUBY_IS_191
+            if !Utilrb::RUBY_IS_191 && !new_constants
                 new_constants = Kernel.constants
             end
 

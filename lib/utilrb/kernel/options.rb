@@ -16,7 +16,20 @@ module Kernel
     #   filter_options(option, array)	   -> known, unknown
     #   filter_options(nil, known_options) -> default_options, {}
     #
-    def filter_options(options, option_spec)
+    def filter_options(options, *user_option_spec)
+        option_spec = Hash.new
+        user_option_spec.each do |opt|
+            if opt.respond_to?(:to_hash)
+                option_spec.merge!(opt)
+            elsif opt.respond_to?(:to_ary)
+                opt.each do |key|
+                    option_spec[key] = nil
+                end
+            else
+                option_spec[opt] = nil
+            end
+        end
+
         unknown_options = Hash.new
         options = options.dup
         options.delete_if do |key, value|
@@ -52,9 +65,9 @@ module Kernel
     # keys. +option_hash+ keys shall be in +known_array+. +nil+ is treated 
     # as an empty option hash, all keys are converted into symbols.
     #
-    def validate_options(options, known_options)
+    def validate_options(options, *known_options)
 	options ||= Hash.new
-	opt, unknown = Kernel.filter_options(options.to_hash, known_options)
+	opt, unknown = Kernel.filter_options(options.to_hash, *known_options)
 	unless unknown.empty?
 	    not_valid = unknown.keys.map { |m| "'#{m}'" }.join(" ")
 	    raise ArgumentError, "unknown options #{not_valid}", caller(1)
