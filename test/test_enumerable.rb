@@ -93,6 +93,12 @@ class TC_Enumerable < Test::Unit::TestCase
 	    assert_equal([1,3,5].to_value_set, [1, 2, 3, 4, 5, 6].to_value_set.delete_if { |v| v % 2 == 0 })
 	end
 
+        def test_value_set_hash
+	    a = [(obj = Object.new), 3, 4, [(obj2 = Object.new), Hash.new]].to_value_set
+	    b = [obj, 3, 4, [obj2, Hash.new]].to_value_set
+            assert_equal a.hash, b.hash
+        end
+
 	def test_value_set_to_s
 	    obj = ValueSet.new
 	    obj << 1

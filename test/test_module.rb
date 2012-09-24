@@ -1,6 +1,6 @@
 require 'test_config'
 
-require 'flexmock'
+require 'flexmock/test_unit'
 require 'set'
 require 'enumerator'
 require 'utilrb/module'
@@ -152,5 +152,26 @@ class TC_Module < Test::Unit::TestCase
 
         assert(!parent.has_ancestor?(child))
     end
+
+    def test_dsl_attribute_without_filter
+        obj = Class.new do
+            dsl_attribute :value
+        end.new
+        assert_same nil, obj.value
+        assert_same obj, obj.value(10)
+        assert_equal 10, obj.value
+    end
+
+    def test_dsl_attribute_with_filter
+        obj = Class.new do
+            dsl_attribute :value do |v|
+                v * 2
+            end
+        end.new
+        assert_same nil, obj.value
+        assert_same obj, obj.value(10)
+        assert_equal 20, obj.value
+    end
+
 end
 
