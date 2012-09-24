@@ -11,5 +11,7 @@
   <license>CeCILL-B (BSD-like)</license>
   
   <rosdep name="ruby"/>
+  <rosdep name="rake"/>
+  <rosdep name="libxslt"/>
   <rosdep name="nokogiri"/>
 </package>
