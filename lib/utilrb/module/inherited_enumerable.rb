@@ -4,13 +4,16 @@ require 'utilrb/enumerable/uniq'
 require 'utilrb/module/include'
 
 class Module
+    # Helper method for inherited_enumerable
+    #
+    # It is called in the context of the singleton class of the module/class on
+    # which inherited_enumerable is called
     def define_inherited_enumerable(name, attribute_name = name, options = Hash.new, &init) # :nodoc:
         # Set up the attribute accessor
 	attribute(attribute_name, &init)
 	class_eval { private "#{attribute_name}=" }
 
         promote = method_defined?("promote_#{name}")
-
 	options[:enum_with] ||= :each
 
         class_eval <<-EOF, __FILE__, __LINE__+1
@@ -131,8 +134,8 @@ class Module
                             yield(value)
                             return self if uniq
                         end
-                        promotions.unshift(klass)
                     end
+                    promotions.unshift(klass) if klass.respond_to?("promote_#{name}")
                 end
             elsif !uniq
                 promotions = []
@@ -144,8 +147,8 @@ class Module
                             end
                             yield(key, value)
                         end
-                        promotions.unshift(klass)
                     end
+                    promotions.unshift(klass) if klass.respond_to?("promote_#{name}")
                 end
             else
                 seen = Set.new
@@ -161,8 +164,8 @@ class Module
                                 yield(key, value)
                             end
                         end
-                        promotions.unshift(klass)
                     end
+                    promotions.unshift(klass) if klass.respond_to?("promote_#{name}")
                 end
             end
             self
@@ -186,8 +189,8 @@ class Module
                         end
                         yield(value)
                     end
-                    promotions.unshift(klass)
                 end
+                promotions.unshift(klass) if klass.respond_to?("promote_#{name}")
             end
             self
         end

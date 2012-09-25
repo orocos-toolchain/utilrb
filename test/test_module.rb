@@ -142,45 +142,59 @@ class TC_Module < Test::Unit::TestCase
     def test_inherited_enumerable_non_mapping_promote
 	a = Class.new do
             def self.promote_value(v)
-                v + 1
+                v
             end
 	    inherited_enumerable(:value, :values) { Array.new }
 	end
-        b = Class.new(a)
-        c = Class.new(b)
+        b = flexmock(Class.new(a), 'b')
+        c = flexmock(Class.new(b), 'c')
+        d = flexmock(Class.new(c), 'd')
 
-        flexmock(c).should_receive(:promote_value).with(10).and_return(12).ordered
-        flexmock(c).should_receive(:promote_value).with(11).and_return(13).ordered
-        flexmock(b).should_receive(:promote_value).with(0).and_return(obj = Object.new).ordered
-        flexmock(c).should_receive(:promote_value).with(obj).and_return(2).ordered
-        flexmock(b).should_receive(:promote_value).with(1).and_return(obj = Object.new).ordered
-        flexmock(c).should_receive(:promote_value).with(obj).and_return(3).ordered
+        c.should_receive(:promote_value).with(10).and_return("10_b_c").once.ordered
+        d.should_receive(:promote_value).with("10_b_c").and_return(12).once.ordered
+        c.should_receive(:promote_value).with(11).and_return("11_b_c").once.ordered
+        d.should_receive(:promote_value).with("11_b_c").and_return(13).once.ordered
+        b.should_receive(:promote_value).with(0).and_return("0_b_c").once.ordered
+        c.should_receive(:promote_value).with("0_b_c").and_return("0_c_d").once.ordered
+        d.should_receive(:promote_value).with("0_c_d").and_return(2).once.ordered
+        b.should_receive(:promote_value).with(1).and_return("1_b_c").once.ordered
+        c.should_receive(:promote_value).with("1_b_c").and_return("1_c_d").once.ordered
+        d.should_receive(:promote_value).with("1_c_d").and_return(3).once.ordered
 
         a.values << 0 << 1
         b.values << 10 << 11
-        c.values << 100 << 110
+        # Do NOT add anything at the level of C. Its promote_value method should
+        # still be called, though
+        d.values << 100 << 110
         assert_equal [0, 1], a.each_value.to_a
-        assert_equal [100, 110, 12, 13, 2, 3], c.each_value.to_a
+        assert_equal [100, 110, 12, 13, 2, 3], d.each_value.to_a
     end
 
     def test_inherited_enumerable_mapping_promote
 	a = Class.new do
             def self.promote_value(key, v)
             end
+            def self.name; 'A' end
 	    inherited_enumerable(:value, :values, :map => true) { Hash.new }
 	end
         b = Class.new(a)
         c = Class.new(b)
+        d = Class.new(c)
 
-        flexmock(c).should_receive(:promote_value).with('b', 2).and_return(15).ordered
-        flexmock(c).should_receive(:promote_value).with('c', 3).and_return(16).ordered
-        flexmock(b).should_receive(:promote_value).with('a', 0).and_return(obj = Object.new).ordered
-        flexmock(c).should_receive(:promote_value).with('a', obj).and_return(10).ordered
+        flexmock(c).should_receive(:promote_value).with('b', 2).and_return("b2_b_c").once.ordered
+        flexmock(d).should_receive(:promote_value).with('b', "b2_b_c").and_return(15).once.ordered
+
+        flexmock(c).should_receive(:promote_value).with('c', 3).and_return("c3_b_c").once.ordered
+        flexmock(d).should_receive(:promote_value).with('c', "c3_b_c").and_return(16).once.ordered
+
+        flexmock(b).should_receive(:promote_value).with('a', 0).and_return("a0_a_b").once.ordered
+        flexmock(c).should_receive(:promote_value).with('a', "a0_a_b").and_return("a0_b_c").once.ordered
+        flexmock(d).should_receive(:promote_value).with('a', "a0_b_c").and_return(10).once.ordered
 
         a.values.merge!('a' => 0, 'b' => 1)
         b.values.merge!('b' => 2, 'c' => 3, 'd' => 4)
-        c.values.merge!('d' => 5, 'e' => 6)
-        assert_equal [['d', 5], ['e', 6], ['b', 15], ['c', 16], ['a', 10]], c.each_value.to_a
+        d.values.merge!('d' => 5, 'e' => 6)
+        assert_equal [['d', 5], ['e', 6], ['b', 15], ['c', 16], ['a', 10]], d.each_value.to_a
     end
 
     def test_inherited_enumerable_mapping_promote_non_uniq
@@ -189,25 +203,31 @@ class TC_Module < Test::Unit::TestCase
             end
 	    inherited_enumerable(:value, :values, :map => true) { Hash.new }
 	end
-        b = Class.new(a)
-        c = Class.new(b)
+        b = flexmock(Class.new(a), 'b')
+        c = flexmock(Class.new(b), 'c')
+        d = flexmock(Class.new(c), 'd')
 
-        flexmock(c).should_receive(:promote_value).with('b', 2).and_return(12).ordered
-        flexmock(c).should_receive(:promote_value).with('c', 3).and_return(13).ordered
-        flexmock(c).should_receive(:promote_value).with('d', 4).and_return(14).ordered
-        flexmock(b).should_receive(:promote_value).with('a', 0).and_return(obj = Object.new).ordered
-        flexmock(c).should_receive(:promote_value).with('a', obj).and_return(10).ordered
-        flexmock(b).should_receive(:promote_value).with('b', 1).and_return(obj = Object.new).ordered
-        flexmock(c).should_receive(:promote_value).with('b', obj).and_return(11).ordered
+        c.should_receive(:promote_value).with('b', 2).and_return("b2_b_c").once.ordered
+        d.should_receive(:promote_value).with('b', "b2_b_c").and_return(12).once.ordered
 
-        a.values['a'] = 0
-        a.values['b'] = 1
-        b.values['b'] = 2
-        b.values['c'] = 3
-        b.values['d'] = 4
-        c.values['d'] = 5
-        c.values['e'] = 6
-        assert_equal [['d', 5], ['e', 6], ['b', 12], ['c', 13], ['d', 14], ['a', 10], ['b', 11]], c.each_value(nil, false).to_a
+        c.should_receive(:promote_value).with('c', 3).and_return("c3_b_c").once.ordered
+        d.should_receive(:promote_value).with('c', "c3_b_c").and_return(13).once.ordered
+
+        c.should_receive(:promote_value).with('d', 4).and_return("d4_b_c").once.ordered
+        d.should_receive(:promote_value).with('d', "d4_b_c").and_return(14).once.ordered
+
+        b.should_receive(:promote_value).with('a', 0).and_return("a0_a_b").once.ordered
+        c.should_receive(:promote_value).with('a', "a0_a_b").and_return("a0_b_c").once.ordered
+        d.should_receive(:promote_value).with('a', "a0_b_c").and_return(10).once.ordered
+
+        b.should_receive(:promote_value).with('b', 1).and_return("b1_a_b").once.ordered
+        c.should_receive(:promote_value).with('b', "b1_a_b").and_return("b1_b_c").once.ordered
+        d.should_receive(:promote_value).with('b', "b1_b_c").and_return(11).once.ordered
+
+        a.values.merge!('a' => 0, 'b' => 1)
+        b.values.merge!('b' => 2, 'c' => 3, 'd' => 4)
+        d.values.merge!('d' => 5, 'e' => 6)
+        assert_equal [['d', 5], ['e', 6], ['b', 12], ['c', 13], ['d', 14], ['a', 10], ['b', 11]], d.each_value(nil, false).to_a
     end
 
     def test_inherited_enumerable_mapping_promote_with_key_uniq
@@ -216,15 +236,17 @@ class TC_Module < Test::Unit::TestCase
             end
 	    inherited_enumerable(:value, :values, :map => true) { Hash.new }
 	end
-        b = Class.new(a)
-        c = Class.new(b)
+        b = flexmock(Class.new(a), 'b')
+        c = flexmock(Class.new(b), 'c')
+        d = flexmock(Class.new(c), 'd')
 
-        flexmock(c).should_receive(:promote_value).with('b', 2).and_return(12).ordered
+        c.should_receive(:promote_value).with('b', 2).and_return("b2_b_c").once.ordered
+        d.should_receive(:promote_value).with('b', "b2_b_c").and_return(12).once.ordered
 
         a.values.merge!('a' => 0, 'b' => 1)
         b.values.merge!('b' => 2, 'c' => 3, 'd' => 4)
-        c.values.merge!('d' => 5, 'e' => 6)
-        assert_equal [12], c.each_value('b', true).to_a
+        d.values.merge!('d' => 5, 'e' => 6)
+        assert_equal [12], d.each_value('b', true).to_a
     end
 
     def test_inherited_enumerable_mapping_promote_with_key_non_uniq
@@ -233,17 +255,21 @@ class TC_Module < Test::Unit::TestCase
             end
 	    inherited_enumerable(:value, :values, :map => true) { Hash.new }
 	end
-        b = Class.new(a)
-        c = Class.new(b)
+        b = flexmock(Class.new(a), 'b')
+        c = flexmock(Class.new(b), 'c')
+        d = flexmock(Class.new(c), 'd')
 
-        flexmock(c).should_receive(:promote_value).with('b', 2).and_return(12).ordered
-        flexmock(b).should_receive(:promote_value).with('b', 1).and_return(obj = Object.new).ordered
-        flexmock(c).should_receive(:promote_value).with('b', obj).and_return(3).ordered
+        c.should_receive(:promote_value).with('b', 2).and_return("b2_b_c").once.ordered
+        d.should_receive(:promote_value).with('b', "b2_b_c").and_return(12).once.ordered
+
+        b.should_receive(:promote_value).with('b', 1).and_return("b1_a_b").once.ordered
+        c.should_receive(:promote_value).with('b', "b1_a_b").and_return("b1_b_c").once.ordered
+        d.should_receive(:promote_value).with('b', "b1_b_c").and_return(11).once.ordered
 
         a.values.merge!('a' => 0, 'b' => 1)
         b.values.merge!('b' => 2, 'c' => 3, 'd' => 4)
-        c.values.merge!('d' => 5, 'e' => 6)
-        assert_equal [12, 3], c.each_value('b', false).to_a
+        d.values.merge!('d' => 5, 'e' => 6)
+        assert_equal [12, 11], d.each_value('b', false).to_a
     end
 
     def test_has_ancestor
