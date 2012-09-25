@@ -63,13 +63,15 @@ class TC_PkgConfig < Test::Unit::TestCase
             PkgConfig::ACTIONS.each do |action_name|
                 method_name = action_name.gsub(/-/, '_')
 
-                pure_ruby  = pkg.send(method_name)
-                cpkgconfig = pkg.send("pkgconfig_#{method_name}")
-                if Shellwords.shellsplit(pure_ruby).to_set != Shellwords.shellsplit(cpkgconfig).to_set
+                pure_ruby  = Shellwords.shellsplit(pkg.send(method_name)).to_set
+                cpkgconfig = Shellwords.shellsplit(pkg.send("pkgconfig_#{method_name}")).to_set
+                default_paths = Utilrb::PkgConfig.default_search_path.map { |p| Regexp.quote(p.gsub(/\/pkgconfig/, '')) }.join("|")
+                pure_ruby.delete_if { |f| f=~/-[IL](#{default_paths}|\/lib)$/ }
+                if pure_ruby != cpkgconfig
                     failed = true
                     puts "#{name} #{action_name}"
-                    puts "  pure ruby:  #{pure_ruby}"
-                    puts "  cpkgconfig: #{cpkgconfig}"
+                    puts "  pure ruby:  #{pure_ruby.inspect}"
+                    puts "  cpkgconfig: #{cpkgconfig.inspect}"
                 end
             end
             if failed
