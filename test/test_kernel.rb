@@ -2,11 +2,9 @@ require 'test_config'
 require 'flexmock'
 require 'tempfile'
 
-require 'utilrb/kernel/options'
-require 'utilrb/kernel/arity'
-require 'utilrb/kernel/swap'
-require 'utilrb/kernel/with_module'
-require 'utilrb/kernel/load_dsl_file'
+require 'utilrb/kernel'
+
+require 'flexmock/test_unit'
 
 class TC_Kernel < Test::Unit::TestCase
     # Do NOT move this block. Some tests are checking the error lines in the
@@ -224,7 +222,7 @@ class TC_Kernel < Test::Unit::TestCase
             flunk("did not raise NameError for KnownConstant")
         rescue NameError => e
             assert e.message =~ /KnownConstant/, e.message
-            expected = "test_kernel.rb:16"
+            expected = "test_kernel.rb:14"
             assert e.backtrace.first =~ /#{expected}/, "wrong backtrace when checking constant resolution: #{e.backtrace.join("\n")}, expected #{expected}"
         end
 
@@ -233,7 +231,7 @@ class TC_Kernel < Test::Unit::TestCase
             flunk("did not raise NoMethodError for unknown_method")
         rescue NoMethodError => e
             assert e.message =~ /unknown_method/
-            expected = "test_kernel.rb:24"
+            expected = "test_kernel.rb:22"
             assert e.backtrace.first =~ /#{expected}/, "wrong backtrace when checking method resolution: #{e.backtrace[0]}, expected #{expected}"
         end
 
@@ -304,6 +302,35 @@ class TC_Kernel < Test::Unit::TestCase
 
 	    GC.start
 	end
+    end
+
+    def test_poll
+        flexmock(Kernel).should_receive(:sleep).with(2).twice
+        counter = 0
+        Kernel.poll(2) do
+            counter += 1
+            if counter > 2
+                break
+            end
+        end
+    end
+
+    def test_wait_until
+        flexmock(Kernel).should_receive(:sleep).with(2).twice
+        counter = 0
+        Kernel.wait_until(2) do
+            counter += 1
+            counter > 2
+        end
+    end
+
+    def test_wait_while
+        flexmock(Kernel).should_receive(:sleep).with(2).twice
+        counter = 0
+        Kernel.wait_while(2) do
+            counter += 1
+            counter <= 2
+        end
     end
 end
 
