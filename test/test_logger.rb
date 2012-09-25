@@ -13,6 +13,7 @@ class TC_Logger < Test::Unit::TestCase
 
     def teardown
         Root::Child.reset_own_logger
+        super
     end
 
     def test_logger_root
@@ -57,10 +58,10 @@ class TC_Logger < Test::Unit::TestCase
     def test_logger_nest_size
         logger = Logger.new(StringIO.new)
         logger.formatter = flexmock
-        logger.formatter.should_receive(:call).with(any, any, any, "msg0").ordered
-        logger.formatter.should_receive(:call).with(any, any, any, "   msg1").ordered
-        logger.formatter.should_receive(:call).with(any, any, any, " msg2").ordered
-        logger.formatter.should_receive(:call).with(any, any, any, "msg3").ordered
+        logger.formatter.should_receive(:call).with(any, any, any, "msg0").once.ordered
+        logger.formatter.should_receive(:call).with(any, any, any, "   msg1").once.ordered
+        logger.formatter.should_receive(:call).with(any, any, any, " msg2").once.ordered
+        logger.formatter.should_receive(:call).with(any, any, any, "msg3").once.ordered
         logger.nest_size = 0
         logger.warn("msg0")
         logger.nest_size = 3
@@ -74,11 +75,11 @@ class TC_Logger < Test::Unit::TestCase
     def test_logger_nest
         logger = Logger.new(StringIO.new)
         logger.formatter = flexmock
-        logger.formatter.should_receive(:call).with(any, any, any, "msg0").ordered
-        logger.formatter.should_receive(:call).with(any, any, any, "  msg1").ordered
-        logger.formatter.should_receive(:call).with(any, any, any, "   msg2").ordered
-        logger.formatter.should_receive(:call).with(any, any, any, "  msg3").ordered
-        logger.formatter.should_receive(:call).with(any, any, any, "msg4").ordered
+        logger.formatter.should_receive(:call).with(any, any, any, "msg0").once.ordered
+        logger.formatter.should_receive(:call).with(any, any, any, "  msg1").once.ordered
+        logger.formatter.should_receive(:call).with(any, any, any, "   msg2").once.ordered
+        logger.formatter.should_receive(:call).with(any, any, any, "  msg3").once.ordered
+        logger.formatter.should_receive(:call).with(any, any, any, "msg4").once.ordered
         logger.warn("msg0")
         logger.nest(2) do
             logger.warn("msg1")
@@ -92,12 +93,12 @@ class TC_Logger < Test::Unit::TestCase
 
     def test_logger_io
         logger = flexmock
-        io = Logger::LoggerIO.new(logger, :warn)
+        io = Logger::LoggerIO.new(logger, :uncommon_level)
 
-        logger.should_receive(:warn).with("msg0").ordered
-        logger.should_receive(:warn).with("msg1 msg2").ordered
+        logger.should_receive(:uncommon_level).with("msg0").once.ordered
+        logger.should_receive(:uncommon_level).with("msg1 msg2").once.ordered
         io.puts "msg0"
         io.print "msg1"
-        io.puts "msg2"
+        io.puts " msg2"
     end
 end
