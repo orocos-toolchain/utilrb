@@ -5,3 +5,4 @@ ext/*.so
 ext/Makefile
 lib/utilrb_ext.so
 doc/
+coverage/
