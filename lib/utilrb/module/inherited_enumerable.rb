@@ -4,11 +4,16 @@ require 'utilrb/enumerable/uniq'
 require 'utilrb/module/include'
 
 class Module
+    # Helper method for inherited_enumerable
+    #
+    # It is called in the context of the singleton class of the module/class on
+    # which inherited_enumerable is called
     def define_inherited_enumerable(name, attribute_name = name, options = Hash.new, &init) # :nodoc:
         # Set up the attribute accessor
 	attribute(attribute_name, &init)
 	class_eval { private "#{attribute_name}=" }
 
+        promote = method_defined?("promote_#{name}")
 	options[:enum_with] ||= :each
 
         class_eval <<-EOF, __FILE__, __LINE__+1
@@ -18,42 +23,6 @@ class Module
 
         if options[:map]
             class_eval <<-EOF, __FILE__, __LINE__+1
-            def each_#{name}(key = nil, uniq = true)
-	        if !block_given?
-	            return enum_for(:each_#{name}, key, uniq)
-		end
-
-		if key
-		    for klass in ancestors
-			if klass.instance_variable_defined?(:@#{attribute_name})
-			    if klass.#{attribute_name}.has_key?(key)
-				yield(klass.#{attribute_name}[key])
-				return self if uniq
-			    end
-			end
-		    end
-		elsif !uniq
-		    for klass in ancestors
-			if klass.instance_variable_defined?(:@#{attribute_name})
-			    klass.#{attribute_name}.#{options[:enum_with]} { |el| yield(el) }
-			end
-		    end
-		else
-		    seen = Set.new
-		    for klass in ancestors
-			if klass.instance_variable_defined?(:@#{attribute_name})
-			    klass.#{attribute_name}.#{options[:enum_with]} do |el| 
-				unless seen.include?(el.first)
-				    seen << el.first
-				    yield(el)
-				end
-			    end
-			end
-		    end
-
-		end
-                self
-            end
             def find_#{name}(key)
                 each_#{name}(key, true) do |value|
                     return value
@@ -61,30 +30,171 @@ class Module
                 nil
             end
             def has_#{name}?(key)
-		for klass in ancestors
-		    if klass.instance_variable_defined?(:@#{attribute_name})
-			return true if klass.#{attribute_name}.has_key?(key)
-		    end
-		end
-		false
-            end
-            EOF
-        else
-            class_eval <<-EOF, __FILE__, __LINE__+1
-            def each_#{name}
-	        if !block_given?
-	            return enum_for(:each_#{name})
-		end
-
-		for klass in ancestors
-		    if klass.instance_variable_defined?(:@#{attribute_name})
-			klass.#{attribute_name}.#{options[:enum_with]} { |el| yield(el) }
-		    end
-		end
-		self
+                for klass in ancestors
+                    if klass.instance_variable_defined?(:@#{attribute_name})
+                        return true if klass.#{attribute_name}.has_key?(key)
+                    end
+                end
+                false
             end
             EOF
         end
+
+        if !promote
+            if options[:map]
+                define_inherited_enumerable_map_without_promotion(name, attribute_name, options)
+            else
+                define_inherited_enumerable_nomap_without_promotion(name, attribute_name, options)
+            end
+        else
+            if options[:map]
+                define_inherited_enumerable_map_with_promotion(name, attribute_name, options)
+            else
+                define_inherited_enumerable_nomap_with_promotion(name, attribute_name, options)
+            end
+        end
+    end
+
+    def define_inherited_enumerable_map_without_promotion(name, attribute_name, options)
+        class_eval <<-EOF, __FILE__, __LINE__+1
+        def each_#{name}(key = nil, uniq = true)
+            if !block_given?
+                return enum_for(:each_#{name}, key, uniq)
+            end
+
+            if key
+                for klass in ancestors
+                    if klass.instance_variable_defined?(:@#{attribute_name})
+                        if klass.#{attribute_name}.has_key?(key)
+                            yield(klass.#{attribute_name}[key])
+                            return self if uniq
+                        end
+                    end
+                end
+            elsif !uniq
+                for klass in ancestors
+                    if klass.instance_variable_defined?(:@#{attribute_name})
+                        klass.#{attribute_name}.#{options[:enum_with]} do |el|
+                            yield(el)
+                        end
+                    end
+                end
+            else
+                seen = Set.new
+                for klass in ancestors
+                    if klass.instance_variable_defined?(:@#{attribute_name})
+                        klass.#{attribute_name}.#{options[:enum_with]} do |el| 
+                            unless seen.include?(el.first)
+                                seen << el.first
+                                yield(el)
+                            end
+                        end
+                    end
+                end
+
+            end
+            self
+        end
+        EOF
+    end
+
+    def define_inherited_enumerable_nomap_without_promotion(name, attribute_name, options)
+        class_eval <<-EOF, __FILE__, __LINE__+1
+        def each_#{name}
+            if !block_given?
+                return enum_for(:each_#{name})
+            end
+
+            for klass in ancestors
+                if klass.instance_variable_defined?(:@#{attribute_name})
+                    klass.#{attribute_name}.#{options[:enum_with]} { |el| yield(el) }
+                end
+            end
+            self
+        end
+        EOF
+    end
+
+    def define_inherited_enumerable_map_with_promotion(name, attribute_name, options)
+        class_eval <<-EOF, __FILE__, __LINE__+1
+        def each_#{name}(key = nil, uniq = true)
+            if !block_given?
+                return enum_for(:each_#{name}, key, uniq)
+            end
+
+            if key
+                promotions = []
+                for klass in ancestors
+                    if klass.instance_variable_defined?(:@#{attribute_name})
+                        if klass.#{attribute_name}.has_key?(key)
+                            value = klass.#{attribute_name}[key]
+                            for p in promotions
+                                value = p.promote_#{name}(key, value)
+                            end
+                            yield(value)
+                            return self if uniq
+                        end
+                    end
+                    promotions.unshift(klass) if klass.respond_to?("promote_#{name}")
+                end
+            elsif !uniq
+                promotions = []
+                for klass in ancestors
+                    if klass.instance_variable_defined?(:@#{attribute_name})
+                        klass.#{attribute_name}.#{options[:enum_with]} do |key, value|
+                            for p in promotions
+                                value = p.promote_#{name}(key, value)
+                            end
+                            yield(key, value)
+                        end
+                    end
+                    promotions.unshift(klass) if klass.respond_to?("promote_#{name}")
+                end
+            else
+                seen = Set.new
+                promotions = []
+                for klass in ancestors
+                    if klass.instance_variable_defined?(:@#{attribute_name})
+                        klass.#{attribute_name}.#{options[:enum_with]} do |key, value|
+                            unless seen.include?(key)
+                                for p in promotions
+                                    value = p.promote_#{name}(key, value)
+                                end
+                                seen << key
+                                yield(key, value)
+                            end
+                        end
+                    end
+                    promotions.unshift(klass) if klass.respond_to?("promote_#{name}")
+                end
+            end
+            self
+        end
+        EOF
+    end
+
+    def define_inherited_enumerable_nomap_with_promotion(name, attribute_name, options)
+        class_eval <<-EOF, __FILE__, __LINE__+1
+        def each_#{name}
+            if !block_given?
+                return enum_for(:each_#{name})
+            end
+
+            promotions = []
+            for klass in ancestors
+                if klass.instance_variable_defined?(:@#{attribute_name})
+                    klass.#{attribute_name}.#{options[:enum_with]} do |value|
+                        for p in promotions
+                            value = p.promote_#{name}(value)
+                        end
+                        yield(value)
+                    end
+                end
+                promotions.unshift(klass) if klass.respond_to?("promote_#{name}")
+            end
+            self
+        end
+        EOF
     end
 
     # Defines an attribute as being enumerable in the class instance and in the

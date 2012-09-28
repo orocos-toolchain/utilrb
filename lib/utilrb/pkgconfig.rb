@@ -396,9 +396,7 @@ module Utilrb
             if path = ENV['PKG_CONFIG_PATH']
                 path.split(':').each(&block)
             end
-            yield('/usr/local/lib/pkgconfig')
-            yield('/usr/lib/pkgconfig')
-            yield('/usr/share/pkgconfig')
+            default_search_path.each(&block)
         end
 
         # Returns true if there is a package with this name
@@ -442,6 +440,36 @@ module Utilrb
                     yield(pkg_name)
                 end
             end
+        end
+
+
+        FOUND_PATH_RX = /Scanning directory '(.*\/)((?:lib|share)\/.*)'$/
+        NONEXISTENT_PATH_RX = /Cannot open directory '.*\/((?:lib|share)\/.*)' in package search path:.*/
+
+        # Returns the system-wide search path that is embedded in pkg-config
+        def self.default_search_path
+            if !@default_search_path
+                output = `LANG=C PKG_CONFIG_PATH= pkg-config --debug 2>&1`.split("\n")
+                @default_search_path = output.grep(FOUND_PATH_RX).
+                    map { |l| l.gsub(FOUND_PATH_RX, '\1\2') }
+            end
+            return @default_search_path
+        end
+
+        # Returns the system-wide standard suffixes that should be appended to
+        # new prefixes to find pkg-config files
+        def self.default_search_suffixes
+            if !@default_search_suffixes
+                output = `LANG=C PKG_CONFIG_PATH= pkg-config --debug 2>&1`.split("\n")
+                found_paths = output.grep(FOUND_PATH_RX).
+                    map { |l| l.gsub(FOUND_PATH_RX, '\2') }.
+                    to_set
+                not_found = output.grep(NONEXISTENT_PATH_RX).
+                    map { |l| l.gsub(NONEXISTENT_PATH_RX, '\1') }.
+                    to_set
+                @default_search_suffixes = found_paths | not_found
+            end
+            return @default_search_suffixes
         end
     end
 end

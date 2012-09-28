@@ -2,13 +2,26 @@ require 'test_config'
 require 'flexmock'
 require 'tempfile'
 
-require 'utilrb/kernel/options'
-require 'utilrb/kernel/arity'
-require 'utilrb/kernel/swap'
-require 'utilrb/kernel/with_module'
-require 'utilrb/kernel/load_dsl_file'
+require 'utilrb/kernel'
+
+require 'flexmock/test_unit'
 
 class TC_Kernel < Test::Unit::TestCase
+    # Do NOT move this block. Some tests are checking the error lines in the
+    # backtraces
+    DSL_EXEC_BLOCK = Proc.new do
+        real_method
+        if KnownConstant != 10
+            raise ArgumentError, "invalid constant value"
+        end
+        class Submod::Klass
+            def my_method
+            end
+        end
+        name('test')
+        unknown_method
+    end
+
     def test_validate_options
         valid_options   = [ :a, :b, :c ]
         valid_test      = { :a => 1, :c => 2 }
@@ -167,6 +180,7 @@ class TC_Kernel < Test::Unit::TestCase
         end
     end
 
+    if !Utilrb::RUBY_IS_19
     def test_eval_dsl_file_does_not_allow_class_definition
         obj = Class.new do
             def real_method
@@ -190,18 +204,6 @@ class TC_Kernel < Test::Unit::TestCase
             end
         end
     end
-
-    DSL_EXEC_BLOCK = Proc.new do
-        real_method
-        if KnownConstant != 10
-            raise ArgumentError, "invalid constant value"
-        end
-        class Submod::Klass
-            def my_method
-            end
-        end
-        name('test')
-        unknown_method
     end
 
     def test_dsl_exec
@@ -220,8 +222,8 @@ class TC_Kernel < Test::Unit::TestCase
             flunk("did not raise NameError for KnownConstant")
         rescue NameError => e
             assert e.message =~ /KnownConstant/, e.message
-            expected = "test_kernel.rb:160"
-            assert e.backtrace.first =~ /#{expected}/, "wrong backtrace when checking constant resolution: #{e.backtrace[0]}, expected #{expected}"
+            expected = "test_kernel.rb:14"
+            assert e.backtrace.first =~ /#{expected}/, "wrong backtrace when checking constant resolution: #{e.backtrace.join("\n")}, expected #{expected}"
         end
 
         begin
@@ -229,7 +231,7 @@ class TC_Kernel < Test::Unit::TestCase
             flunk("did not raise NoMethodError for unknown_method")
         rescue NoMethodError => e
             assert e.message =~ /unknown_method/
-            expected = "test_kernel.rb:168"
+            expected = "test_kernel.rb:22"
             assert e.backtrace.first =~ /#{expected}/, "wrong backtrace when checking method resolution: #{e.backtrace[0]}, expected #{expected}"
         end
 
@@ -300,6 +302,35 @@ class TC_Kernel < Test::Unit::TestCase
 
 	    GC.start
 	end
+    end
+
+    def test_poll
+        flexmock(Kernel).should_receive(:sleep).with(2).twice
+        counter = 0
+        Kernel.poll(2) do
+            counter += 1
+            if counter > 2
+                break
+            end
+        end
+    end
+
+    def test_wait_until
+        flexmock(Kernel).should_receive(:sleep).with(2).twice
+        counter = 0
+        Kernel.wait_until(2) do
+            counter += 1
+            counter > 2
+        end
+    end
+
+    def test_wait_while
+        flexmock(Kernel).should_receive(:sleep).with(2).twice
+        counter = 0
+        Kernel.wait_while(2) do
+            counter += 1
+            counter <= 2
+        end
     end
 end
 

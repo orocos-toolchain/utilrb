@@ -119,7 +119,7 @@ static VALUE weakref_get(VALUE self)
 
 static VALUE refcount(VALUE mod, VALUE obj)
 {
-    if (0 == obj & FIXNUM_FLAG)
+    if (0 == (obj & FIXNUM_FLAG))
         obj = rb_obj_id(obj);
 
     RefFromObjID::const_iterator it = from_obj_id.find(obj);

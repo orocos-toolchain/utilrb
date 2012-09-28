@@ -1,5 +1,6 @@
 require 'test_config'
 require 'utilrb/logger'
+require 'flexmock/test_unit'
 
 class TC_Logger < Test::Unit::TestCase
     module Root
@@ -12,6 +13,7 @@ class TC_Logger < Test::Unit::TestCase
 
     def teardown
         Root::Child.reset_own_logger
+        super
     end
 
     def test_logger_root
@@ -51,5 +53,52 @@ class TC_Logger < Test::Unit::TestCase
         assert_not_same Root.logger, child.logger
         child.reset_own_logger
         test_logger_hierarchy
+    end
+
+    def test_logger_nest_size
+        logger = Logger.new(StringIO.new)
+        logger.formatter = flexmock
+        logger.formatter.should_receive(:call).with(any, any, any, "msg0").once.ordered
+        logger.formatter.should_receive(:call).with(any, any, any, "   msg1").once.ordered
+        logger.formatter.should_receive(:call).with(any, any, any, " msg2").once.ordered
+        logger.formatter.should_receive(:call).with(any, any, any, "msg3").once.ordered
+        logger.nest_size = 0
+        logger.warn("msg0")
+        logger.nest_size = 3
+        logger.warn("msg1")
+        logger.nest_size = 1
+        logger.warn("msg2")
+        logger.nest_size = 0
+        logger.warn("msg3")
+    end
+
+    def test_logger_nest
+        logger = Logger.new(StringIO.new)
+        logger.formatter = flexmock
+        logger.formatter.should_receive(:call).with(any, any, any, "msg0").once.ordered
+        logger.formatter.should_receive(:call).with(any, any, any, "  msg1").once.ordered
+        logger.formatter.should_receive(:call).with(any, any, any, "   msg2").once.ordered
+        logger.formatter.should_receive(:call).with(any, any, any, "  msg3").once.ordered
+        logger.formatter.should_receive(:call).with(any, any, any, "msg4").once.ordered
+        logger.warn("msg0")
+        logger.nest(2) do
+            logger.warn("msg1")
+            logger.nest(1) do
+                logger.warn("msg2")
+            end
+            logger.warn("msg3")
+        end
+        logger.warn("msg4")
+    end
+
+    def test_logger_io
+        logger = flexmock
+        io = Logger::LoggerIO.new(logger, :uncommon_level)
+
+        logger.should_receive(:uncommon_level).with("msg0").once.ordered
+        logger.should_receive(:uncommon_level).with("msg1 msg2").once.ordered
+        io.puts "msg0"
+        io.print "msg1"
+        io.puts " msg2"
     end
 end

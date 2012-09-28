@@ -9,7 +9,9 @@ if ENV['RUBY_SOURCE_DIR']
     $CFLAGS += " -DHAS_RUBY_SOURCE -I#{ENV['RUBY_SOURCE_DIR']}"
 end
 
-$LDFLAGS += " -module"
+if try_link("int main() { }", "-module")
+    $LDFLAGS += " -module"
+end
 create_makefile("utilrb_ext")
 
 ## WORKAROUND a problem with mkmf.rb

@@ -10,8 +10,8 @@ module Utilrb
         # 
         # Returns the path to the file on success, otherwise nil
         def self.findWithEnv(filename, pkg_name, environment_search_path)
-            if environment_search_path
-                env_var = ENV[environment_search_path]
+	    env_var = ENV[environment_search_path]
+            if env_var
                 # Extract search path from environment variable
                 configuration_path = Array.new
                 env_var.split(':').each do | path |
