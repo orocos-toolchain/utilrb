@@ -45,7 +45,7 @@ module Utilrb
             attr_reader :loaded_packages
 
             def clear_cache
-                cache.clear
+                loaded_packages.clear
             end
         end
         @loaded_packages = Hash.new
