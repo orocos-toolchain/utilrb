@@ -12,6 +12,7 @@ class TC_Logger < Test::Unit::TestCase
     end
 
     def teardown
+        Root.reset_own_logger
         Root::Child.reset_own_logger
         super
     end
@@ -45,6 +46,13 @@ class TC_Logger < Test::Unit::TestCase
         assert_equal Logger::INFO, Root.logger.level
 
         assert child.has_own_logger?
+    end
+
+    def test_logger_hierarch_make_own_propagates_to_children
+        child = Root::Child
+        assert_same Root.logger, child.logger
+        Root.make_own_logger('root', Logger::DEBUG)
+        assert_same Root.logger, child.logger
     end
 
     def test_logger_hierarch_reset_own

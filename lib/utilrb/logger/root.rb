@@ -1,3 +1,4 @@
+require 'utilrb/logger/hierarchy'
 class Logger
     HAS_COLOR =
         begin
@@ -48,17 +49,21 @@ class Logger
 
         Module.new do
             include Logger::Forward
+            include Logger::HierarchyElement
 
-            singleton = (class << self; self end)
-            singleton.send(:define_method, :extended) do |mod|
+            def has_own_logger?; true end
+
+            define_method :logger do
+                if logger = super()
+                    return logger
+                end
+
                 logger = Logger.new(STDOUT)
                 logger.level = base_level
                 logger.progname = progname
                 logger.formatter = formatter
-                mod.instance_variable_set(:@logger, logger)
+                @default_logger = logger
             end
-
-            attr_accessor :logger
         end
     end
 end

@@ -1,9 +1,63 @@
 require 'facets/module/spacename'
 require 'facets/kernel/constant'
+require 'utilrb/object/attribute'
 require 'utilrb/object/singleton_class'
 require 'utilrb/logger/forward'
 
 class Logger
+    module HierarchyElement
+        attribute :log_children do
+            Array.new
+        end
+
+        # Makes it so that this level of the module hierarchy has its own
+        # logger. If +new_progname+ and/or +new_level+ are nil, the associated
+        # value are taken from the parent's logger.
+        def make_own_logger(new_progname = nil, new_level = nil)
+            @logger ||= self.logger.dup
+            if new_progname
+                @logger.progname = new_progname
+            end
+            if new_level
+                @logger.level = new_level
+            end
+            log_children.each do |child|
+                child.reset_default_logger
+            end
+            @logger
+        end
+
+        # Allows to change the logger object at this level of the hierarchy
+        #
+        # This is usually not used directly: a new logger can be created with
+        # Hierarchy#make_own_logger and removed with Hierarchy#reset_own_logger
+        attr_writer :logger
+
+        # Removes a logger defined at this level of the module hierarchy. The
+        # logging methods will now access the parent's module logger.
+        def reset_own_logger
+            @logger = nil
+            log_children.each do |child|
+                child.reset_default_logger
+            end
+        end
+
+        def reset_default_logger
+            @default_logger = nil
+            log_children.each do |child|
+                child.reset_default_logger
+            end
+        end
+
+        def logger
+            if defined?(@logger) && @logger
+                return @logger 
+            elsif defined?(@default_logger) && @default_logger
+                return @default_logger
+            end
+        end
+    end
+
     # Define a hierarchy of loggers mapped to the module hierarchy.
     #
     # It defines the #logger accessor which either returns the logger
@@ -26,11 +80,13 @@ class Logger
     # "extend Hierarchy" will also add the Forward support if the parent module
     # has it.
     module Hierarchy
-        # Allows to change the logger object at this level of the hierarchy
-        #
-        # This is usually not used directly: a new logger can be created with
-        # Hierarchy#make_own_logger and removed with Hierarchy#reset_own_logger
-        attr_writer :logger
+        include HierarchyElement
+
+        # Returns true if the local module has its own logger, and false if it
+        # returns the logger of the parent
+        def has_own_logger?
+            defined?(@logger) && @logger
+        end
 
         def self.included(obj) # :nodoc:
             if obj.singleton_class.ancestors.include?(Logger::Forward)
@@ -47,45 +103,19 @@ class Logger
             end
         end
 
-        # Returns true if the local module has its own logger, and false if it
-        # returns the logger of the parent
-        def has_own_logger?
-            defined?(@logger) && @logger
-        end
-
-        # Makes it so that this level of the module hierarchy has its own
-        # logger. If +new_progname+ and/or +new_level+ are nil, the associated
-        # value are taken from the parent's logger.
-        def make_own_logger(new_progname = nil, new_level = nil)
-            if !has_own_logger?
-                @logger = self.logger.dup
-            end
-            if new_progname
-                @logger.progname = new_progname
-            end
-            if new_level
-                @logger.level = new_level
-            end
-            @logger
-        end
-
-        # Removes a logger defined at this level of the module hierarchy. The
-        # logging methods will now access the parent's module logger.
-        def reset_own_logger
-            @logger = nil
-        end
-
         # Returns the logger object that should be used to log at this level of
         # the module hierarchy
         def logger
-            if defined?(@logger) && @logger
-                return @logger 
-            elsif defined?(@default_logger) && @default_logger
-                return @default_logger
+            if logger = super
+                return logger
             end
 
-	    @default_logger ||=
+            @default_logger =
                 if kind_of?(Module)
+                    parent_module = constant(self.spacename)
+                    if parent_module.respond_to? :log_children
+                        parent_module.log_children << self
+                    end
                     constant(self.spacename).logger
                 else
                     self.class.logger
