@@ -155,7 +155,7 @@ module Kernel
                     attr_accessor :main_object
                     def initialize(obj); @main_object = obj end
                     def method_missing(*m, &block)
-                        main_object.send(*m, &block)
+                        main_object.__send__(*m, &block)
                     end
                 end
             end
