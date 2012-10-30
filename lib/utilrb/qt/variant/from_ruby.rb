@@ -15,7 +15,7 @@ module Qt
         end
 
         def self.from_ruby_finalizer
-            lambda { |variant_id| puts @@saved_values.delete(variant_id).inspect }
+            lambda { |variant_id| @@saved_values.delete(variant_id) }
         end
 
         def to_ruby
