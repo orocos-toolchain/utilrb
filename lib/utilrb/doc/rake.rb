@@ -19,6 +19,14 @@ module Utilrb
             end
         end
 
+    def self.doc?
+        if DOC_MODE
+            true
+        else
+            false
+        end
+    end
+
     def self.doc(target = 'docs', options = Hash.new)
         options = Kernel.validate_options options,
             :include => [File.join('lib', '**', '*.rb'), File.join('ext', '**', '*.cc')],
