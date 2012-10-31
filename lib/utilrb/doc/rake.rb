@@ -35,6 +35,20 @@ module Utilrb
             options[:plugins].each do |plugin_name|
                 require "#{plugin_name}/yard"
             end
+
+            task_clobber = ::Rake::Task.define_task "clobber_#{target}" do 
+                FileUtils.rm_rf options[:target_dir]
+            end
+            task_clobber.add_description "Remove #{target} products"
+
+            name = ::Rake.application.current_scope.dup
+            name << task.name
+            task_re = ::Rake::Task.define_task "re#{target}" do
+                FileUtils.rm_rf options[:target_dir]
+                ::Rake::Task[name.join(":")].invoke
+            end
+            task_re.add_description "Force a rebuild of #{target}"
+
         when /rdoc/
             klass = if DOC_MODE == 'rdoc-new'
                         RDoc::Task
