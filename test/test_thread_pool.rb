@@ -35,7 +35,10 @@ describe Utilrb::ThreadPool do
                     sleep 0.12
                 end
             end
+            assert_equal 20,pool.backlog
+            assert_equal 20,pool.tasks.size
             sleep 0.1
+            assert_equal 0,pool.backlog
             assert_equal 0,pool.waiting
             assert_equal 20,pool.spawned
             sleep 0.1
@@ -102,6 +105,22 @@ describe Utilrb::ThreadPool do
             assert_equal 2,count
             pool.shutdown
             pool.join
+        end
+
+        it "must be able to reque a task" do 
+            pool = Utilrb::ThreadPool.new(5)
+            count = 0
+            task = pool.process do 
+                count += 1
+            end
+            while !task.finished?
+                sleep 0.001
+            end
+            pool << task 
+            while !task.finished?
+                sleep 0.001
+            end
+            assert_equal 2, count
         end
     end
 
@@ -171,11 +190,50 @@ describe Utilrb::ThreadPool::Task do
             assert task.started?
         end
 
+        it "must call the callback after it is finished." do 
+            task = Utilrb::ThreadPool::Task.new do 
+                123
+            end
+            result = nil
+            task.callback do |val|
+                result = val
+            end
+            task.execute
+
+            assert_equal 123,result
+            assert !task.running?
+            assert task.finished?
+            assert !task.exception?
+            assert !task.timeout?
+            assert !task.terminated?
+            assert task.successfull?
+            assert task.started?
+        end
+
         it "must be in exception state if exception was raised." do 
             task = Utilrb::ThreadPool::Task.new do 
                 raise
             end
             task.execute
+            assert !task.running?
+            assert task.finished?
+            assert task.exception?
+            assert !task.timeout?
+            assert !task.terminated?
+            assert !task.successfull?
+            assert task.started?
+        end
+
+        it "must call the error handler if an error was raised." do 
+            task = Utilrb::ThreadPool::Task.new do 
+                raise
+            end
+            e = nil
+            task.error_handler do |val|
+                e = val
+            end
+            task.execute
+            assert e
             assert !task.running?
             assert task.finished?
             assert task.exception?

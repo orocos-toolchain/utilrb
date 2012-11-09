@@ -2,14 +2,15 @@ require 'thread'
 
 module Utilrb
     # ThreadPool implementation inspired by
-    # https://github.com/meh/ruby-threadpool/
+    # https://github.com/meh/ruby-threadpool
     #
     # @example Using a thread pool of 10 threads
     #   pool = ThreadPool.new(10)
     #   0.upto(9) do 
     #      pool.process do 
-    #      sleep 1
-    #      puts "done"
+    #        sleep 1
+    #        puts "done"
+    #      end
     #   end
     #   pool.shutdown
     #   pool.join
@@ -112,6 +113,8 @@ module Utilrb
                 @state = :waiting
                 @mutex = Mutex.new
                 @pool = nil
+                @callback = nil
+                @error_handler = nil
             end
 
             # Resets the tasks.
@@ -131,25 +134,27 @@ module Utilrb
             # Executes the task.
             # Should be called from a worker thread
             def execute(pool=nil)
-                return if @state != :waiting
+                @mutex.synchronize do 
+                    return if @state != :waiting
 
-                #store current thread to be able to terminate
-                #the thread
-                @pool = pool
-                @thread = Thread.current
-                @started_at = Time.now
-                @state = :running
+                    #store current thread to be able to terminate
+                    #the thread
+                    @pool = pool
+                    @thread = Thread.current
+                    @started_at = Time.now
+                    @state = :running
+                end
 
                 state = begin
                             @result = @block.call(*@arguments)
                             :finished
                         rescue Exception => e
+                            @exception = e
                             if e.is_a? Timeout
                                 :timeout
                             elsif e.is_a? Asked
                                 :terminated
                             else
-                                @exception = e
                                 :exception
                             end
                         end
@@ -162,6 +167,11 @@ module Utilrb
                     @state = state
                     @pool = nil
                 end
+                if successfull?
+                    @callback.call @result if @callback
+                else
+                    @error_handler.call @exception if @error_handler
+                end
             end
 
             # Terminates the task if it is running
@@ -169,6 +179,24 @@ module Utilrb
                 @mutex.synchronize do
                     return unless running?
                     @thread.raise exception
+                end
+            end
+
+            # Called from the worker thread when the work is done 
+            #
+            # @yield [Object] The callback
+            def callback(&block)
+                @mutex.synchronize do
+                    @callback = block
+                end
+            end
+
+            # Called from the worker thread when an Error occurred
+            #
+            # @yield [Exception] The error handler
+            def error_handler(&block)
+                @mutex.synchronize do
+                    @error_handler= block 
                 end
             end
 
@@ -204,22 +232,22 @@ module Utilrb
             end
         end
 
-        # The minimum number of threads insight the thread pool
+        # The minimum number of worker threads.
         #
         # @return [Fixnum]
         attr_reader :min
 
-        # The maximum number of threads insight the thread pool
+        # The maximum number of worker threads.
         #
         # @return [Fixnum]
         attr_reader :max
 
-        # The real number of threads insight the thread pool
+        # The real number of worker threads.
         #
         # @return [Fixnum]
         attr_reader :spawned
 
-        # The number of threads which are waiting for work
+        # The number of worker threads waiting for work.
         #
         # @return [Fixnum]
         attr_reader :waiting
@@ -291,13 +319,22 @@ module Utilrb
             end
         end
 
+        # Returns an array of the current waiting and running tasks
+        #
+        # @return [Array<Task>] The tasks
+        def tasks
+            @mutex.synchronize do
+                 @tasks_running.dup + @tasks_waiting.dup
+            end
+        end
+
         # Processes the given block as soon as the next thread is available.
         #
         # @param [Array] args the block arguments
         # @yield [*args] the block
         # @return [Task]
         def process (*args, &block)
-            task = Task.new(self, *args, &block)
+            task = Task.new(*args, &block)
             self << task
         end
 
