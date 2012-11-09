@@ -1,3 +1,6 @@
+
+# Utilrb is yet another Ruby toolkit, in the spirit of facets. It includes all
+# the standard class extensions used by www.rock-robotics.org projects.
 module Utilrb
     unless defined? Utilrb::VERSION
 	VERSION = "1.6.6"

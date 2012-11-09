@@ -1,4 +1,4 @@
-require 'test_config'
+require './test_config'
 require 'utilrb/logger'
 require 'flexmock/test_unit'
 
