@@ -9,13 +9,8 @@ module Utilrb
         rescue LoadError
             begin
                 require 'rdoc/task'
-                'rdoc-new'
+                'rdoc'
             rescue LoadError
-                begin
-                    require 'rake/rdoctask'
-                    'rdoc-old'
-                rescue LoadError
-                end
             end
         end
 
@@ -57,13 +52,8 @@ module Utilrb
             end
             task_re.add_description "Force a rebuild of #{target}"
 
-        when /rdoc/
-            klass = if DOC_MODE == 'rdoc-new'
-                        RDoc::Task
-                    else
-                        ::Rake::RDocTask
-                    end
-            task = klass.new(target)
+        when "rdoc"
+            task = RDoc::Task.new(target)
             task.rdoc_files.include(*options[:include])
             task.rdoc_files.exclude(*options[:exclude])
             task.title = options[:title]
