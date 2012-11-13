@@ -61,7 +61,7 @@ module Utilrb
 
         else
             [target, "re#{target}"].each do |task_name|
-                t = Rake::Task.define_task(task_name) do
+                t = ::Rake::Task.define_task(task_name) do
                     STDERR.puts "Documentation generation is disabled: install either the yard or rdoc gems"
                 end
                 t.add_description "Disabled on this installation as neither yard nor rdoc are available"
