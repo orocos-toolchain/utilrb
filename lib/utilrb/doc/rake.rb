@@ -58,6 +58,14 @@ module Utilrb
             task.rdoc_files.exclude(*options[:exclude])
             task.title = options[:title]
             task.rdoc_dir = File.expand_path(options[:target_dir])
+
+        else
+            [target, "re#{target}"].each do |task_name|
+                t = Rake::Task.define_task(task_name) do
+                    STDERR.puts "Documentation generation is disabled: install either the yard or rdoc gems"
+                end
+                t.add_description "Disabled on this installation as neither yard nor rdoc are available"
+            end
         end
     end
 end
