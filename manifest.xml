@@ -12,4 +12,7 @@
   
   <rosdep name="ruby"/>
   <rosdep name="nokogiri"/>
+  <rosdep name="facets" />
+  <rosdep name="rake"/>
+
 </package>
