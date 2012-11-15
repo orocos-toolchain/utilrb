@@ -1,4 +1,6 @@
 require 'thread'
+require 'set'
+require 'utilrb/kernel/options'
 
 module Utilrb
     # ThreadPool implementation inspired by
@@ -14,12 +16,22 @@ module Utilrb
     #   end
     #   pool.shutdown
     #   pool.join
+    #
+    # @author Alexander Duda <Alexander.Duda@dfki.de>
     class ThreadPool
         # A Task is executed by the thread pool as soon as
         # a free thread is available.
+        #
+        # @author Alexander Duda <Alexander.Duda@dfki.de>
         class Task
-            Timeout = Class.new(Exception)
             Asked = Class.new(Exception)
+
+            # The sync key is used to speifiy that a given task must not run in
+            # paralles with another task having the same sync key. If no key is
+            # set there are no such constrains for the taks.
+            #
+            # @return  the sync key
+            attr_reader :sync_key
 
             # Thread pool the task belongs to
             #
@@ -28,7 +40,7 @@ module Utilrb
 
             # State of the task
             # 
-            # @return [:waiting,:running,:finished,:timeout,:terminated,:exception] the state
+            # @return [:waiting,:running,:stopping,:finished,:terminated,:exception] the state
             attr_reader :state
 
             # The exception thrown by the custom code block
@@ -58,10 +70,6 @@ module Utilrb
             # to store a human readable object
             attr_accessor :description
 
-            # Maximum number of seconds until
-            # the execution will timeout
-            attr_accessor :timeout
-
             # Checks if the task was started
             #
             # @return [Boolean]
@@ -72,23 +80,23 @@ module Utilrb
             # @return [Boolean]
             def running?; @state == :running; end
 
+            # Checks if the task is going to be stopped
+            #
+            # @return [Boolean]
+            def stopping?; @state == :stopping; end
+
             # Checks if the task was stopped or finished.
-            # This also includes timeouts and cases where
+            # This also includes cases where
             # an exception was raised by the custom code block.
             #
             # @return [Boolean]
-            def finished?; started? && !running?; end
+            def finished?; started? && !running? && !stopping?; end
 
             # Checks if the task was successfully finished.
             # This means no exceptions, termination or timed out occurred
             #
             # @return [Boolean]
             def successfull?; @state == :finished; end
-
-            # Checks if a timeout occurred
-            #
-            # @return [Boolean]
-            def timeout?; @state == :timeout; end
 
             # Checks if the task was terminated.
             #
@@ -100,37 +108,61 @@ module Utilrb
             # @return [Boolean]
             def exception?; @state == :exception; end
 
-            # A new task which can be added to the work queue of a {ThreadPool}
+            # A new task which can be added to the work queue of a {ThreadPool}.
+            # If a sync key is given no task having the same key will be 
+            # executed in parallel which is useful for instance member calls
+            # which are not thread safe.
             #
+            # @param [Hash] options The options of the task.
+            # @option options [Object] :sync_key The sync key
+            # @option options [Proc] :callback The callback
+            # @option options [Object] :default Default value returned when an error ocurred which was handled. 
+            #   Set it to :_no_default if the callback shall not be called with a default value
             # @param [Array] args The arguments for the code block 
-            # @param [Proc] block The code block
-            def initialize (*args, &block)
+            # @param [#call] block The code block
+            def initialize (options = Hash.new,*args, &block)
                 unless block
                     raise ArgumentError, 'you must pass a work block to initialize a new Task.'
                 end
+                options = Kernel.validate_options(options,{:sync_key => nil,:default => :_no_default,:callback => nil})
+                @sync_key = options[:sync_key]
                 @arguments = args
+                @default = options[:default]
+                @callback = options[:callback]
                 @block = block
-                @state = :waiting
                 @mutex = Mutex.new
                 @pool = nil
-                @callback = nil
-                @error_handler = nil
+                reset
             end
 
             # Resets the tasks.
             # This can be used to requeue a task that is already finished
             def reset
-                if finished?
-                    @state = :waiting
-                    @exception = nil
-                    @result = nil
-                    @started_at = nil
-                    @stopped_at = nil
+                if finished? || !started?
+                    @mutex.synchronize do 
+                        @result = if @default == :_no_default
+                                      nil
+                                  else
+                                      @default
+                                  end
+                        @state = :waiting
+                        @exception = nil
+                        @started_at = nil
+                        @stopped_at = nil
+                    end
                 else
                     raise RuntimeError,"cannot reset a task which is not finished"
                 end
             end
- 
+
+            # returns true if the task has a default return vale
+            # @return [Boolean]
+            def default?
+                 @mutex.synchronize do 
+                     @default != :_no_default
+                 end
+            end
+
             # Executes the task.
             # Should be called from a worker thread
             def execute(pool=nil)
@@ -150,9 +182,7 @@ module Utilrb
                             :finished
                         rescue Exception => e
                             @exception = e
-                            if e.is_a? Timeout
-                                :timeout
-                            elsif e.is_a? Asked
+                            if e.is_a? Asked
                                 :terminated
                             else
                                 :exception
@@ -160,70 +190,41 @@ module Utilrb
                         end
                 @stopped_at = Time.now
 
-                # state must be written at last to ensure
-                # all post process variables are initialized
                 @mutex.synchronize do
                     @thread = nil
                     @state = state
                     @pool = nil
                 end
-                if successfull?
-                    @callback.call @result if @callback
-                else
-                    @error_handler.call @exception if @error_handler
-                end
+                @callback.call @result,@exception if @callback
             end
 
             # Terminates the task if it is running
             def terminate!(exception = Asked)
                 @mutex.synchronize do
                     return unless running?
+                    @state = :stopping
                     @thread.raise exception
                 end
             end
 
             # Called from the worker thread when the work is done 
             #
-            # @yield [Object] The callback
+            # @yield [Object,Exception] The callback
             def callback(&block)
                 @mutex.synchronize do
                     @callback = block
                 end
             end
 
-            # Called from the worker thread when an Error occurred
-            #
-            # @yield [Exception] The error handler
-            def error_handler(&block)
-                @mutex.synchronize do
-                    @error_handler= block 
-                end
-            end
-
-            # Raises an timout Exception on the assigned thread
-            def timeout!
-                terminate! Timeout
-            end
-
-            # Sets the timeout for the task. If the thread pool has a running
-            # watchdog and the task was running for longer than the given time
-            # period the task is timed out.
-            #
-            # @param[Float] timeout The timeout in seconds
-            def timeout=(timeout)
-                @timeout = timeout
-                @mutex.synchronize do
-                    @pool.wake_up_watchdog if @pool
-                end
-            end
-
             # Returns the number of seconds the task is or was running
+            # at the given point in time
             #
-            # @result [Float]
-            def time_elapsed
+            # @param [Time] time The point in time.
+            # @return[Float]
+            def time_elapsed(time = Time.now)
                 #no need to synchronize here
                 if running?
-                    (Time.now-@started_at).to_f
+                    (time-@started_at).to_f
                 elsif finished?
                     (@stopped_at-@started_at).to_f
                 else
@@ -254,7 +255,6 @@ module Utilrb
 
         # Auto trim automatically reduces the number of worker threads if there are too many
         # threads waiting for work.
-        # @param [Boolean] 
         # @return [Boolean]
         attr_accessor :auto_trim
 
@@ -267,6 +267,7 @@ module Utilrb
             @max = max
 
             @cond = ConditionVariable.new
+            @cond_sync_key = ConditionVariable.new
             @mutex = Mutex.new
 
             @tasks_waiting = []         # tasks waiting for execution
@@ -276,8 +277,9 @@ module Utilrb
             @spawned = 0
             @waiting = 0
             @shutdown = false
-            @block_on_task_finished = nil
+            @callback_on_task_finished = nil
             @pipes = nil
+            @sync_keys = Set.new
 
             @trim_requests = 0
             @auto_trim = false
@@ -291,7 +293,7 @@ module Utilrb
 
         # Checks if the thread pool is shutting down all threads.
         #
-        # @result [boolean]
+        # @return [boolean]
         def shutdown?; @shutdown; end
 
         # Changes the minimum and maximum number of threads
@@ -334,8 +336,56 @@ module Utilrb
         # @yield [*args] the block
         # @return [Task]
         def process (*args, &block)
-            task = Task.new(*args, &block)
+            process_with_options(nil,*args,&block)
+        end
+
+        # Returns true if a worker thread is currently processing a task 
+        # and no work is queued
+        #
+        # @return [Boolean]
+        def process?
+            @mutex.synchronize do
+                 waiting != spawned || @tasks_waiting.length > 0
+            end
+        end
+
+        # Processes the given block as soon as the next thread is available
+        # with the given options.
+        #
+        # @param (see Task#initialize)
+        # @option (see Task#initialize)
+        # @return [Task]
+        def process_with_options(options,*args, &block)
+            task = Task.new(options,*args, &block)
             self << task
+            task
+        end
+
+        # Processes the given block from the main thread but insures
+        # that during processing no worker thread is executing a task
+        # which has the same sync_key.
+        #
+        # This is useful for instance member calls which are not thread
+        # safe.
+        #
+        # @param [Object] sync_key The sync key
+        # @yield [*args] the code block block 
+        # @return [Object] The result of the code block
+        def sync(sync_key,*args,&block)
+            @mutex.synchronize do
+                while(!@sync_keys.add?(sync_key))
+                    @cond_sync_key.wait @mutex #wait until someone has removed a key
+                end
+            end
+            result = block.call(*args)
+            @mutex.synchronize do
+                @sync_keys.delete sync_key
+                # @cond_sync_key.signal  # not needed at the moment as only the main thread
+                                         # waits for this
+                @cond.signal # worker threads are just waiting for work no matter if it is
+                             # because of a deletion of a sync_key or a task was added
+            end
+            result
         end
 
         # Processes the given {Task} as soon as the next thread is available
@@ -374,24 +424,12 @@ module Utilrb
 
         # Shuts down all threads.
         #
-        # @param [Float] maximal number of seconds shutdown is waiting for a running thread
-        def shutdown(timeout = nil)
+        def shutdown()
             tasks = nil
             @mutex.synchronize do
                 @shutdown = true
-                @cond.broadcast
-                tasks = if timeout
-                            @tasks_running.dup
-                        else
-                            []
-                        end
             end
-            tasks.each do |task|
-                if !task.timeout || (task.timeout - task.time_elapsed).to_f > timeout
-                    task.timeout = (task.time_elapsed + timeout).to_f
-                end
-            end
-            watchdog if timeout
+            @cond.broadcast
         end
 
         # Blocks until all threads were terminated.
@@ -399,39 +437,18 @@ module Utilrb
         # if shutdown was not called.
         def join
             @workers.first.join until @workers.empty?
-            wake_up_watchdog
-            @watchdog.join if @watchdog
             self
         end
 
-        # Activates a watchdog checking all tasks timeouts.
-        def watchdog
-            @mutex.synchronize do
-                if !@watchdog
-                    spawn_watchdog
-                else
-                    wake_up_watchdog
-                end
-            end
-        end
-
         # Given code block is called for every task which was
-        # finished even it was terminated or timeout.
+        # finished even it was terminated.
         #
         # This can be used to store the result for an event loop
         #
         # @yield [Task] the code block
         def on_task_finished (&block)
             @mutex.synchronize do
-                @block_on_task_finished = block
-            end
-        end
-
-        # Wakes up the watchdog if the watchdog is waiting for 
-        # the next timeout
-        def wake_up_watchdog
-            if @pipes
-                @pipes.last.write_nonblock 'x' rescue nil
+                @callback_on_task_finished = block
             end
         end
 
@@ -441,8 +458,17 @@ module Utilrb
         def spawn_thread
             thread = Thread.new do
                 while !shutdown? do
-                    task = @mutex.synchronize do
-                        while @tasks_waiting.empty? && !shutdown? do 
+                    current_task = @mutex.synchronize do
+                        while !shutdown?
+                            task = @tasks_waiting.each_with_index do |t,i|
+                                if !t.sync_key || @sync_keys.add?(t.sync_key)
+                                    @tasks_waiting.delete_at(i)
+                                    @tasks_running << t
+                                    break t
+                                end
+                            end
+                            break task unless task.is_a? Array
+
                             if @trim_requests > 0
                                 @trim_requests -= 1
                                 break
@@ -450,17 +476,18 @@ module Utilrb
                             @waiting += 1
                             @cond.wait @mutex
                             @waiting -= 1
-                        end
-                        if !shutdown?
-                            @tasks_running << @tasks_waiting.shift
-                            @tasks_running.last
-                        end
+                        end or break
                     end or break
-                    wake_up_watchdog
-                    task.execute(self)
+
+                    current_task.execute(self)
                     @mutex.synchronize do
-                        @tasks_running.delete task
-                        @block_on_task_finished.call(task) if @block_on_task_finished
+                        @tasks_running.delete current_task
+                        @callback_on_task_finished.call(current_task) if @callback_on_task_finished
+                        if current_task.sync_key
+                            @sync_keys.delete(current_task.sync_key) 
+                            @cond_sync_key.signal
+                            @cond.signal
+                        end
                     end
                     trim if auto_trim
                 end
@@ -473,41 +500,6 @@ module Utilrb
             end
             @spawned += 1
             @workers << thread
-        end
-
-        # Spawns a watchdog thread checking the timeouts for each task running
-        # must be called from a synchronized block
-        def spawn_watchdog
-            return if @watchdog
-            @pipes = IO.pipe
-            @watchdog = Thread.new do
-                while !shutdown? || @spawned > 0 do
-                    #sleep until the next timeout will occur
-                    now = Time.now
-                    timeout = @mutex.synchronize do 
-                        if !@tasks_running.empty?
-                            @tasks_running.map do |task|
-                                next unless task.started_at
-                                now - task.started_at + task.timeout
-                            end.compact.min
-                        end
-                    end
-                    readable, = IO.select([@pipes.first], nil, nil, timeout)
-                    if readable && !readable.empty?
-                        readable.first.read_nonblock 1024
-                    end
-
-                    #check all tasks if they timed out
-                    now = Time.now
-                    @mutex.synchronize do 
-                        @tasks_running.each do  |task|
-                            if now >= task.started_at + task.timeout
-                                task.timeout!
-                            end
-                        end
-                    end
-                end
-            end
         end
     end
 end

@@ -4,6 +4,147 @@ require 'minitest/spec'
 
 MiniTest::Unit.autorun
 
+describe Utilrb::EventLoop::Forwardable do
+    class Dummy
+        def test(wait)
+            sleep wait
+            Thread.current
+        end
+    end
+
+    class DummyAsync
+        extend Utilrb::EventLoop::Forwardable
+        def_event_loop_delegator :@obj,:@event_loop,:test,:alias => :atest
+        def_event_loop_delegators :@obj,:@event_loop,[:bla1,:bla2]
+
+        forward_to :@obj, :@event_loop do
+            thread_safe do 
+                def_delegators :bla3,:bla4
+            end
+            def_delegators :bla5
+        end
+
+        def initialize(event_loop,obj = Dummy.new)
+            @event_loop = event_loop
+            @obj = obj
+        end
+
+    end
+
+    class DummyAsyncFilter
+        extend Utilrb::EventLoop::Forwardable
+
+        def do_not_overwrite
+            222
+        end
+
+        def_event_loop_delegator :@obj,:@event_loop,:test,:alias => :atest2,:default => 123
+        def_event_loop_delegator :@obj,:@event_loop,:test,:alias => :atest,:filter => :test_filter
+        def_event_loop_delegator :@obj,:@event_loop,:test,:alias => :do_not_overwrite
+        
+        def initialize(event_loop,obj = Dummy.new)
+            @event_loop = event_loop
+            @obj = obj
+        end
+
+        # the result is always returned as array to check 
+        # that the filer is working
+        def test_filter(result)
+            [result,result]
+        end
+    end
+
+    describe "when a class is extend but the designated object is nil" do
+        it "must raise if a method call is delegated." do
+            event_loop = Utilrb::EventLoop.new
+            obj = DummyAsync.new(event_loop,nil)
+            assert_raises Utilrb::EventLoop::Forwardable::DesignatedObjectNotFound do 
+                obj.atest(0.1)
+            end
+            assert_raises Utilrb::EventLoop::Forwardable::DesignatedObjectNotFound do 
+                obj.atest(0.1) do |_|
+                end
+                sleep 0.1
+                event_loop.step
+            end
+            assert_raises Utilrb::EventLoop::Forwardable::DesignatedObjectNotFound do 
+                obj.atest_every(0.05,0.5) do |_|
+                end
+                sleep 0.1
+                event_loop.step
+                sleep 0.1
+                event_loop.step
+            end
+        end
+
+        it "must return the default value if a method call is delegated but the underlying object is nil." do
+            event_loop = Utilrb::EventLoop.new
+            obj = DummyAsyncFilter.new(event_loop,nil)
+            obj.atest2(0.1).must_equal(123)
+            obj.atest2(0.1) do |result,exception|
+                result.must_equal 123
+            end
+            sleep 0.1
+            event_loop.step
+        end
+
+        it "must raise if a method call is delegated but the underlying object is nil and no default value is set." do
+            event_loop = Utilrb::EventLoop.new
+            obj = DummyAsyncFilter.new(event_loop,nil)
+            assert_raises Utilrb::EventLoop::Forwardable::DesignatedObjectNotFound do 
+                obj.atest(0.1)
+            end
+        end
+    end
+
+    describe "when a class is extend" do
+        it "must delegate the method call directly to the real object." do
+            event_loop = Utilrb::EventLoop.new
+            obj = DummyAsyncFilter.new(event_loop)
+            assert_equal Thread.current,obj.atest(0.1).first
+        end
+
+        it 'must not overwrite instance methods' do 
+            event_loop = Utilrb::EventLoop.new
+            obj = DummyAsyncFilter.new(event_loop)
+            assert_equal 222,obj.do_not_overwrite
+        end
+
+        it "must defer the method call to a thread pool if a block is given." do
+            event_loop = Utilrb::EventLoop.new
+            obj = DummyAsync.new(event_loop)
+            thread = nil
+            task = obj.atest(0.05) do |result|
+                thread = result
+            end
+            assert_equal Utilrb::ThreadPool::Task,task.class
+            sleep 0.1
+            event_loop.step
+            assert task.successfull?
+            assert thread != Thread.current
+        end
+
+        it "must defer the method call to a thread pool every given period." do
+            event_loop = Utilrb::EventLoop.new
+            obj = DummyAsync.new(event_loop)
+            thread = nil
+            timer = obj.atest_every(0.1,0.05) do |result|
+                thread = result
+            end
+            assert_equal Utilrb::EventLoop::Timer,timer.class
+            sleep 0.1
+            event_loop.step
+            sleep 0.1
+            event_loop.step
+            assert thread != Thread.current
+            thread = nil
+            sleep 0.1
+            event_loop.step
+            assert thread != Thread.current
+        end
+    end
+end
+
 describe Utilrb::EventLoop do
     describe "when executed" do
         it "must call the timers at the right point in time." do
@@ -24,11 +165,13 @@ describe Utilrb::EventLoop do
             event_loop.once 0.3 do 
                 val4 = 444
             end
+            assert event_loop.events?
 
             time = Time.now
             while Time.now - time < 0.101
                 event_loop.step
             end
+            event_loop.steps
             assert_equal 123,val1
             assert_equal nil,val2
             assert_equal 222,val3
@@ -51,6 +194,7 @@ describe Utilrb::EventLoop do
             end
             assert_equal nil,val3
             assert_equal 444,val4
+            event_loop.clear
         end
 
         it 'must call a given block for every step' do 
@@ -85,8 +229,8 @@ describe Utilrb::EventLoop do
             timer1.cancel
             assert !timer1.running?
             time = Time.now
-            while Time.now - time < 0.201
-                event_loop.step
+            event_loop.wait_for do 
+                Time.now - time >= 0.22
             end
             assert_equal nil,val1
             assert_equal 345,val2
@@ -112,7 +256,7 @@ describe Utilrb::EventLoop do
                 assert main_thread != result
                 val = result
             end
-            event_loop.defer callback,123,333 do |a,b|
+            event_loop.defer({:callback => callback},123,333) do |a,b|
                 assert_equal 123,a
                 assert_equal 333,b
                 sleep 0.2
@@ -128,57 +272,87 @@ describe Utilrb::EventLoop do
             assert val
             assert_equal val,val2
         end
-
-        it 'must handle errors if a handler is registered' do 
+        it "must peridically defer blocking calls to a thread pool" do 
             event_loop = Utilrb::EventLoop.new
+            main_thread = Thread.current
+            work = Proc.new do 
+                Thread.current
+            end
             val = nil
-            val2 = nil
-
-            error_handler = Proc.new do |error| 
-                if(error.class == Exception)
-                    val = error
-                    true
-                end
+            event_loop.async_every work,:period => 0.1 do |result,e|
+                val = result
             end
-            event_loop.defer nil, error_handler do
-                raise Exception
-            end
-
-            sleep 0.1
+            sleep 0.11
             event_loop.step
-            assert_equal Exception, val.class
-            assert_equal nil, val2
-
+            assert !val
+            sleep 0.01
+            event_loop.step
+            assert val
+            assert val != main_thread
             val = nil
-            event_loop.error_handler do |error|
-                if error.class == Utilrb::EventLoop::EventLoopError
-                    val2 = error.error
-                    error.class == Utilrb::EventLoop::EventLoopError
-                    true
-                end
-            end
 
-            event_loop.defer nil, error_handler do
-                raise ArgumentError
-            end
-            sleep 0.1
+            sleep 0.11
             event_loop.step
-            assert_equal nil, val
-            assert_equal ArgumentError, val2.class
-
-            val2 = nil
-            event_loop.once do
-                raise ArgumentError
-            end
-            event_loop << Proc.new  do |error|
-                val2 = error
-                error.class == ArgumentError
-            end
+            sleep 0.01
             event_loop.step
-            assert_equal ArgumentError, val2.class
+            assert val
+            assert val != main_thread
         end
 
-        it 'must re-raise an error if no handler is registered' do 
+        it 'must be able to overwrite an error' do 
+            event_loop = Utilrb::EventLoop.new
+            work = Proc.new do 
+                raise ArgumentError
+            end
+            event_loop.async work do |r,e|
+                if e
+                    RuntimeError.new
+                end
+            end
+            sleep 0.1
+            assert_raises RuntimeError do
+                event_loop.step
+            end
+        end
+
+        it 'must be able to ignore an error' do 
+            event_loop = Utilrb::EventLoop.new
+            work = Proc.new do 
+                raise ArgumentError
+            end
+            event_loop.async work do |r,e|
+                if e
+                    :ignore_error
+                end
+            end
+            sleep 0.1
+            event_loop.step
+        end
+
+        it 'must inform on_error block in an event of an error' do 
+            event_loop = Utilrb::EventLoop.new
+            error = nil
+            event_loop.on_error ArgumentError do |e|
+                error = e
+            end
+
+            #check super class 
+            error2 = nil
+            event_loop.on_error Exception do |e|
+                error2 = e
+            end
+            work = Proc.new do
+                raise ArgumentError
+            end
+            event_loop.async_with_options work, :default => :default_value do |r,e|
+            end
+            sleep 0.1
+            event_loop.step
+            assert error
+            assert error2
+        end
+
+        it 'must re-raise an error' do 
             event_loop = Utilrb::EventLoop.new
             event_loop.once do
                 raise ArgumentError
@@ -198,14 +372,14 @@ describe Utilrb::EventLoop do
             event_loop.clear_errors
             event_loop.step
 
-            event_loop.defer 123,22,333 do |a,b,c|
+            event_loop.defer Hash.new, 123,22,333 do |a,b,c|
                 assert_equal 123,a
                 assert_equal 22,b
                 assert_equal 333,c
-                raise Exception
+                raise ArgumentError
             end
             sleep 0.1
-            assert_raises Utilrb::EventLoop::EventLoopError do 
+            assert_raises ArgumentError do 
                 event_loop.step
             end
         end

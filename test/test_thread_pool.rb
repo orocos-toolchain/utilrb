@@ -74,10 +74,10 @@ describe Utilrb::ThreadPool do
             pool.auto_trim = true
             0.upto 19 do 
                 pool.process do 
-                    sleep 0.12
+                    sleep 0.15
                 end
             end
-            sleep 0.1
+            sleep 0.13
             assert_equal 0,pool.waiting
             assert_equal 20,pool.spawned
             sleep 0.4
@@ -85,6 +85,58 @@ describe Utilrb::ThreadPool do
             assert_equal 5,pool.spawned
             pool.shutdown
             pool.join
+        end
+
+        it "must not execute tasks with the same sync key in parallel" do
+            pool = Utilrb::ThreadPool.new(5,10)
+            pool.auto_trim = true
+            time = Time.now
+            0.upto 10 do 
+                t = pool.process_with_options :sync_key => time do
+                    sleep 0.1
+                end
+                assert_equal time, t.sync_key
+            end
+            while pool.backlog > 0
+                sleep 0.1
+            end
+            pool.shutdown
+            pool.join
+            assert Time.now - time >= 1.0
+        end
+
+        it "must not execute a task and a sync call in parallel if they have the same sync key" do
+            pool = Utilrb::ThreadPool.new(5,5)
+            time = Time.now
+            t = pool.process_with_options :sync_key => 1 do
+                sleep 0.2
+            end
+            pool.sync 1 do 
+                sleep 0.2
+            end
+            while pool.backlog > 0
+                sleep 0.1
+            end
+            pool.shutdown
+            pool.join
+            assert Time.now - time >= 0.4
+        end
+
+        it "must execute a task and a sync call in parallel if they have different sync keys" do
+            pool = Utilrb::ThreadPool.new(5,5)
+            time = Time.now
+            t = pool.process_with_options :sync_key => 1 do
+                sleep 0.2
+            end
+            pool.sync 2 do 
+                sleep 0.2
+            end
+            while pool.backlog > 0
+                sleep 0.1
+            end
+            pool.shutdown
+            pool.join
+            assert Time.now - time < 0.4
         end
     end
 
@@ -124,32 +176,14 @@ describe Utilrb::ThreadPool do
         end
     end
 
-    describe "when watchdog is running" do
-        it "must timeout tasks taking too long." do 
-            pool = Utilrb::ThreadPool.new(5)
-            pool.watchdog
-            task = pool.process do 
-                sleep 10
-            end
-            task.timeout = 0.1
-            sleep 0.12
-            assert !task.running?
-            assert task.timeout?
-            pool.shutdown
-            pool.join
-        end
-    end
-
     describe "when shutting down" do
-        it "must terminate tasks taking too long." do 
+        it "must terminate all threads" do 
             pool = Utilrb::ThreadPool.new(5)
             task = pool.process do 
-                sleep 3
+                sleep 0.2
             end
-            sleep 0.1
-            pool.shutdown(0.3)
+            pool.shutdown()
             pool.join
-            assert task.timeout?
         end
     end
 end
@@ -168,23 +202,34 @@ describe Utilrb::ThreadPool::Task do
             assert !task.running?
             assert !task.finished?
             assert !task.exception?
-            assert !task.timeout?
             assert !task.terminated?
             assert !task.successfull?
             assert !task.started?
             assert_equal :waiting, task.state
         end
+        it "must raise if wrong option is given." do 
+            assert_raises ArgumentError do 
+                task = Utilrb::ThreadPool::Task.new :bla => 123 do 
+                end
+            end
+        end
+        it "must set its options." do
+            task = Utilrb::ThreadPool::Task.new :sync_key => 2 do 
+                123
+            end
+            assert_equal 2,task.sync_key
+        end
     end
 
     describe "when executed" do
-        it "must be in finished state if task successfully executed." do 
+        it "must be in finished state if task successfully executed." do
             task = Utilrb::ThreadPool::Task.new do 
+                123
             end
             task.execute
             assert !task.running?
             assert task.finished?
             assert !task.exception?
-            assert !task.timeout?
             assert !task.terminated?
             assert task.successfull?
             assert task.started?
@@ -195,7 +240,7 @@ describe Utilrb::ThreadPool::Task do
                 123
             end
             result = nil
-            task.callback do |val|
+            task.callback do |val,e|
                 result = val
             end
             task.execute
@@ -204,7 +249,6 @@ describe Utilrb::ThreadPool::Task do
             assert !task.running?
             assert task.finished?
             assert !task.exception?
-            assert !task.timeout?
             assert !task.terminated?
             assert task.successfull?
             assert task.started?
@@ -218,29 +262,61 @@ describe Utilrb::ThreadPool::Task do
             assert !task.running?
             assert task.finished?
             assert task.exception?
-            assert !task.timeout?
             assert !task.terminated?
             assert !task.successfull?
             assert task.started?
-        end
 
-        it "must call the error handler if an error was raised." do 
             task = Utilrb::ThreadPool::Task.new do 
                 raise
             end
-            e = nil
-            task.error_handler do |val|
-                e = val
+            result = nil
+            task.callback do |val,e|
+                result = val ? val : e
             end
             task.execute
-            assert e
             assert !task.running?
             assert task.finished?
             assert task.exception?
-            assert !task.timeout?
             assert !task.terminated?
             assert !task.successfull?
             assert task.started?
+            assert_equal RuntimeError, result.class
+        end
+
+        it "must return the default value if an error was raised." do 
+            task = Utilrb::ThreadPool::Task.new :default => 123 do 
+                raise
+            end
+            result = nil
+            task.callback do |val,e|
+                result = val
+            end
+            task.execute
+            assert !task.running?
+            assert task.finished?
+            assert task.exception?
+            assert !task.terminated?
+            assert !task.successfull?
+            assert task.started?
+            assert_equal 123,result
+        end
+
+        it "must not call the callback if an error occured and default is set to :_no_default." do 
+            task = Utilrb::ThreadPool::Task.new :default => :_no_default do 
+                raise
+            end
+            result = nil
+            task.callback do |val,e|
+                result = val
+            end
+            task.execute
+            assert !task.running?
+            assert task.finished?
+            assert task.exception?
+            assert !task.terminated?
+            assert !task.successfull?
+            assert task.started?
+            assert_equal nil,result
         end
 
         it "must calculate its elapsed time." do 
@@ -275,15 +351,14 @@ describe Utilrb::ThreadPool::Task do
             assert !task.running?
             assert task.finished?
             assert !task.exception?
-            assert !task.timeout?
             assert task.terminated?
             assert !task.successfull?
             assert task.started?
         end
     end
 
-    describe "when timeout" do
-        it "must be in timeout state." do 
+    describe "when terminated" do
+        it "must be in state terminated." do 
             task = Utilrb::ThreadPool::Task.new do 
                 sleep 10
             end
@@ -291,14 +366,13 @@ describe Utilrb::ThreadPool::Task do
                 task.execute
             end
             sleep 0.1
-            task.terminate!(Utilrb::ThreadPool::Task::Timeout)
+            task.terminate!()
             thread.join
 
             assert !task.running?
             assert task.finished?
             assert !task.exception?
-            assert task.timeout?
-            assert !task.terminated?
+            assert task.terminated?
             assert !task.successfull?
             assert task.started?
         end
