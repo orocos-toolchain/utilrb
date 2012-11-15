@@ -1,3 +1,4 @@
+$LOAD_PATH.unshift File.expand_path('lib', File.dirname(__FILE__))
 require 'rake'
 require './lib/utilrb/common'
 require './lib/utilrb/rake_common'
