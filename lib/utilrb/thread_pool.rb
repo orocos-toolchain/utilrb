@@ -361,7 +361,7 @@ module Utilrb
             task
         end
 
-        # Processes the given block from the main thread but insures
+        # Processes the given block from current thread but insures
         # that during processing no worker thread is executing a task
         # which has the same sync_key.
         #
@@ -380,8 +380,7 @@ module Utilrb
             result = block.call(*args)
             @mutex.synchronize do
                 @sync_keys.delete sync_key
-                # @cond_sync_key.signal  # not needed at the moment as only the main thread
-                                         # waits for this
+                @cond_sync_key.signal
                 @cond.signal # worker threads are just waiting for work no matter if it is
                              # because of a deletion of a sync_key or a task was added
             end

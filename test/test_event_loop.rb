@@ -67,14 +67,6 @@ describe Utilrb::EventLoop::Forwardable do
                 sleep 0.1
                 event_loop.step
             end
-            assert_raises Utilrb::EventLoop::Forwardable::DesignatedObjectNotFound do 
-                obj.atest_every(0.05,0.5) do |_|
-                end
-                sleep 0.1
-                event_loop.step
-                sleep 0.1
-                event_loop.step
-            end
         end
 
         it "must return the default value if a method call is delegated but the underlying object is nil." do
@@ -123,25 +115,6 @@ describe Utilrb::EventLoop::Forwardable do
             assert task.successfull?
             assert thread != Thread.current
         end
-
-        it "must defer the method call to a thread pool every given period." do
-            event_loop = Utilrb::EventLoop.new
-            obj = DummyAsync.new(event_loop)
-            thread = nil
-            timer = obj.atest_every(0.1,0.05) do |result|
-                thread = result
-            end
-            assert_equal Utilrb::EventLoop::Timer,timer.class
-            sleep 0.1
-            event_loop.step
-            sleep 0.1
-            event_loop.step
-            assert thread != Thread.current
-            thread = nil
-            sleep 0.1
-            event_loop.step
-            assert thread != Thread.current
-        end
     end
 end
 
@@ -152,20 +125,15 @@ describe Utilrb::EventLoop do
             val1 = nil
             val2 = nil
             val3 = nil
-            val4 = nil
             timer1 = event_loop.every 0.1 do 
                 val1 = 123
             end
             timer2 = event_loop.every 0.2 do 
                 val2 = 345
             end
-            event_loop << Proc.new do
-                val3 = 222
-            end
             event_loop.once 0.3 do 
-                val4 = 444
+                val3 = 444
             end
-            assert event_loop.events?
 
             time = Time.now
             while Time.now - time < 0.101
@@ -174,10 +142,8 @@ describe Utilrb::EventLoop do
             event_loop.steps
             assert_equal 123,val1
             assert_equal nil,val2
-            assert_equal 222,val3
-            assert_equal nil,val4
+            assert_equal nil,val3
             val1 = nil
-            val3 = nil
 
             time = Time.now
             while Time.now - time < 0.101
@@ -186,14 +152,12 @@ describe Utilrb::EventLoop do
             assert_equal 123,val1
             assert_equal 345,val2
             assert_equal nil,val3
-            assert_equal nil,val4
 
             time = Time.now
             while Time.now - time < 0.101
                 event_loop.step
             end
-            assert_equal nil,val3
-            assert_equal 444,val4
+            assert_equal 444,val3
             event_loop.clear
         end
 
@@ -390,6 +354,35 @@ describe Utilrb::EventLoop do
                 event_loop.stop
             end
             event_loop.exec
+        end
+
+        it 'must raise if step is called from a wrong thread' do 
+            event_loop = Utilrb::EventLoop.new
+            event_loop.defer do
+                event_loop.step
+            end
+            sleep 0.1
+            assert_raises RuntimeError do 
+                event_loop.step
+            end
+        end
+
+        it 'must call a given block from the event loop thread' do 
+            event_loop = Utilrb::EventLoop.new
+            event_loop.thread = Thread.current
+            result1,result2 = [nil,nil]
+            event_loop.defer do
+                result1 = Thread.current
+                event_loop.call do
+                    result2 = Thread.current
+                    assert event_loop.thread?
+                end
+            end
+            sleep 0.1
+            event_loop.step
+            assert result1
+            assert result1 != result2
+            assert_equal Thread.current,result2
         end
     end
 end
