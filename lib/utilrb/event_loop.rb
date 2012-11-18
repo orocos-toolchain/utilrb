@@ -261,12 +261,15 @@ module Utilrb
         # @param [Hash] options The options 
         # @option (see ThreadPool::Task#initialize)
         # @option options [Proc] :callback The callback
+        # @option options [class] :known_errors Known erros which will be rescued
+        #       if a default value is given.
         # 
         # @param (see ThreadPool::Task#initialize)
         # @return [ThreadPool::Task] The thread pool task.
         def defer(options=Hash.new,*args,&block)
-            options, task_options = Kernel.filter_options(options,{:callback => nil})
+            options, task_options = Kernel.filter_options(options,{:callback => nil,:known_errors => nil})
             callback = options[:callback]
+            known_erros = Array(options[:known_errors])
 
             task = Utilrb::ThreadPool::Task.new(task_options,*args,&block)
             # ensures that user callback is called from main thread and not from worker threads
@@ -286,34 +289,20 @@ module Utilrb
                                                 e
                                             else
                                                 exception
-                                            end 
+                                            end
                                         end
                         end
                         if exception
-                            if task.default?
-                                # just inform all error handlers
-                                handle_error(exception,false)
-                            else
-                                # inform error handlers and raise
-                                handle_error(exception,true)
-                            end
+                            raises = !task.default? || !known_erros.find {|error| exception.is_a? error}
+                            handle_error(exception,raises)
                         end
                     end
                 end
             else
                 task.callback do |result,exception|
                     if exception
-                        if task.default?
-                            #just inform all error handlers
-                            once do
-                                handle_error(exception,false)
-                            end
-                        else
-                            once do
-                                # inform error handlers and raise
-                                handle_error(exception,true)
-                            end
-                        end
+                        raises = !task.default? || !known_erros.find {|error| exception.is_a? error}
+                        once {handle_error(exception,raises)}
                     end
                 end
             end
@@ -743,9 +732,9 @@ module Utilrb
             # @option options [Symbol] :alias The alias of the method
             # @option options [Symbol] :sync_key The sync key 
             # @option options [Symbol] :filter The filter method
-            # @option options [Object] :default Default value returned
-            # @option options [Exception] :error Exception which will be raised
-            #   if the underlying object is nil and no default value is set
+            # @option options [Object] :default Default value returned if the error
+            #     is marked as known or the designated object is nil
+            # @option options [class] :known_errors Known errors which will be rescued if a default value is given 
             # @see #sync
             def def_event_loop_delegator(accessor,event_loop, method, options = Hash.new )
                 Forward.def_event_loop_delegator(self,accessor,event_loop,method,options)
@@ -798,7 +787,12 @@ module Utilrb
 
 
                 def self.def_event_loop_delegator(klass,accessor,event_loop, method, options = Hash.new )
-                    options = Kernel.validate_options options, :filter => nil,:alias => method,:sync_key => :accessor,:default => :_no_default
+                    options = Kernel.validate_options options, :filter => nil,
+                                                               :alias => method,
+                                                               :sync_key => :accessor,
+                                                               :default => :_no_default,
+                                                               :known_errors => nil
+
                     raise ArgumentError, "accessor is nil" unless accessor
                     raise ArgumentError, "event_loop is nil" unless event_loop
                     raise ArgumentError, "method is nil" unless method
@@ -810,16 +804,26 @@ module Utilrb
                     sync_key = options[:sync_key]
                     sync_key ||= :nil
                     default = options[:default].inspect
+                    errors = Array(options[:known_errors]).to_s
 
                     line_no = __LINE__; str = %Q{
                     def #{ali}(*args, &block)
-                      begin
                         options = Hash.new
-                        accessor,error = #{accessor} # cache the accessor.
+                        accessor,error = #{if options[:known_errors]
+                                            %Q{
+                                                begin
+                                                    #{accessor} # cache the accessor.
+                                                rescue #{Array(options[:known_errors]).join(",")} => e
+                                                   [nil,e]
+                                                end
+                                               }
+                                          else
+                                                accessor.to_s
+                                          end}
                         if !block
                             if !accessor
                                 #{if options[:default] == :_no_default
-                                    "if error 
+                                    "if error
                                         raise error
                                      else 
                                         raise DesignatedObjectNotFound,'designated object is nil'
@@ -828,7 +832,15 @@ module Utilrb
                                     filter ? "#{filter}(#{default})" : default
                                 end}
                             else
-                                result = #{sync_key != :nil ? "#{event_loop}.sync(#{sync_key}){accessor.__send__(:#{method}, *args)}" : "accessor.__send__(:#{method}, *args)"}
+                                result = begin
+                                            #{sync_key != :nil ? "#{event_loop}.sync(#{sync_key}){accessor.__send__(:#{method}, *args)}" : "accessor.__send__(:#{method}, *args)"}
+                                          #{if options[:known_errors]
+                                          %Q{
+                                            rescue #{Array(options[:known_errors]).join(",")} => e
+                                                #{default}
+                                           }
+                                          end}
+                                          end
                                 #{filter ? "#{filter}(result)" : "result"}
                             end
                         else
@@ -838,19 +850,24 @@ module Utilrb
                                         if err
                                             raise err
                                         else
-                                            raise DesignatedObjectNotFound,'designated object is nil'
+                                            #{if options[:default] == :_no_default
+                                                "raise DesignatedObjectNotFound,'designated object is nil'"
+                                            else
+                                                default
+                                            end}
                                         end
                                     else
                                         acc.__send__(:#{method}, *args)
                                     end
                                 end
                             callback = #{filter ? "block.to_proc.arity == 2 ? Proc.new { |r,e| block.call(#{filter}(r),e)} : Proc.new {|r| block.call(#{filter}(r))}" : "block"}
-                            #{event_loop}.async_with_options(work,{:sync_key => #{sync_key},:default =>#{default}},*args, &callback)
+                            #{event_loop}.async_with_options(work,
+                                                             {:sync_key => #{sync_key},:default =>#{default},:known_errors => #{errors}},
+                                                             *args, &callback)
                         end
                       rescue Exception
                         $@.delete_if{|s| %r"#{Regexp.quote(__FILE__)}"o =~ s}
                         ::Kernel::raise
-                      end
                     end
                     }
                     # If it's not a class or module, it's an instance
@@ -870,7 +887,7 @@ module Utilrb
                               else
                                   Hash.new
                               end
-                    options = Kernel.validate_options options, :filter => nil,:sync_key => nil,:default =>:nil
+                    ArgumentError ":alias is not supported when defining multiple methods at once." if options.has_key?(:alias)
                     methods.each do |method|
                         def_event_loop_delegator(klass,accessor,event_loop,method,options)
                     end

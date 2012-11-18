@@ -308,7 +308,7 @@ describe Utilrb::EventLoop do
             work = Proc.new do
                 raise ArgumentError
             end
-            event_loop.async_with_options work, :default => :default_value do |r,e|
+            event_loop.async_with_options work, :default => :default_value,:known_errors => ArgumentError do |r,e|
             end
             sleep 0.1
             event_loop.step
