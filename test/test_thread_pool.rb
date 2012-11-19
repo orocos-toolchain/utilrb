@@ -174,6 +174,36 @@ describe Utilrb::ThreadPool do
             end
             assert_equal 2, count
         end
+
+        it "must process the next task if thread gets available" do 
+            pool = Utilrb::ThreadPool.new(1)
+            count = 0
+            pool.process do 
+                sleep 0.1
+                count +=1
+            end
+            pool.process do 
+                sleep 0.1
+                count +=1
+            end
+            sleep 0.25
+            assert_equal 2, count
+
+            task3 = Utilrb::ThreadPool::Task.new do
+                count +=1
+                sleep 0.1
+            end
+            task4 = Utilrb::ThreadPool::Task.new do
+                count +=1
+                sleep 0.1
+            end
+            pool << task3
+            pool << task4
+            sleep 0.15
+            pool.shutdown
+            pool.join
+            assert_equal 4, count
+        end
     end
 
     describe "when shutting down" do
