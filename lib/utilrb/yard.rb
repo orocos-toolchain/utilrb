@@ -161,6 +161,7 @@ module Utilrb
                     object.signature
                     object.docstring.add_tag(YARD::Tags::Tag.new(:param, 'value', ['Boolean'], nil))
                     object.docstring.add_tag(YARD::Tags::Tag.new(:return, nil, ['Boolean'], nil))
+                    register(object)
                 end
             end
         end
