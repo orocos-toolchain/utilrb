@@ -153,14 +153,14 @@ module Utilrb
                 object = YARD::CodeObjects::MethodObject.new(namespace, pname, scope)
                 object.dynamic = true 
                 register(object)
-                object.docstring.create_tag("return", "[Boolean]")
+                object.docstring.add_tag(YARD::Tags::Tag.new(:return, nil, ['Boolean']))
                 if rw
                     object = YARD::CodeObjects::MethodObject.new(namespace, wname, scope)
                     object.dynamic = true 
                     object.parameters << ["value", nil]
                     object.signature
-                    object.docstring.create_tag("param", "[Boolean] value")
-                    object.docstring.create_tag("return", "[Boolean]")
+                    object.docstring.add_tag(YARD::Tags::Tag.new(:param, 'value', ['Boolean'], nil))
+                    object.docstring.add_tag(YARD::Tags::Tag.new(:return, nil, ['Boolean'], nil))
                 end
             end
         end
