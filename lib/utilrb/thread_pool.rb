@@ -252,6 +252,16 @@ module Utilrb
         #
         # @return [Fixnum]
         attr_reader :waiting
+        
+        # The average execution time of a (running) task.
+        #
+        # @return [Float]
+        attr_reader :avg_run_time
+        
+        # The average waiting time of a task before being executed.
+        #
+        # @return [Float]
+        attr_reader :avg_wait_time
 
         # Auto trim automatically reduces the number of worker threads if there are too many
         # threads waiting for work.
@@ -272,6 +282,12 @@ module Utilrb
 
             @tasks_waiting = []         # tasks waiting for execution
             @tasks_running = []         # tasks which are currently running
+            
+            # Statistics
+            @avg_run_time = 0           # average run time of a task in s [Float]
+            @avg_wait_time = 0          # average time a task has to wait for execution in s [Float]
+            @total_finished_tasks = 0   # total amount of tasks having finished execution
+            @total_waited_tasks = 0     # total amount of tasks having waited for execution
 
             @workers = []               # thread pool
             @spawned = 0
@@ -449,6 +465,29 @@ module Utilrb
             @mutex.synchronize do
                 @callback_on_task_finished = block
             end
+        end
+        
+        # Updates thread_pool statistics. Call this  method at least
+        # before a waiting task gets started or a running task finishes. 
+        #
+        # TODO needs implementation for task.wait_time
+        def update_statistics
+            # handle running tasks
+            if not @tasks_running.empty?
+                sum_run = @tasks_running.inject(0) { |sum, task| sum + ( task.time_elapsed ) }
+                @avg_run_time = Float ( ( @avg_run_time + sum_run ) / ( @total_finished_tasks + @tasks_running.size ) ).round(2)
+            end
+
+            # handle waiting tasks
+            #if not @tasks_waiting.empty?
+            #    sum_wait = @tasks_waiting.inject(0) { |sum, task| sum - task.wait_time }
+            #    @avg_wait_time = Float ( ( @avg_wait_time + sum_wait ) / @total_waited_tasks + @tasks_waiting.size ).round(2)
+            #end
+            
+            avg_run_time = @avg_run_time
+            avg_wait_time = @avg_wait_time
+
+            self
         end
 
         private
