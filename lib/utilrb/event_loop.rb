@@ -269,7 +269,7 @@ module Utilrb
         def defer(options=Hash.new,*args,&block)
             options, task_options = Kernel.filter_options(options,{:callback => nil,:known_errors => nil})
             callback = options[:callback]
-            known_erros = Array(options[:known_errors])
+            known_erros = options[:known_errors]
 
             task = Utilrb::ThreadPool::Task.new(task_options,*args,&block)
             # ensures that user callback is called from main thread and not from worker threads
