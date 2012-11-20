@@ -804,7 +804,7 @@ module Utilrb
                     sync_key = options[:sync_key]
                     sync_key ||= :nil
                     default = options[:default].inspect
-                    errors = Array(options[:known_errors]).to_s
+                    errors = "[#{Array(options[:known_errors]).map(&:name).join(",")}]"
 
                     line_no = __LINE__; str = %Q{
                     def #{ali}(*args, &block)
