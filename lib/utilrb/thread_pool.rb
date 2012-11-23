@@ -117,14 +117,13 @@ module Utilrb
             # @option options [Object] :sync_key The sync key
             # @option options [Proc] :callback The callback
             # @option options [Object] :default Default value returned when an error ocurred which was handled. 
-            #   Set it to :_no_default if the callback shall not be called with a default value
             # @param [Array] args The arguments for the code block 
             # @param [#call] block The code block
             def initialize (options = Hash.new,*args, &block)
                 unless block
                     raise ArgumentError, 'you must pass a work block to initialize a new Task.'
                 end
-                options = Kernel.validate_options(options,{:sync_key => nil,:default => :_no_default,:callback => nil})
+                options = Kernel.validate_options(options,{:sync_key => nil,:default => nil,:callback => nil})
                 @sync_key = options[:sync_key]
                 @arguments = args
                 @default = options[:default]
@@ -139,12 +138,8 @@ module Utilrb
             # This can be used to requeue a task that is already finished
             def reset
                 if finished? || !started?
-                    @mutex.synchronize do 
-                        @result = if @default == :_no_default
-                                      nil
-                                  else
-                                      @default
-                                  end
+                    @mutex.synchronize do
+                        @result = @default
                         @state = :waiting
                         @exception = nil
                         @started_at = nil
@@ -159,7 +154,7 @@ module Utilrb
             # @return [Boolean]
             def default?
                  @mutex.synchronize do 
-                     @default != :_no_default
+                     @default != nil
                  end
             end
 

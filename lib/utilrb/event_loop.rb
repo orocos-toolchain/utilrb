@@ -237,9 +237,8 @@ module Utilrb
         #
         # If the callback has an arity of 2 the exception will be passed to the
         # callback as second parameter in an event of an error. The error is
-        # also passed to the error handlers of the even loop. But it will not
-        # be re raised if a default return value was set by the option
-        # :default.
+        # also passed to the error handlers of the even loop, but it will not
+        # be re raised if the error is marked as known
         #
         # To overwrite an error the callback can return :ignore_error or
         # a new instance of an error in an event of an error. In this
@@ -267,9 +266,9 @@ module Utilrb
         # @param (see ThreadPool::Task#initialize)
         # @return [ThreadPool::Task] The thread pool task.
         def defer(options=Hash.new,*args,&block)
-            options, task_options = Kernel.filter_options(options,{:callback => nil,:known_errors => nil})
+            options, task_options = Kernel.filter_options(options,{:callback => nil,:known_errors => []})
             callback = options[:callback]
-            known_erros = options[:known_errors]
+            known_erros = Array(options[:known_errors])
 
             task = Utilrb::ThreadPool::Task.new(task_options,*args,&block)
             # ensures that user callback is called from main thread and not from worker threads
@@ -277,7 +276,7 @@ module Utilrb
                 task.callback do |result,exception|
                     once do
                         if callback.arity == 1
-                            callback.call result if !exception || !task.default?
+                            callback.call result if !exception
                         else
                             e = callback.call result,exception
                             #check if the error was overwritten in the
@@ -293,7 +292,7 @@ module Utilrb
                                         end
                         end
                         if exception
-                            raises = !task.default? || !known_erros.find {|error| exception.is_a? error}
+                            raises = !known_erros.find {|error| exception.is_a? error}
                             handle_error(exception,raises)
                         end
                     end
@@ -301,7 +300,7 @@ module Utilrb
             else
                 task.callback do |result,exception|
                     if exception
-                        raises = !task.default? || !known_erros.find {|error| exception.is_a? error}
+                        raises = !known_erros.find {|error| exception.is_a? error}
                         once {handle_error(exception,raises)}
                     end
                 end
@@ -329,7 +328,7 @@ module Utilrb
 
         # Calls the give block in the event loop thread. If the current thread
         # is the event loop thread it will execute it right a way and returns
-        # the result of the code block call. Otherwise, it returns an handler to 
+        # the result of the code block call. Otherwise, it returns a handler to 
         # the Event which was queued.
         #
         #@return [Event,Object]
@@ -606,6 +605,18 @@ module Utilrb
             @errors.clear
         end
 
+        def handle_error(error,save = true)
+            call do
+                on_error = @mutex.synchronize do
+                    @on_error.find_all{|key,e| error.is_a? key}.map(&:last).flatten
+                end
+                on_error.each do |handler|
+                    handler.call error
+                end
+                @errors << error if save
+            end
+        end
+
     private
         # Calls the given block and rescues all errors which can be handled
         # by the added error handler. If an error cannot be handled it is 
@@ -614,7 +625,7 @@ module Utilrb
         # until the next step is called and re raised until all errors are processed.
         #
         # @info This method must be called from the event loop thread, otherwise
-        #    all error handler would be called from the wrong thread
+        #    all error handlers would be called from the wrong thread
         #
         # @yield The code block.
         # @see #error_handler
@@ -622,21 +633,6 @@ module Utilrb
             block.call
         rescue Exception => e
             handle_error(e,true)
-        end
-
-        # @info This method must be called from the event loop thread, otherwise
-        #    all error handler would be called from the wrong thread
-        def handle_error(error,save = true)
-            validate_thread
-
-            on_error = @mutex.synchronize do
-                @on_error.find_all{|key,e| error.is_a? key}.map(&:last).flatten
-            end
-            on_error.each do |handler|
-                handler.call error
-            end
-
-            @errors << error if save
         end
 
     public
@@ -666,23 +662,42 @@ module Utilrb
             # Defines a method as delegator instance method with an optional alias
             # name ali.
             #
-            # Method calls to ali will be delegated to accessor.method.
+            # Method calls to ali will be delegated to accessor.method. If an error occurres
+            # during proccessing it will be raised like in the case of the original object but
+            # also forwarded to the error handlers of event loop.
             #
             # Method calls to ali(*args,&block) will be delegated to
             # accessor.method(*args) but called from a thread pool.  Thereby the code
             # block is used as callback called from the main thread after the
-            # call returned.
+            # call returned. If an error occurred it will be:
+            #  * given to the callback as second argument 
+            #  * forwarded to the error handlers of the event loop
+            #  * raised at the beginning of the next step if not marked as known error
             #
-            # For exception handling the callback can be used:
+            # To overwrite an error the callback can return :ignore_error or a
+            # new instance of an error. In an event of an error the error handlers of the
+            # event loop will not be called or called with the new error
+            # instance.
+            #
             #    ali do |result,exception|
+            #       if exception
+            #           MyError.new
+            #       else
+            #          puts result
+            #       end
             #    end
             #
-            # If the callback accepts only one argument the error handlers from
-            # the underlying event loop are used to handle the error. If no
-            # handle can handle the error it is re raised at the end of the
-            # event loop step.
-            #    ali do |result|
+            #    ali do |result,exception|
+            #       if exception 
+            #           :ignore_error
+            #       else
+            #          puts result
+            #       end
             #    end
+            #
+            # If the callback accepts only one argument 
+            # the callback will not be called in an event of an error but
+            # the error will still be forwarded to the error handlers.
             #    
             # If the result shall be filtered before returned a filter method can
             # be specified which is called from the event loop thread just before
@@ -728,13 +743,11 @@ module Utilrb
             # @param [Symbol] accessor The symbol for the designated object.
             # @param [Symbol] event_loop The event loop accessor.
             # @param [Symbol] method The method called on the designated object.
-            # @param [Hash] options The options 
+            # @param [Hash] options The options
             # @option options [Symbol] :alias The alias of the method
             # @option options [Symbol] :sync_key The sync key 
             # @option options [Symbol] :filter The filter method
-            # @option options [Object] :default Default value returned if the error
-            #     is marked as known or the designated object is nil
-            # @option options [class] :known_errors Known errors which will be rescued if a default value is given 
+            # @option options [class] :known_errors Known errors which will be rescued but still be forwarded.
             # @see #sync
             def def_event_loop_delegator(accessor,event_loop, method, options = Hash.new )
                 Forward.def_event_loop_delegator(self,accessor,event_loop,method,options)
@@ -790,7 +803,6 @@ module Utilrb
                     options = Kernel.validate_options options, :filter => nil,
                                                                :alias => method,
                                                                :sync_key => :accessor,
-                                                               :default => :_no_default,
                                                                :known_errors => nil
 
                     raise ArgumentError, "accessor is nil" unless accessor
@@ -803,7 +815,6 @@ module Utilrb
                     filter = options[:filter]
                     sync_key = options[:sync_key]
                     sync_key ||= :nil
-                    default = options[:default].inspect
                     errors = "[#{Array(options[:known_errors]).map(&:name).join(",")}]"
 
                     line_no = __LINE__; str = %Q{
@@ -822,25 +833,11 @@ module Utilrb
                                           end}
                         if !block
                             if !accessor
-                                #{if options[:default] == :_no_default
-                                    "if error
-                                        raise error
-                                     else 
-                                        raise DesignatedObjectNotFound,'designated object is nil'
-                                     end"
-                                else
-                                    filter ? "#{filter}(#{default})" : default
-                                end}
+                                error ||= DesignatedObjectNotFound.new 'designated object is nil'
+                                #{event_loop}.handle_error(error,false)
+                                raise error
                             else
-                                result = begin
-                                            #{sync_key != :nil ? "#{event_loop}.sync(#{sync_key}){accessor.__send__(:#{method}, *args)}" : "accessor.__send__(:#{method}, *args)"}
-                                          #{if options[:known_errors]
-                                          %Q{
-                                            rescue #{Array(options[:known_errors]).join(",")} => e
-                                                #{default}
-                                           }
-                                          end}
-                                          end
+                                result = #{sync_key != :nil ? "#{event_loop}.sync(#{sync_key}){accessor.__send__(:#{method}, *args)}" : "accessor.__send__(:#{method}, *args)"}
                                 #{filter ? "#{filter}(result)" : "result"}
                             end
                         else
@@ -850,11 +847,7 @@ module Utilrb
                                         if err
                                             raise err
                                         else
-                                            #{if options[:default] == :_no_default
-                                                "raise DesignatedObjectNotFound,'designated object is nil'"
-                                            else
-                                                default
-                                            end}
+                                            raise DesignatedObjectNotFound,'designated object is nil'
                                         end
                                     else
                                         acc.__send__(:#{method}, *args)
@@ -862,7 +855,7 @@ module Utilrb
                                 end
                             callback = #{filter ? "block.to_proc.arity == 2 ? Proc.new { |r,e| block.call(#{filter}(r),e)} : Proc.new {|r| block.call(#{filter}(r))}" : "block"}
                             #{event_loop}.async_with_options(work,
-                                                             {:sync_key => #{sync_key},:default =>#{default},:known_errors => #{errors}},
+                                                             {:sync_key => #{sync_key},:known_errors => #{errors}},
                                                              *args, &callback)
                         end
                       rescue Exception
@@ -887,7 +880,7 @@ module Utilrb
                               else
                                   Hash.new
                               end
-                    ArgumentError ":alias is not supported when defining multiple methods at once." if options.has_key?(:alias)
+                    raise ArgumentError, ":alias is not supported when defining multiple methods at once." if options.has_key?(:alias)
                     methods.each do |method|
                         def_event_loop_delegator(klass,accessor,event_loop,method,options)
                     end

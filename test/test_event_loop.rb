@@ -38,7 +38,7 @@ describe Utilrb::EventLoop::Forwardable do
             222
         end
 
-        def_event_loop_delegator :@obj,:@event_loop,:test,:alias => :atest2,:default => 123
+        def_event_loop_delegator :@obj,:@event_loop,:test,:alias => :atest2
         def_event_loop_delegator :@obj,:@event_loop,:test,:alias => :atest,:filter => :test_filter
         def_event_loop_delegator :@obj,:@event_loop,:test,:alias => :do_not_overwrite
         
@@ -69,18 +69,7 @@ describe Utilrb::EventLoop::Forwardable do
             end
         end
 
-        it "must return the default value if a method call is delegated but the underlying object is nil." do
-            event_loop = Utilrb::EventLoop.new
-            obj = DummyAsyncFilter.new(event_loop,nil)
-            obj.atest2(0.1).must_equal(123)
-            obj.atest2(0.1) do |result,exception|
-                result.must_equal 123
-            end
-            sleep 0.1
-            event_loop.step
-        end
-
-        it "must raise if a method call is delegated but the underlying object is nil and no default value is set." do
+        it "must raise if a method call is delegated but the underlying object is nil." do
             event_loop = Utilrb::EventLoop.new
             obj = DummyAsyncFilter.new(event_loop,nil)
             assert_raises Utilrb::EventLoop::Forwardable::DesignatedObjectNotFound do 

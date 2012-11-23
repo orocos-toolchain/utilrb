@@ -331,24 +331,6 @@ describe Utilrb::ThreadPool::Task do
             assert_equal 123,result
         end
 
-        it "must not call the callback if an error occured and default is set to :_no_default." do 
-            task = Utilrb::ThreadPool::Task.new :default => :_no_default do 
-                raise
-            end
-            result = nil
-            task.callback do |val,e|
-                result = val
-            end
-            task.execute
-            assert !task.running?
-            assert task.finished?
-            assert task.exception?
-            assert !task.terminated?
-            assert !task.successfull?
-            assert task.started?
-            assert_equal nil,result
-        end
-
         it "must calculate its elapsed time." do 
             task = Utilrb::ThreadPool::Task.new do 
                 sleep 0.2
