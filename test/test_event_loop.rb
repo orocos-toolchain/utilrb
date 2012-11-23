@@ -10,12 +10,17 @@ describe Utilrb::EventLoop::Forwardable do
             sleep wait
             Thread.current
         end
+
+        def error
+            raise
+        end
     end
 
     class DummyAsync
         extend Utilrb::EventLoop::Forwardable
         def_event_loop_delegator :@obj,:@event_loop,:test,:alias => :atest
         def_event_loop_delegators :@obj,:@event_loop,[:bla1,:bla2]
+        def_event_loop_delegator :@obj,:@event_loop,:error,:on_error => :on_error2,:known_errors => RuntimeError
 
         forward_to :@obj, :@event_loop do
             thread_safe do 
@@ -24,9 +29,15 @@ describe Utilrb::EventLoop::Forwardable do
             def_delegators :bla5
         end
 
+        attr_accessor :last_error
+
         def initialize(event_loop,obj = Dummy.new)
             @event_loop = event_loop
             @obj = obj
+        end
+
+        def on_error2(error)
+            @last_error = error
         end
 
     end
@@ -83,6 +94,24 @@ describe Utilrb::EventLoop::Forwardable do
             event_loop = Utilrb::EventLoop.new
             obj = DummyAsyncFilter.new(event_loop)
             assert_equal Thread.current,obj.atest(0.1).first
+        end
+
+        it 'must call the error callback' do 
+            event_loop = Utilrb::EventLoop.new
+            obj = DummyAsync.new(event_loop)
+            assert_raises RuntimeError do 
+                obj.error
+            end
+            obj.last_error.must_be_instance_of RuntimeError
+            obj.last_error = nil
+            error = nil
+            obj.error do |_,e|
+                error = e
+            end
+            sleep 0.1
+            event_loop.step
+            error.must_be_instance_of RuntimeError
+            obj.last_error.must_be_instance_of RuntimeError
         end
 
         it 'must not overwrite instance methods' do 

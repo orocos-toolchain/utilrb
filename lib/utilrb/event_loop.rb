@@ -257,12 +257,14 @@ module Utilrb
         # @option (see ThreadPool::Task#initialize)
         # @option options [Proc] :callback The callback
         # @option options [class] :known_errors Known erros which will be rescued
+        # @option options [Proc] :on_error Callback which is called when an error occured
         #
         # @param (see ThreadPool::Task#initialize)
         # @return [ThreadPool::Task] The thread pool task.
         def defer(options=Hash.new,*args,&block)
-            options, task_options = Kernel.filter_options(options,{:callback => nil,:known_errors => []})
+            options, task_options = Kernel.filter_options(options,{:callback => nil,:known_errors => [],:on_error => nil})
             callback = options[:callback]
+            error_callback = options[:on_error]
             known_erros = Array(options[:known_errors])
 
             task = Utilrb::ThreadPool::Task.new(task_options,*args,&block)
@@ -287,6 +289,7 @@ module Utilrb
                                         end
                         end
                         if exception
+                            error_callback.call(exception) if error_callback
                             raises = !known_erros.find {|error| exception.is_a? error}
                             handle_error(exception,raises)
                         end
@@ -296,7 +299,10 @@ module Utilrb
                 task.callback do |result,exception|
                     if exception
                         raises = !known_erros.find {|error| exception.is_a? error}
-                        once {handle_error(exception,raises)}
+                        once do 
+                            error_callback.call(exception) if error_callback
+                            handle_error(exception,raises)
+                        end
                     end
                 end
             end
@@ -742,6 +748,7 @@ module Utilrb
             # @option options [Symbol] :alias The alias of the method
             # @option options [Symbol] :sync_key The sync key 
             # @option options [Symbol] :filter The filter method
+            # @option options [Symbol] :on_error Method which is called if an error occured
             # @option options [class] :known_errors Known errors which will be rescued but still be forwarded.
             # @see #sync
             def def_event_loop_delegator(accessor,event_loop, method, options = Hash.new )
@@ -798,7 +805,8 @@ module Utilrb
                     options = Kernel.validate_options options, :filter => nil,
                                                                :alias => method,
                                                                :sync_key => :accessor,
-                                                               :known_errors => nil
+                                                               :known_errors => nil,
+                                                               :on_error => nil
 
                     raise ArgumentError, "accessor is nil" unless accessor
                     raise ArgumentError, "event_loop is nil" unless event_loop
@@ -811,6 +819,7 @@ module Utilrb
                     sync_key = options[:sync_key]
                     sync_key ||= :nil
                     errors = "[#{Array(options[:known_errors]).map(&:name).join(",")}]"
+                    on_error = options[:on_error]
 
                     line_no = __LINE__; str = %Q{
                     def #{ali}(*args, &block)
@@ -827,13 +836,17 @@ module Utilrb
                                                 accessor.to_s
                                           end}
                         if !block
-                            if !accessor
-                                error ||= DesignatedObjectNotFound.new 'designated object is nil'
-                                #{event_loop}.handle_error(error,false)
+                            begin
+                                if !accessor
+                                    error ||= DesignatedObjectNotFound.new 'designated object is nil'
+                                    raise error
+                                else
+                                    result = #{sync_key != :nil ? "#{event_loop}.sync(#{sync_key}){accessor.__send__(:#{method}, *args)}" : "accessor.__send__(:#{method}, *args)"}
+                                    #{filter ? "#{filter}(result)" : "result"}
+                                end
+                            rescue Exception => error
+                                #{"#{on_error}(error)" if on_error}
                                 raise error
-                            else
-                                result = #{sync_key != :nil ? "#{event_loop}.sync(#{sync_key}){accessor.__send__(:#{method}, *args)}" : "accessor.__send__(:#{method}, *args)"}
-                                #{filter ? "#{filter}(result)" : "result"}
                             end
                         else
                             work = Proc.new do |*args|
@@ -850,7 +863,8 @@ module Utilrb
                                 end
                             callback = #{filter ? "block.to_proc.arity == 2 ? Proc.new { |r,e| block.call(#{filter}(r),e)} : Proc.new {|r| block.call(#{filter}(r))}" : "block"}
                             #{event_loop}.async_with_options(work,
-                                                             {:sync_key => #{sync_key},:known_errors => #{errors}},
+                                                             {:sync_key => #{sync_key},:known_errors => #{errors},
+                                                             :on_error => #{ on_error ? "self.method(#{on_error.inspect})" : "nil" }},
                                                              *args, &callback)
                         end
                       rescue Exception
