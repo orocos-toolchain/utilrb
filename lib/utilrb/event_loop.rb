@@ -169,10 +169,6 @@ module Utilrb
         # Integrates a blocking operation call into the EventLoop like {Utilrb::EventLoop#defer}
         # but has a more suitable syntax for deferring a method call
         #
-        # If the callback has an arity of 2 the exception is passed to the
-        # callback as second parameter and considered as handled. Otherwise 
-        # the error is passed to the error handlers.
-        #
         #    async method(:my_method) do |result,exception|
         #          if exception
         #                  raise exception
@@ -261,8 +257,7 @@ module Utilrb
         # @option (see ThreadPool::Task#initialize)
         # @option options [Proc] :callback The callback
         # @option options [class] :known_errors Known erros which will be rescued
-        #       if a default value is given.
-        # 
+        #
         # @param (see ThreadPool::Task#initialize)
         # @return [ThreadPool::Task] The thread pool task.
         def defer(options=Hash.new,*args,&block)
@@ -312,7 +307,7 @@ module Utilrb
         end
 
         # Executes the given block in the next step from the event loop thread.
-        # Returns a Timer object if a delay is set otherwise a handler to the
+        # Returns a Timer object if a delay is set otherwise an handler to the
         # Event which was queued.
         #
         # @yield [] The code block.
@@ -329,7 +324,7 @@ module Utilrb
 
         # Calls the give block in the event loop thread. If the current thread
         # is the event loop thread it will execute it right a way and returns
-        # the result of the code block call. Otherwise, it returns a handler to 
+        # the result of the code block call. Otherwise, it returns an handler to 
         # the Event which was queued.
         #
         #@return [Event,Object]
@@ -480,8 +475,8 @@ module Utilrb
             @stop = true
         end
 
-        # Steps with the given period as long as the given 
-        # block returns false.
+        # Steps with the given period until the given 
+        # block returns true.
         #
         # @param [Float] period The period 
         # @yieldreturn [Boolean]
@@ -525,7 +520,7 @@ module Utilrb
             raise @errors.shift if !@errors.empty?
 
             #copy all work otherwise it would not be allowed to 
-            #call any event loop functions from a callback or timer
+            #call any event loop functions from a timer
             timers,call = @mutex.synchronize do
                                     @every_cylce_events.delete_if &:ignore?
                                     @every_cylce_events.each do |event|
@@ -546,7 +541,7 @@ module Utilrb
             number_of_events = @events.size-1
             0.upto number_of_events do
                 event = @events.pop
-                handle_errors{event.call}
+                handle_errors{event.call} unless event.ignore?
             end
             timers.each do |timer|
                 handle_errors{timer.call(time)}
@@ -599,9 +594,8 @@ module Utilrb
             end
         end
 
-        # Clears all errors which occurred during the last step and cannot be
-        # handled by the error handlers. If the errors were not cleared they are
-        # re raised the next time raise is called.
+        # Clears all errors which occurred during the last step and are not marked as known 
+        # If the errors were not cleared they are re raised the next time step is called.
         def clear_errors
             @errors.clear
         end
@@ -888,6 +882,5 @@ module Utilrb
                 end
             end
         end
-
     end
 end
