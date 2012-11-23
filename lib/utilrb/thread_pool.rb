@@ -369,15 +369,22 @@ module Utilrb
         def sync(sync_key,*args,&block)
             @mutex.synchronize do
                 while(!@sync_keys.add?(sync_key))
+                    # check for deadlock
+                    @tasks_running.each do |task|
+                        raise "Deadlock detected !" if task.thread == Thread.current && task.sync_key == sync_key
+                    end
                     @cond_sync_key.wait @mutex #wait until someone has removed a key
                 end
             end
-            result = block.call(*args)
-            @mutex.synchronize do
-                @sync_keys.delete sync_key
-                @cond_sync_key.signal
-                @cond.signal # worker threads are just waiting for work no matter if it is
-                             # because of a deletion of a sync_key or a task was added
+            begin 
+                result = block.call(*args)
+            ensure 
+                @mutex.synchronize do
+                    @sync_keys.delete sync_key
+                    @cond_sync_key.signal
+                    @cond.signal # worker threads are just waiting for work no matter if it is
+                                 # because of a deletion of a sync_key or a task was added
+                end
             end
             result
         end
@@ -387,6 +394,7 @@ module Utilrb
         # @param [Task] task The task.
         # @return [Task]
         def <<(task)
+            raise "cannot add task #{task} it is still running" if task.thread
             task.reset if task.finished?
             @mutex.synchronize do
                 if shutdown? 
@@ -472,15 +480,17 @@ module Utilrb
                             @waiting -= 1
                         end or break
                     end or break
-
-                    current_task.execute(self)
-                    @mutex.synchronize do
-                        @tasks_running.delete current_task
-                        @callback_on_task_finished.call(current_task) if @callback_on_task_finished
-                        if current_task.sync_key
-                            @sync_keys.delete(current_task.sync_key) 
-                            @cond_sync_key.signal
-                            @cond.signal
+                    begin 
+                        current_task.execute(self)
+                    ensure
+                        @mutex.synchronize do
+                            @tasks_running.delete current_task
+                            @callback_on_task_finished.call(current_task) if @callback_on_task_finished
+                            if current_task.sync_key
+                                @sync_keys.delete(current_task.sync_key) 
+                                @cond_sync_key.signal
+                                @cond.signal
+                            end
                         end
                     end
                     trim if auto_trim

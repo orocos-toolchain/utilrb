@@ -318,6 +318,7 @@ module Utilrb
         # @yield [] The code block.
         # @return [Utilrb::EventLoop::Timer,Event]
         def once(delay=nil,&block)
+            raise ArgumentError "no block given" unless block
             if delay && delay > 0
                 timer = Timer.new(self,delay,true,&block)
                 timer.start
