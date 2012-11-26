@@ -480,7 +480,8 @@ module Utilrb
 
         #calculates the moving average 
         def moving_average(current_val,new_val)
-            current_val*0.95+new_val*0.5
+            return new_val if current_val == 0
+            (current_val*0.95+new_val) * 0.5
         end
         
         # spawns a worker thread
