@@ -437,6 +437,15 @@ module Utilrb
             end
         end
 
+        # Returns all currently running timers.
+        #
+        # @return Array<Timer>
+        def timers
+            @mutex.synchronize do
+                @timers.dup
+            end
+        end
+
         # Cancels the given timer if it is running otherwise
         # it does nothing.
         # 
