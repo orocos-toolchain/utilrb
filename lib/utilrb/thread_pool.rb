@@ -148,7 +148,7 @@ module Utilrb
                         @state = :waiting
                         @exception = nil
                         @started_at = nil
-                        @queue_at = nil
+                        @queued_at = nil
                         @stopped_at = nil
                     end
                 else
