@@ -53,6 +53,11 @@ module Utilrb
             # return [Thread] the thread
             attr_reader :thread
 
+            # The time the task was queued 
+            #
+            # return [Time] the time
+            attr_accessor :queued_at
+
             # The time the task was started
             #
             # return [Time] the time
@@ -143,6 +148,7 @@ module Utilrb
                         @state = :waiting
                         @exception = nil
                         @started_at = nil
+                        @queue_at = nil
                         @stopped_at = nil
                     end
                 else
@@ -281,8 +287,6 @@ module Utilrb
             # Statistics
             @avg_run_time = 0           # average run time of a task in s [Float]
             @avg_wait_time = 0          # average time a task has to wait for execution in s [Float]
-            @total_finished_tasks = 0   # total amount of tasks having finished execution
-            @total_waited_tasks = 0     # total amount of tasks having waited for execution
 
             @workers = []               # thread pool
             @spawned = 0
@@ -417,6 +421,7 @@ module Utilrb
                     warn "unable to add work while shutting down"
                     return task
                 end
+                task.queued_at = Time.now
                 @tasks_waiting << task
                 if @waiting == 0 && @spawned < @max
                     spawn_thread
@@ -450,6 +455,7 @@ module Utilrb
             @cond.broadcast
         end
 
+
         # Blocks until all threads were terminated.
         # This does not terminate any thread by itself and will block for ever
         # if shutdown was not called.
@@ -469,31 +475,14 @@ module Utilrb
                 @callback_on_task_finished = block
             end
         end
-        
-        # Updates thread_pool statistics. Call this  method at least
-        # before a waiting task gets started or a running task finishes. 
-        #
-        # TODO needs implementation for task.wait_time
-        def update_statistics
-            # handle running tasks
-            if not @tasks_running.empty?
-                sum_run = @tasks_running.inject(0) { |sum, task| sum + ( task.time_elapsed ) }
-                @avg_run_time = Float ( ( @avg_run_time + sum_run ) / ( @total_finished_tasks + @tasks_running.size ) ).round(2)
-            end
-
-            # handle waiting tasks
-            #if not @tasks_waiting.empty?
-            #    sum_wait = @tasks_waiting.inject(0) { |sum, task| sum - task.wait_time }
-            #    @avg_wait_time = Float ( ( @avg_wait_time + sum_wait ) / @total_waited_tasks + @tasks_waiting.size ).round(2)
-            #end
-            
-            avg_run_time = @avg_run_time
-            avg_wait_time = @avg_wait_time
-
-            self
-        end
 
         private
+
+        #calculates the moving average 
+        def moving_average(current_val,new_val)
+            current_val*0.95+new_val*0.5
+        end
+        
         # spawns a worker thread
         # must be called from a synchronized block
         def spawn_thread
@@ -505,6 +494,7 @@ module Utilrb
                                 if !t.sync_key || @sync_keys.add?(t.sync_key)
                                     @tasks_waiting.delete_at(i)
                                     @tasks_running << t
+                                    @avg_wait_time = moving_average(@avg_wait_time,(Time.now-t.queued_at))
                                     break t
                                 end
                             end
@@ -519,10 +509,11 @@ module Utilrb
                             @waiting -= 1
                         end or break
                     end or break
-                    begin 
+                    begin
                         current_task.execute(self)
                     ensure
                         @mutex.synchronize do
+                            @avg_run_time = moving_average(@avg_run_time,(current_task.stopped_at-current_task.started_at))
                             @tasks_running.delete current_task
                             @callback_on_task_finished.call(current_task) if @callback_on_task_finished
                             if current_task.sync_key
