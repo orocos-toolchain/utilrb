@@ -17,9 +17,12 @@ class Logger
     # Defines a logger on a module, allowing to use that module as a root in a
     # hierarchy (i.e. having submodules use the Logger::Hierarchy support)
     #
-    # @param [String] progname the logger's program name
-    # @param [Integer] base_level the initial logger level, as a symbol name
-    #   (i.e. Logger::WARN, Logger::DEBUG, ...)
+    # @param [String] progname is used as the logger's program name
+    # @param [Integer/Symbol] base_level is the level at which the logger is
+    #        initialized, this can be either a symbol from [:DEBUG, :INFO, :WARN,
+    #        :ERROR, :FATAL] or the integer constants from Logger::DEBUG,
+    #        Logger::INFO, etc.  This value is overriden if the BASE_LOG_LEVEL
+    #        environment variable is set.
     #
     # If a block is given, it will be provided the message severity, time,
     # program name and text and should return the formatted message.
@@ -37,6 +40,13 @@ class Logger
     #   MyModule.warn "warntext"
     #
     def self.Root(progname, base_level, &block)
+	begin	
+	    base_level = ENV['BASE_LOG_LEVEL'].upcase.to_sym if ENV['BASE_LOG_LEVEL']
+	    base_level = Logger.const_get( base_level ) if base_level.is_a? Symbol
+	rescue Exception => e
+	    raise ArgumentError, "Log level #{base_level} is not available in the ruby Logger"
+	end
+
         console = @console
         formatter =
             if block then lambda(&block)
