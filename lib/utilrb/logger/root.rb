@@ -17,9 +17,9 @@ class Logger
     # Defines a logger on a module, allowing to use that module as a root in a
     # hierarchy (i.e. having submodules use the Logger::Hierarchy support)
     #
-    # +progname+ is used as the logger's program name
-    #
-    # +base_level+ is the level at which the logger is initialized
+    # @param [String] progname the logger's program name
+    # @param [Integer] base_level the initial logger level, as a symbol name
+    #   (i.e. Logger::WARN, Logger::DEBUG, ...)
     #
     # If a block is given, it will be provided the message severity, time,
     # program name and text and should return the formatted message.
@@ -28,14 +28,14 @@ class Logger
     # accessed. Moreover, it includes Logger::Forward, which allows to access
     # the logger's output methods on the module directly
     #
-    # Example:
-    #
+    # @example
     #   module MyModule
-    #       extend Logger.Root('MyModule', :WARN)
+    #       extend Logger.Root('MyModule', Logger::WARN)
     #   end
     #
     #   MyModule.info "text"
     #   MyModule.warn "warntext"
+    #
     def self.Root(progname, base_level, &block)
         console = @console
         formatter =
