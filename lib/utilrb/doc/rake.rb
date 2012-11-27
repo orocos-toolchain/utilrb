@@ -23,6 +23,10 @@ module Utilrb
     end
 
     def self.doc(target = 'docs', options = Hash.new)
+        if target.kind_of?(Hash)
+            target, options = 'docs', target
+        end
+
         options = Kernel.validate_options options,
             :include => [File.join('lib', '**', '*.rb'), File.join('ext', '**', '*.cc')],
             :exclude => [],
