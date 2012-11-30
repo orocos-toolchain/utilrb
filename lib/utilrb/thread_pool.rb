@@ -136,6 +136,7 @@ module Utilrb
                 @block = block
                 @mutex = Mutex.new
                 @pool = nil
+                @state_temp = nil
                 reset
             end
 
@@ -164,12 +165,10 @@ module Utilrb
                  end
             end
 
-            # Executes the task.
-            # Should be called from a worker thread
-            def execute(pool=nil)
+            #sets all internal state to running
+            #call execute after that.
+            def pre_execute(pool=nil)
                 @mutex.synchronize do 
-                    return if @state != :waiting
-
                     #store current thread to be able to terminate
                     #the thread
                     @pool = pool
@@ -177,8 +176,16 @@ module Utilrb
                     @started_at = Time.now
                     @state = :running
                 end
+            end
 
-                state = begin
+            # Executes the task.
+            # Should be called from a worker thread after pre_execute was called.
+            # After execute returned and the task was deleted 
+            # from any internal list finalize must be called
+            # to propagate the task state.
+            def execute()
+                raise RuntimeError, "call pre_execute first" if @state != :running
+                @state_temp = begin
                             @result = @block.call(*@arguments)
                             :finished
                         rescue Exception => e
@@ -190,10 +197,14 @@ module Utilrb
                             end
                         end
                 @stopped_at = Time.now
-
+            end
+            
+            # propagates the tasks state
+            # should be called after execute
+            def finalize
                 @mutex.synchronize do
                     @thread = nil
-                    @state = state
+                    @state = @state_temp
                     @pool = nil
                 end
                 @callback.call @result,@exception if @callback
@@ -387,24 +398,22 @@ module Utilrb
         # @yield [*args] the code block block 
         # @return [Object] The result of the code block
         def sync(sync_key,*args,&block)
+            raise ArgumentError,"no sync key" unless sync_key
+
             @mutex.synchronize do
                 while(!@sync_keys.add?(sync_key))
-                    # check for deadlock
-                    @tasks_running.each do |task|
-                        raise "Deadlock detected !" if task.thread == Thread.current && task.sync_key == sync_key
-                    end
                     @cond_sync_key.wait @mutex #wait until someone has removed a key
                 end
             end
-            begin 
+            begin
                 result = block.call(*args)
-            ensure 
+            ensure
                 @mutex.synchronize do
                     @sync_keys.delete sync_key
-                    @cond_sync_key.signal
-                    @cond.signal # worker threads are just waiting for work no matter if it is
-                                 # because of a deletion of a sync_key or a task was added
                 end
+                @cond_sync_key.signal
+                @cond.signal # worker threads are just waiting for work no matter if it is
+                # because of a deletion of a sync_key or a task was added
             end
             result
         end
@@ -494,6 +503,7 @@ module Utilrb
                             task = @tasks_waiting.each_with_index do |t,i|
                                 if !t.sync_key || @sync_keys.add?(t.sync_key)
                                     @tasks_waiting.delete_at(i)
+                                    t.pre_execute(self) # block tasks so that no one is using it at the same time
                                     @tasks_running << t
                                     @avg_wait_time = moving_average(@avg_wait_time,(Time.now-t.queued_at))
                                     break t
@@ -511,18 +521,21 @@ module Utilrb
                         end or break
                     end or break
                     begin
-                        current_task.execute(self)
+                        current_task.execute
+                    rescue Exception => e
+                        puts e
                     ensure
                         @mutex.synchronize do
-                            @avg_run_time = moving_average(@avg_run_time,(current_task.stopped_at-current_task.started_at))
                             @tasks_running.delete current_task
-                            @callback_on_task_finished.call(current_task) if @callback_on_task_finished
-                            if current_task.sync_key
-                                @sync_keys.delete(current_task.sync_key) 
-                                @cond_sync_key.signal
-                                @cond.signal
-                            end
+                            @sync_keys.delete(current_task.sync_key) if current_task.sync_key
+                            @avg_run_time = moving_average(@avg_run_time,(current_task.stopped_at-current_task.started_at))
                         end
+                        if current_task.sync_key
+                            @cond_sync_key.signal
+                            @cond.signal # maybe another thread is waiting for a sync key
+                        end
+                        current_task.finalize # propagate state after it was deleted from the internal lists
+                        @callback_on_task_finished.call(current_task) if @callback_on_task_finished
                     end
                     trim if auto_trim
                 end
@@ -535,6 +548,8 @@ module Utilrb
             end
             @spawned += 1
             @workers << thread
+        rescue Exception => e
+            puts e
         end
     end
 end

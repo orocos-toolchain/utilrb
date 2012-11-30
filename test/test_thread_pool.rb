@@ -256,7 +256,9 @@ describe Utilrb::ThreadPool::Task do
             task = Utilrb::ThreadPool::Task.new do 
                 123
             end
+            task.pre_execute
             task.execute
+            task.finalize
             assert !task.running?
             assert task.finished?
             assert !task.exception?
@@ -273,7 +275,9 @@ describe Utilrb::ThreadPool::Task do
             task.callback do |val,e|
                 result = val
             end
+            task.pre_execute
             task.execute
+            task.finalize
 
             assert_equal 123,result
             assert !task.running?
@@ -288,7 +292,9 @@ describe Utilrb::ThreadPool::Task do
             task = Utilrb::ThreadPool::Task.new do 
                 raise
             end
+            task.pre_execute
             task.execute
+            task.finalize
             assert !task.running?
             assert task.finished?
             assert task.exception?
@@ -303,7 +309,9 @@ describe Utilrb::ThreadPool::Task do
             task.callback do |val,e|
                 result = val ? val : e
             end
+            task.pre_execute
             task.execute
+            task.finalize
             assert !task.running?
             assert task.finished?
             assert task.exception?
@@ -321,7 +329,9 @@ describe Utilrb::ThreadPool::Task do
             task.callback do |val,e|
                 result = val
             end
+            task.pre_execute
             task.execute
+            task.finalize
             assert !task.running?
             assert task.finished?
             assert task.exception?
@@ -337,7 +347,9 @@ describe Utilrb::ThreadPool::Task do
             end
             assert_in_delta 0.0,task.time_elapsed,0.0001
             thread = Thread.new do 
+                task.pre_execute
                 task.execute
+                task.finalize
             end
             sleep 0.1
             assert_in_delta 0.1,task.time_elapsed,0.01
@@ -354,7 +366,9 @@ describe Utilrb::ThreadPool::Task do
                 sleep 10
             end
             thread = Thread.new do
+                task.pre_execute
                 task.execute
+                task.finalize
             end
             sleep 0.1
             task.terminate!
@@ -375,7 +389,9 @@ describe Utilrb::ThreadPool::Task do
                 sleep 10
             end
             thread = Thread.new do
+                task.pre_execute
                 task.execute
+                task.finalize
             end
             sleep 0.1
             task.terminate!()
