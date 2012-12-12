@@ -252,7 +252,8 @@ static VALUE value_set_difference_bang(VALUE vself, VALUE vother)
     ValueSet result;
     std::set_difference(self.begin(), self.end(), other.begin(), other.end(), 
 	    std::inserter(result, result.end()));
-    self.swap(result);
+    if (result.size() != self.size())
+        self.swap(result);
     return vself;
 }
 
