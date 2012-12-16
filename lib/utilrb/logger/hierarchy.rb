@@ -112,11 +112,18 @@ class Logger
 
             @default_logger =
                 if kind_of?(Module)
-                    parent_module = constant(self.spacename)
+                    m = self
+                    while m && !m.name
+                        m = m.superclass
+                    end
+                    if !m
+                        raise "cannot find a logger for #{self}"
+                    end
+                    parent_module = constant(m.spacename)
                     if parent_module.respond_to? :log_children
                         parent_module.log_children << self
                     end
-                    constant(self.spacename).logger
+                    constant(m.spacename).logger
                 else
                     self.class.logger
                 end

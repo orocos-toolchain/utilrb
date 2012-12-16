@@ -9,6 +9,9 @@ class TC_Logger < Test::Unit::TestCase
         module Child
             extend Logger::Hierarchy
         end
+        class Klass
+            extend Logger::Hierarchy
+        end
     end
 
     def teardown
@@ -30,6 +33,12 @@ class TC_Logger < Test::Unit::TestCase
         child = Root::Child
         assert child.respond_to?(:logger)
         assert child.logger
+        assert_same Root.logger, child.logger
+        assert child.respond_to?(:warn)
+    end
+
+    def test_logger_hierarchy_on_anonymous_tasks
+        child = Class.new(Root::Klass)
         assert_same Root.logger, child.logger
         assert child.respond_to?(:warn)
     end
