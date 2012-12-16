@@ -31,6 +31,10 @@ module Models
                 nil
             end
             def has_#{name}?(key)
+                ancestors = self.ancestors
+                if ancestors.first != self
+                    ancestors.unshift self
+                end
                 for klass in ancestors
                     if klass.instance_variable_defined?(:@#{attribute_name})
                         return true if klass.#{attribute_name}.has_key?(key)
@@ -63,6 +67,10 @@ module Models
                 return enum_for(:each_#{name}, key, uniq)
             end
 
+            ancestors = self.ancestors
+            if ancestors.first != self
+                ancestors.unshift self
+            end
             if key
                 for klass in ancestors
                     if klass.instance_variable_defined?(:@#{attribute_name})
@@ -106,6 +114,10 @@ module Models
                 return enum_for(:each_#{name})
             end
 
+            ancestors = self.ancestors
+            if ancestors.first != self
+                ancestors.unshift self
+            end
             for klass in ancestors
                 if klass.instance_variable_defined?(:@#{attribute_name})
                     klass.#{attribute_name}.#{options[:enum_with]} { |el| yield(el) }
@@ -123,6 +135,10 @@ module Models
                 return enum_for(:each_#{name}, key, uniq)
             end
 
+            ancestors = self.ancestors
+            if ancestors.first != self
+                ancestors.unshift self
+            end
             if key
                 promotions = []
                 for klass in ancestors
@@ -181,6 +197,10 @@ module Models
                 return enum_for(:each_#{name})
             end
 
+            ancestors = self.ancestors
+            if ancestors.first != self
+                ancestors.unshift self
+            end
             promotions = []
             for klass in ancestors
                 if klass.instance_variable_defined?(:@#{attribute_name})
