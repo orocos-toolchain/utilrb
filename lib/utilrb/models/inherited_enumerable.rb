@@ -315,7 +315,7 @@ module Models
 	singleton_class.class_eval { define_inherited_enumerable(name, attribute_name, options, &init) }
 
 	if is_a?(Module) && !is_a?(Class)
-	    unless const_defined?(:ClassExtension)
+	    unless const_defined_here?(:ClassExtension)
 		const_set(:ClassExtension, Module.new)
 	    end
 	    class_extension = const_get(:ClassExtension)
