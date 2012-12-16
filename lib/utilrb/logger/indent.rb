@@ -9,6 +9,9 @@ class Logger
     # You usually want to increment / decrement this with {nest}
     def nest_size=(new_value)
         @nest_string = nil
+        if new_value < 0
+            raise ArgumentError, "negative value for nest_size. You probably have unbalanced nest calls"
+        end
         @nest_size = new_value
     end
 
