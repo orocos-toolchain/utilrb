@@ -115,7 +115,7 @@ module Utilrb
             #
             # @param [Time] time The time stamp
             def call(time = Time.now)
-                @last_call = time
+                reset(time)
                 @result = @block.call
             end
 
@@ -299,7 +299,7 @@ module Utilrb
                 task.callback do |result,exception|
                     if exception
                         raises = !known_erros.find {|error| exception.is_a? error}
-                        once do 
+                        once do
                             error_callback.call(exception) if error_callback
                             handle_error(exception,raises)
                         end
@@ -507,12 +507,12 @@ module Utilrb
         # @param [Float] period Ther period
         # @param (@see #step)
         def steps(period = 0.05,&block)
-            while thread_pool.process? || events? 
+            begin
                 last_step = Time.now
                 step(last_step,&block)
                 diff = (Time.now-last_step).to_f
                 sleep(period-diff) if diff < period && !@stop
-            end
+            end while thread_pool.process? || events? 
         end
 
         # (see ThreadPool#backlog)
@@ -562,7 +562,6 @@ module Utilrb
                 handle_errors{timer.call(time)}
             end
             handle_errors{call.call} if call
-
             raise @errors.shift if !@errors.empty?
         end
 
@@ -623,7 +622,7 @@ module Utilrb
                 on_error.each do |handler|
                     handler.call error
                 end
-                @errors << error if save
+                @errors << error if save == true
             end
         end
 
