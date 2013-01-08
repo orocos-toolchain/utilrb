@@ -494,10 +494,15 @@ module Utilrb
         # block returns true.
         #
         # @param [Float] period The period 
+        # @param [Float] timeout The timeout in seconds
         # @yieldreturn [Boolean]
-        def wait_for(period=0.05,&block)
-            exec period do 
+        def wait_for(period=0.05,timeout=nil,&block)
+            start = Time.now
+            exec period do
                 stop if block.call
+                if timeout && timeout <= (Time.now-start).to_f
+                    raise RuntimeError,"Timeout during wait_for"
+                end
             end
         end
 
@@ -506,13 +511,16 @@ module Utilrb
         #
         # @param [Float] period Ther period
         # @param (@see #step)
-        def steps(period = 0.05,&block)
+        def steps(period = 0.05,max_time=1.0,&block)
+            start = Time.now
             begin
                 last_step = Time.now
                 step(last_step,&block)
-                diff = (Time.now-last_step).to_f
+                time = Time.now
+                break if max_time && max_time <= (time-start).to_f
+                diff = (time-last_step).to_f
                 sleep(period-diff) if diff < period && !@stop
-            end while thread_pool.process? || events? 
+            end while (thread_pool.process? || events?)
         end
 
         # (see ThreadPool#backlog)
