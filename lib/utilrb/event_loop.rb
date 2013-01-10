@@ -157,11 +157,12 @@ module Utilrb
         # A new EventLoop
         def initialize
             @mutex = Mutex.new
-            @events = Queue.new           # stores all events for the next step
-            @timers = Set.new             # stores all timers
-            @every_cylce_events = Set.new # stores all events which are added to @events each step
-            @on_error = {}                # stores on error callbacks
-            @errors = Queue.new           # stores errors which will be re raised at the end of the step
+            @events = Queue.new               # stores all events for the next step
+            @timers = Set.new                 # stores all timers
+            @every_cylce_events = Set.new     # stores all events which are added to @events each step
+            @on_error = {}                    # stores on error callbacks
+            @errors = Queue.new               # stores errors which will be re raised at the end of the step
+            @number_of_events_to_process = 0  # number of events which are processed in the current step
             @thread_pool = ThreadPool.new
             @thread = Thread.current #the event loop thread
         end
@@ -559,20 +560,22 @@ module Utilrb
                                     [temp_timers,block]
                                 end
 
-            # handle all current events but not the one 
-            # which are added during processing
-            number_of_events = @events.size-1
-            0.upto number_of_events do
+            # handle all current events but not the one which are added during processing.
+            # Step is recursively be called if wait_for is used insight an event code block.
+            # To make sure that all events and timer are processed in the right order
+            # @number_of_events_to_process and a second timeout check is used.
+            @number_of_events_to_process = [@events.size,@number_of_events_to_process].max
+            while @number_of_events_to_process > 0
                 event = @events.pop
+                @number_of_events_to_process -= 1
                 handle_errors{event.call} unless event.ignore?
             end
             timers.each do |timer|
-                handle_errors{timer.call(time)}
+                handle_errors{timer.call(time)} if timer.timeout?(time)
             end
             handle_errors{call.call} if call
             raise @errors.shift if !@errors.empty?
         end
-
 
         # Adds a timer to the event loop
         #
