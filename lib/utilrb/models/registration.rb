@@ -10,6 +10,10 @@ module Utilrb
         # It depends on the mixed-in object to provide a #supermodel method that
         # returns the model that is parent of +self+
         module Registration
+            # The place where this model got defined in the source code
+            # @return [Array<String>]
+            attr_accessor :definition_location
+
             # Tells {#clear_submodels} whether this model should be removed from
             # the model set or not. The default is false (it should be removed)
             #
@@ -69,6 +73,15 @@ module Utilrb
                     true
                 else false
                 end
+            end
+
+            # Registers submodels when a subclass is created (when models are
+            # represented as classes)
+            def inherited(subclass)
+                subclass.definition_location = caller
+                super
+                register_submodel(subclass)
+                subclass.permanent_model = true
             end
         end
     end
