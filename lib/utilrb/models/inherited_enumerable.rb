@@ -25,6 +25,7 @@ module Models
         if options[:map]
             class_eval <<-EOF, __FILE__, __LINE__+1
             def find_#{name}(key)
+                raise ArgumentError, "nil cannot be used as a key in find_#{name}" if !key
                 each_#{name}(key, true) do |value|
                     return value
                 end
