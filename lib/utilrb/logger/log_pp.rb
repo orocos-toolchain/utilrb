@@ -34,7 +34,7 @@ class Logger
     def log_pp(level, object, *first_line_format)
         send(level) do
             first_line = !first_line_format.empty? && defined?(HighLine)
-            Logger.pp_to_array(object).each do |line|
+            self.class.pp_to_array(object).each do |line|
                 if first_line
                     line = color(line, *first_line_format)
                     first_line = false
