@@ -1,3 +1,4 @@
+require 'facets/kernel/call_stack'
 require 'utilrb/logger'
 require 'utilrb/module/attr_predicate'
 module Utilrb
@@ -11,7 +12,9 @@ module Utilrb
         # returns the model that is parent of +self+
         module Registration
             # The place where this model got defined in the source code
-            # @return [Array<String>]
+            # The tuple is (file,lineno,method), and can be obtained with
+            # facet's #call_stack
+            # @return [Array<(String,Integer,Symbol)>]
             attr_accessor :definition_location
 
             # Tells {#clear_submodels} whether this model should be removed from
@@ -88,7 +91,7 @@ module Utilrb
             # Registers submodels when a subclass is created (when models are
             # represented as classes)
             def inherited(subclass)
-                subclass.definition_location = caller
+                subclass.definition_location = call_stack
                 super
                 register_submodel(subclass)
                 subclass.permanent_model = true
