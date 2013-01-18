@@ -23,6 +23,16 @@ module Utilrb
             # [ValueSet] the set of models that are children of this one
             attribute(:submodels) { ValueSet.new }
 
+            # Returns the model that is parent of this one
+            #
+            # The default implementation returns superclass if it is extended by
+            # this Registration module, and nil otherwise
+            def supermodel
+                if superclass.respond_to?(:register_submodel)
+                    superclass
+                end
+            end
+
             # Call to register a model that is a submodel of +self+
             def register_submodel(klass)
                 submodels << klass
