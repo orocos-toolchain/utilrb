@@ -6,7 +6,7 @@ module Qt
         # finalized
         @@saved_values = Hash.new
         def self.from_ruby(obj, lifetime_object = nil)
-            variant = Qt::Variant.new(obj.object_id.to_s)
+            variant = Qt::Variant.new("__##{obj.object_id}#__")
             lifetime_object ||= variant
             ObjectSpace.define_finalizer lifetime_object, from_ruby_finalizer
             @@saved_values[lifetime_object.object_id] ||= Set.new
@@ -19,7 +19,12 @@ module Qt
         end
 
         def to_ruby
-            ObjectSpace._id2ref(Integer(value))
+            raise "QVarint is not storing an Object ID"if (value =~ /__#(\d*)#__/) != 0
+            ObjectSpace._id2ref(Integer($1))
+        end
+
+        def to_ruby?
+            (value =~ /__#(\d*)#__/) == 0
         end
     end
 end
