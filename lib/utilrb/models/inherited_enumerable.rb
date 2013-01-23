@@ -46,6 +46,17 @@ module Models
             EOF
         end
 
+        class_eval <<-EOF, __FILE__, __LINE__+1
+        def clear_#{attribute_name}
+            #{attribute_name}.clear
+            for klass in ancestors
+                if klass.instance_variable_defined?(:@#{attribute_name})
+                    klass.#{attribute_name}.clear
+                end
+            end
+        end
+        EOF
+
         if !promote
             if options[:map]
                 define_inherited_enumerable_map_without_promotion(name, attribute_name, options)
