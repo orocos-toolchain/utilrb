@@ -47,6 +47,7 @@ module Utilrb
             attr_accessor :period
             attr_accessor :event_loop
             attr_reader :result
+            attr_accessor :doc
 
             # A timer
             #
@@ -61,6 +62,7 @@ module Utilrb
                 @last_call = Time.now
                 @period = period
                 @single_shot = single_shot
+                doc = ""
             end
 
             # Cancels the timer. If it is not running it will do nothing
@@ -125,6 +127,8 @@ module Utilrb
             def reset(time = Time.now)
                 @last_call = time
             end
+
+            alias :stop :cancel
         end
 
         # An event loop event
