@@ -36,6 +36,19 @@ module Utilrb
 
             # Call to register a model that is a submodel of +self+
             def register_submodel(klass)
+                if !klass.definition_location
+                    klass.definition_location = call_stack
+                end
+
+                if klass.name && !klass.permanent_model?
+                    begin
+                        if constant("::#{klass.name}") == klass
+                            klass.permanent_model = true
+                        end
+                    rescue NameError
+                    end
+                end
+
                 submodels << klass
                 if m = supermodel
                     m.register_submodel(klass)
