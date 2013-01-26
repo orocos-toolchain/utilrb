@@ -43,7 +43,7 @@ class Logger
         end
 
         def reset_default_logger
-            @default_logger = nil
+            @__utilrb_hierarchy__default_logger = nil
             log_children.each do |child|
                 child.reset_default_logger
             end
@@ -52,8 +52,8 @@ class Logger
         def logger
             if defined?(@logger) && @logger
                 return @logger 
-            elsif defined?(@default_logger) && @default_logger
-                return @default_logger
+            elsif defined?(@__utilrb_hierarchy__default_logger) && @__utilrb_hierarchy__default_logger
+                return @__utilrb_hierarchy__default_logger
             end
         end
     end
@@ -110,7 +110,7 @@ class Logger
                 return logger
             end
 
-            @default_logger =
+            @__utilrb_hierarchy__default_logger =
                 if kind_of?(Module)
                     m = self
                     while m && !m.name

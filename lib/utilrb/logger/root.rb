@@ -72,7 +72,7 @@ class Logger
                 logger.level = base_level
                 logger.progname = progname
                 logger.formatter = formatter
-                @default_logger = logger
+                @__utilrb_hierarchy__default_logger = logger
             end
         end
     end
