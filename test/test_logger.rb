@@ -118,4 +118,37 @@ class TC_Logger < Test::Unit::TestCase
         io.print "msg1"
         io.puts " msg2"
     end
+
+
+    module HierarchyTest
+        def self.logger; "root_logger" end
+        class HierarchyTest
+            extend Logger::Hierarchy
+            extend Logger::Forward
+        end
+    end
+
+    module NotALoggingModule
+        class HierarchyTest < HierarchyTest::HierarchyTest
+        end
+        class NoLogger
+        end
+    end
+
+    def test_hierarchy_can_resolve_parent_logger_with_identical_name
+        assert_equal "root_logger", HierarchyTest::HierarchyTest.logger
+    end
+    def test_hierarchy_can_resolve_parent_logger_in_subclasses_where_the_subclass_parent_module_is_not_providing_a_logger
+        assert_equal "root_logger", NotALoggingModule::HierarchyTest.logger
+    end
+
+    def test_hierarchy_raises_if_no_parent_logger_can_be_found
+        assert_raises(Logger::Hierarchy::NoParentLogger) { NotALoggingModule::NoLogger.extend Logger::Hierarchy }
+    end
+
+    module RootModule
+    end
+    def test_hierarchy_raises_if_hierarchy_is_called_on_a_root_module
+        assert_raises(Logger::Hierarchy::NoParentLogger) { RootModule.extend Logger::Hierarchy }
+    end
 end

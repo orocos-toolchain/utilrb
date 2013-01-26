@@ -82,6 +82,10 @@ class Logger
     module Hierarchy
         include HierarchyElement
 
+        # Exception raised when a module/class in the logger hierarchy cannot
+        # find a parent logger
+        class NoParentLogger < RuntimeError; end
+
         # Returns true if the local module has its own logger, and false if it
         # returns the logger of the parent
         def has_own_logger?
@@ -95,7 +99,8 @@ class Logger
         end
 
         def self.extended(obj) # :nodoc:
-            if obj.kind_of?(Module)
+            obj.logger # initialize the default logger. Also does some checking
+            if obj.kind_of?(Module) && !obj.spacename.empty?
                 parent_module = constant(obj.spacename)
                 if (parent_module.singleton_class.ancestors.include?(Logger::Forward))
                     obj.send(:extend, Logger::Forward)
@@ -113,17 +118,27 @@ class Logger
             @__utilrb_hierarchy__default_logger =
                 if kind_of?(Module)
                     m = self
-                    while m && !m.name
-                        m = m.superclass
+                    while m
+                        if m.name && !m.spacename.empty?
+                            parent_module = constant(m.spacename)
+                            if parent_module.respond_to?(:logger)
+                                break
+                            end
+                        end
+                        if m.respond_to?(:superclass)
+                            m = m.superclass
+                        else
+                            m = nil; break
+                        end
                     end
+
                     if !m
-                        raise "cannot find a logger for #{self}"
+                        raise NoParentLogger, "cannot find a logger for #{self}"
                     end
-                    parent_module = constant(m.spacename)
                     if parent_module.respond_to? :log_children
                         parent_module.log_children << self
                     end
-                    constant(m.spacename).logger
+                    parent_module.logger
                 else
                     self.class.logger
                 end
