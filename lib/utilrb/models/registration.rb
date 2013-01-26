@@ -1,10 +1,8 @@
 require 'facets/kernel/call_stack'
-require 'utilrb/logger'
+require 'utilrb/object/attribute'
 require 'utilrb/module/attr_predicate'
 module Utilrb
     module Models
-        extend Logger::Hierarchy
-        extend Logger::Forward
 
         # Handling of registration of model hierarchies
         #
