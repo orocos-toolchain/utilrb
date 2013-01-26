@@ -68,7 +68,7 @@ class Logger
                     return logger
                 end
 
-                logger = Logger.new(STDOUT)
+                logger = ::Logger.new(STDOUT)
                 logger.level = base_level
                 logger.progname = progname
                 logger.formatter = formatter
