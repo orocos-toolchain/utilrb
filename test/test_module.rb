@@ -104,5 +104,23 @@ class TC_Module < Test::Unit::TestCase
         assert_equal 20, obj.value
     end
 
+    def test_define_inherited_enumerable_usable_on_extended_modules
+        obj = Array.new
+        defmod = Module.new do
+            define_inherited_enumerable(:object, :objects) { obj }
+        end
+        mod = Module.new { extend defmod }
+        assert_same obj, mod.objects
+    end
+
+    def test_define_inherited_enumerable_usable_through_inclusion
+        obj = Array.new
+        defmod = Module.new do
+            define_inherited_enumerable(:object, :objects) { obj }
+        end
+        intermediate = Module.new { include defmod }
+        mod = Module.new { extend intermediate }
+        assert_same obj, mod.objects
+    end
 end
 
