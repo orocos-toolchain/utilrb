@@ -19,7 +19,7 @@ module Qt
         end
 
         def to_ruby
-            raise "QVarint is not storing an Object ID"if (value =~ /__#(\d*)#__/) != 0
+            raise "QVariant is not storing an Object ID"if (value =~ /__#(\d*)#__/) != 0
             ObjectSpace._id2ref(Integer($1))
         end
 
