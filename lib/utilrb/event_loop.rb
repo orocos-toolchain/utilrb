@@ -395,6 +395,7 @@ module Utilrb
         # @param @error_classes The error classes the block should be called for
         # @yield [exception] The code block
         def on_errors(*error_classes,&block)
+            error_classes.flatten!
             error_classes.each do |error_class|
                 on_error(error_class,&block)
             end
