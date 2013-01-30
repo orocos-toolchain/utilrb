@@ -539,6 +539,10 @@ module Utilrb
             thread_pool.shutdown()
         end
 
+        def reraise_error(error)
+            raise error, error.message, error.backtrace + caller(1)
+        end
+
         # Handles all current events and timers. If a code
         # block is given it will be executed at the end.
         #
@@ -546,7 +550,7 @@ module Utilrb
         # @yield The code block
         def step(time = Time.now,&block)
             validate_thread
-            raise @errors.shift if !@errors.empty?
+            reraise_error(@errors.shift) if !@errors.empty?
 
             #copy all work otherwise it would not be allowed to 
             #call any event loop functions from a timer
@@ -579,7 +583,7 @@ module Utilrb
                 handle_errors{timer.call(time)} if timer.timeout?(time)
             end
             handle_errors{call.call} if call
-            raise @errors.shift if !@errors.empty?
+            reraise_error(@errors.shift) if !@errors.empty?
         end
 
         # Adds a timer to the event loop
