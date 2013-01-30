@@ -270,7 +270,7 @@ module Utilrb
             options, task_options = Kernel.filter_options(options,{:callback => nil,:known_errors => [],:on_error => nil})
             callback = options[:callback]
             error_callback = options[:on_error]
-            known_erros = Array(options[:known_errors])
+            known_errors = Array(options[:known_errors])
 
             task = Utilrb::ThreadPool::Task.new(task_options,*args,&block)
             # ensures that user callback is called from main thread and not from worker threads
@@ -295,7 +295,7 @@ module Utilrb
                         end
                         if exception
                             error_callback.call(exception) if error_callback
-                            raises = !known_erros.find {|error| exception.is_a? error}
+                            raises = !known_errors.any? {|error| error === exception}
                             handle_error(exception,raises)
                         end
                     end
@@ -303,7 +303,7 @@ module Utilrb
             else
                 task.callback do |result,exception|
                     if exception
-                        raises = !known_erros.find {|error| exception.is_a? error}
+                        raises = !known_errors.find {|error| error === exception}
                         once do
                             error_callback.call(exception) if error_callback
                             handle_error(exception,raises)
