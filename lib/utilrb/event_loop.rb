@@ -82,12 +82,18 @@ module Utilrb
             # initializing will be used.
             #
             # @param [Float] period The period in seconds
+            # @param [TrueClass,FalseClass] instantly If set to true the timer instantly runs otherwise
+            #   the timer waits until the first period passed.
             # @raise [ArgumentError] if no period is specified
             # @return [Timer]
-            def start(period = @period)
+            def start(period = @period,instantly = true)
                 @period = period
-                @last_call = Time.now
                 raise ArgumentError,"no period is given" unless @period
+                @last_call = if instantly
+                                 Time.at(0)
+                             else
+                                 Time.now
+                             end
                 @event_loop.add_timer self
                 self
             end
