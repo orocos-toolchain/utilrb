@@ -184,7 +184,7 @@ module Utilrb
             # from any internal list finalize must be called
             # to propagate the task state.
             def execute()
-                raise RuntimeError, "call pre_execute first" if @state != :running
+                raise RuntimeError, "call pre_execute ThreadPool::Task first. Current state is #{@state} but :running was expected" if @state != :running
                 @state_temp = begin
                             @result = @block.call(*@arguments)
                             :finished

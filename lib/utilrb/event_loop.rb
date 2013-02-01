@@ -209,6 +209,10 @@ module Utilrb
             thread_pool.sync(sync_key,*args,&block)
         end
 
+        def pretty_print(pp) # :nodoc:
+            pp.text "EventLoop "
+        end
+
         # Integrates a blocking operation call like {Utilrb::EventLoop#async}
         # but automatically re queues the call if period was passed and the
         # task was finished by the worker thread.  This means it will never re
@@ -590,6 +594,9 @@ module Utilrb
             end
             handle_errors{call.call} if call
             reraise_error(@errors.shift) if !@errors.empty?
+            
+            #allow thread pool to take over
+            Thread.pass
         end
 
         # Adds a timer to the event loop
