@@ -63,7 +63,9 @@ module Utilrb
                 @period = period
                 @single_shot = single_shot
                 @stopped = true
-                doc = ""
+                @doc = Kernel.caller.find do |s|
+                    !(%r"#{Regexp.quote(__FILE__)}"o =~ s) && !(s =~ /^\/usr\/.+/)
+                end.to_s
             end
 
             # Cancels the timer. If it is not running it will do nothing
