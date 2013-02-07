@@ -93,8 +93,8 @@ class Logger
         end
 
         def self.included(obj) # :nodoc:
-            if obj.singleton_class.ancestors.include?(Logger::Forward)
-                obj.send(:include, Logger::Forward)
+            if obj.singleton_class.ancestors.include?(::Logger::Forward)
+                obj.send(:include, ::Logger::Forward)
             end
         end
 
@@ -102,8 +102,8 @@ class Logger
             obj.logger # initialize the default logger. Also does some checking
             if obj.kind_of?(Module) && !obj.spacename.empty?
                 parent_module = constant(obj.spacename)
-                if (parent_module.singleton_class.ancestors.include?(Logger::Forward))
-                    obj.send(:extend, Logger::Forward)
+                if (parent_module.singleton_class.ancestors.include?(::Logger::Forward))
+                    obj.send(:extend, ::Logger::Forward)
                 end
             end
         end

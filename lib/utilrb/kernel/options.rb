@@ -57,6 +57,12 @@ module Kernel
         return *[known_options, unknown_options]
     end
 
+    # Normalizes all keys in the given option hash to symbol and returns the
+    # modified hash
+    def normalize_options(options)
+        options.to_sym_keys
+    end
+
     # Validates an option hash, with default value support. See #filter_options
     # 
     # In the first form, +option_hash+ should contain keys which are also 

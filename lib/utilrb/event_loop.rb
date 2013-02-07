@@ -62,12 +62,20 @@ module Utilrb
                 @last_call = Time.now
                 @period = period
                 @single_shot = single_shot
-                doc = ""
+                @stopped = true
+                @doc = Kernel.caller.find do |s|
+                    !(%r"#{Regexp.quote(__FILE__)}"o =~ s) && !(s =~ /^\/usr\/.+/)
+                end.to_s
             end
 
             # Cancels the timer. If it is not running it will do nothing
             def cancel
+                @stopped = true
                 @event_loop.cancel_timer self
+            end
+
+            def stopped?
+                @stopped 
             end
 
             # Returns true if the timer is currently running.
@@ -87,6 +95,7 @@ module Utilrb
             # @raise [ArgumentError] if no period is specified
             # @return [Timer]
             def start(period = @period,instantly = true)
+                @stopped = false
                 @period = period
                 raise ArgumentError,"no period is given" unless @period
                 @last_call = if instantly
@@ -590,6 +599,7 @@ module Utilrb
                 handle_errors{event.call} unless event.ignore?
             end
             timers.each do |timer|
+                next if timer.stopped?
                 handle_errors{timer.call(time)} if timer.timeout?(time)
             end
             handle_errors{call.call} if call
