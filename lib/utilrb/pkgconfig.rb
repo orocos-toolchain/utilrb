@@ -76,6 +76,14 @@ module Utilrb
             find_matching_version(candidates, version_spec)
         end
 
+        # Finds the provided package and optional version and returns its
+        # PkgConfig description
+        #
+        # @param [String] version_spec version specification, of the form "op
+        # number", where op is < <= >= > or == and the version number X, X.y,
+        # ...
+        # @return [PkgConfig] the pkg-config description
+        # @raise [NotFound] if the package is not found
         def self.new(name, version_spec = nil)
             get(name, version_spec)
         end

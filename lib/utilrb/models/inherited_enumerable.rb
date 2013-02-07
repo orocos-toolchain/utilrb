@@ -25,12 +25,17 @@ module Models
         if options[:map]
             class_eval <<-EOF, __FILE__, __LINE__+1
             def find_#{name}(key)
+                raise ArgumentError, "nil cannot be used as a key in find_#{name}" if !key
                 each_#{name}(key, true) do |value|
                     return value
                 end
                 nil
             end
             def has_#{name}?(key)
+                ancestors = self.ancestors
+                if ancestors.first != self
+                    ancestors.unshift self
+                end
                 for klass in ancestors
                     if klass.instance_variable_defined?(:@#{attribute_name})
                         return true if klass.#{attribute_name}.has_key?(key)
@@ -40,6 +45,17 @@ module Models
             end
             EOF
         end
+
+        class_eval <<-EOF, __FILE__, __LINE__+1
+        def clear_#{attribute_name}
+            #{attribute_name}.clear
+            for klass in ancestors
+                if klass.instance_variable_defined?(:@#{attribute_name})
+                    klass.#{attribute_name}.clear
+                end
+            end
+        end
+        EOF
 
         if !promote
             if options[:map]
@@ -63,6 +79,10 @@ module Models
                 return enum_for(:each_#{name}, key, uniq)
             end
 
+            ancestors = self.ancestors
+            if ancestors.first != self
+                ancestors.unshift self
+            end
             if key
                 for klass in ancestors
                     if klass.instance_variable_defined?(:@#{attribute_name})
@@ -106,6 +126,10 @@ module Models
                 return enum_for(:each_#{name})
             end
 
+            ancestors = self.ancestors
+            if ancestors.first != self
+                ancestors.unshift self
+            end
             for klass in ancestors
                 if klass.instance_variable_defined?(:@#{attribute_name})
                     klass.#{attribute_name}.#{options[:enum_with]} { |el| yield(el) }
@@ -123,6 +147,10 @@ module Models
                 return enum_for(:each_#{name}, key, uniq)
             end
 
+            ancestors = self.ancestors
+            if ancestors.first != self
+                ancestors.unshift self
+            end
             if key
                 promotions = []
                 for klass in ancestors
@@ -181,6 +209,10 @@ module Models
                 return enum_for(:each_#{name})
             end
 
+            ancestors = self.ancestors
+            if ancestors.first != self
+                ancestors.unshift self
+            end
             promotions = []
             for klass in ancestors
                 if klass.instance_variable_defined?(:@#{attribute_name})
@@ -295,7 +327,7 @@ module Models
 	singleton_class.class_eval { define_inherited_enumerable(name, attribute_name, options, &init) }
 
 	if is_a?(Module) && !is_a?(Class)
-	    unless const_defined?(:ClassExtension)
+	    unless const_defined_here?(:ClassExtension)
 		const_set(:ClassExtension, Module.new)
 	    end
 	    class_extension = const_get(:ClassExtension)

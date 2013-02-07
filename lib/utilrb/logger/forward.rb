@@ -15,10 +15,12 @@ class Logger
             EOF
         end
 
+        # Forwarded to {Logger#nest}
         def log_nest(size, level = nil, &block)
             logger.nest(size, level, &block)
         end
 
+        # Forwarded to {Logger#log_pp}
         def log_pp(level, object, *first_line_format)
             logger.log_pp(level, object, *first_line_format)
         end
