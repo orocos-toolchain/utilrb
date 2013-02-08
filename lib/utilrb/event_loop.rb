@@ -168,6 +168,13 @@ module Utilrb
             end
         end
 
+        def self.cleanup_backtrace(&block)
+            block.call
+        rescue
+            $@.delete_if{|s| %r"#{Regexp.quote(__FILE__)}"o =~ s}
+            ::Kernel::raise
+        end
+
         # Underlying thread pool used to defer work.
         #
         # @return [Utilrb::ThreadPool]
