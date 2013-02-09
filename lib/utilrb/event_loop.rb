@@ -916,7 +916,7 @@ module Utilrb
                                             raise DesignatedObjectNotFound,'designated object is nil'
                                         end
                                     else
-                                        acc.__send__(:#{method}, *args)
+                                        acc.__send__(:#{method}, *args, &block)
                                     end
                                 end
                             callback = #{filter ? "block.to_proc.arity == 2 ? Proc.new { |r,e| block.call(#{filter}(r),e)} : Proc.new {|r| block.call(#{filter}(r))}" : "block"}
