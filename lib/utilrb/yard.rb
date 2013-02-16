@@ -2,8 +2,8 @@ require 'pp'
 module Utilrb
     module YARD
         include ::YARD
-        class InheritedEnumerableHandler < YARD::Handlers::Ruby::AttributeHandler
-            handles method_call(:define_inherited_enumerable)
+        class InheritedAttributeHandler < YARD::Handlers::Ruby::AttributeHandler
+            handles method_call(:inherited_attribute)
             namespace_only
 
             def self.process(handler, name, attr_name, is_map, key_name = nil, return_type = nil)
@@ -111,7 +111,7 @@ Looks for objects registered in #{name} under the given key, and returns the fir
                 end
             end
         end
-        YARD::Tags::Library.define_tag("Key for define_inherited_enumerable(_, :map => true)", :key_name)
+        YARD::Tags::Library.define_tag("Key for inherited_attribute(_, :map => true)", :key_name)
 
         class AttrEnumerableHandler < YARD::Handlers::Ruby::AttributeHandler
             handles method_call(:attr_enumerable)
