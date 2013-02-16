@@ -32,13 +32,17 @@ module Utilrb
             :exclude => [],
             :target_dir => 'doc',
             :title => '',
-            :plugins => []
+            :plugins => [],
+            :files => []
 
         case DOC_MODE
         when 'yard'
             task = YARD::Rake::YardocTask.new(target)
             task.files.concat(options[:include])
             task.options << '--title' << options[:title] << '--output-dir' << options[:target_dir]
+            if !options[:files].empty?
+                task.options << "--files" << options[:files].join(",")
+            end
             options[:plugins].each do |plugin_name|
                 require "#{plugin_name}/yard"
             end
