@@ -37,10 +37,8 @@ module Utilrb
         # Generates a graph of all the objects currently live, in dot format
         def self.dot_snapshot(options = Hash.new)
             r, w = IO.pipe
-            puts "before fork"
             live_objects = RubyObjectGraph.snapshot
             fork do
-                puts "in fork"
                 options, register_options = Kernel.filter_options options,
                     :collapse => nil
                 ruby_graph = RubyObjectGraph.new
