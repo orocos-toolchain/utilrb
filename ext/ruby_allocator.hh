@@ -1,7 +1,7 @@
 #ifndef RUBY_ALLOCATOR_HH
 #define RUBY_ALLOCATOR_HH
 
-#include <ruby/defines.h>
+#include <defines.h>
 
 template <class T> class ruby_allocator
 {
