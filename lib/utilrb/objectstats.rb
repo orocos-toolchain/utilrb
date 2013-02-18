@@ -19,12 +19,15 @@ module ObjectStats
     # Returns a klass => count hash counting the currently allocated objects
     # 
     # It allocates 1 Hash, which is included in the count
-    def self.count_by_class
+    def self.count_by_class(threshold = nil)
         by_class = Hash.new(0)
         ObjectSpace.each_object { |obj|
             by_class[obj.class] += 1
             by_class
         }
+        if threshold
+            by_class.delete_if { |kl, count| count < threshold }
+        end
 
         by_class
     end
