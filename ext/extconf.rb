@@ -1,17 +1,22 @@
 require 'mkmf'
 
-if RUBY_VERSION >= "1.9"
-    $CFLAGS += " -DRUBY_IS_19"
-end
-
-if ENV['RUBY_SOURCE_DIR']
-    $CFLAGS += " -DHAS_RUBY_SOURCE -I#{ENV['RUBY_SOURCE_DIR']}"
-end
-
 if try_link("int main() { }", "-module")
     $LDFLAGS += " -module"
 end
-create_makefile("utilrb_ext")
+
+if RUBY_VERSION >= "1.9"
+    $CFLAGS += " -DRUBY_IS_19"
+    begin
+        require 'debugger/ruby_core_source'
+        $CFLAGS += " -DHAS_RUBY_SOURCE"
+        hdrs = lambda { try_compile("#include <vm_core.h>") }
+        Debugger::RubyCoreSource.create_makefile_with_core(hdrs, "utilrb_ext")
+    rescue LoadError
+        create_makefile("utilrb_ext")
+    end
+else
+    create_makefile("utilrb_ext")
+end
 
 ## WORKAROUND a problem with mkmf.rb
 # It seems that the newest version do define an 'install' target. However, that
