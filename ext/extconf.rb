@@ -1,5 +1,6 @@
 require 'mkmf'
 
+CONFIG['LDSHARED'].gsub! '$(CC)', "$(CXX)"
 if try_link("int main() { }", "-module")
     $LDFLAGS += " -module"
 end
