@@ -310,7 +310,7 @@ module Utilrb
                             #check if the error was overwritten in the
                             #case of an error
                             exception = if exception
-                                            if e == :ignore_error
+                                            if e.is_a?(Symbol) && e == :ignore_error
                                                 nil
                                             elsif e.is_a? Exception
                                                 e
