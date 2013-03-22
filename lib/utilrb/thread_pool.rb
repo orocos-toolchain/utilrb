@@ -317,6 +317,23 @@ module Utilrb
             end
         end
 
+        # sets the minimum number of threads
+        def min=(val)
+            resize(val,max)
+        end
+
+        # sets the maximum number of threads
+        def max=(val)
+            resize(min,val)
+        end
+
+        # returns the current used sync_keys
+        def sync_keys
+            @mutex.synchronize do
+                @sync_keys.clone
+            end
+        end
+
         # Checks if the thread pool is shutting down all threads.
         #
         # @return [boolean]

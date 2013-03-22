@@ -56,7 +56,7 @@ module Utilrb
             # @param[Boolean] single_shot if true the timer will fire only once
             # @param[#call] block The code block which will be executed each time the timer fires
             # @see EventLoop#once
-            def initialize(event_loop,period=nil,single_shot=false,&block)
+            def initialize(event_loop,period=0,single_shot=false,&block)
                 @block = block
                 @event_loop = event_loop
                 @last_call = Time.now
@@ -72,6 +72,10 @@ module Utilrb
             def cancel
                 @stopped = true
                 @event_loop.cancel_timer self
+            end
+
+            def single_shot?
+                @single_shot
             end
 
             def stopped?
