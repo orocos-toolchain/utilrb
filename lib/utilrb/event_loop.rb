@@ -534,12 +534,14 @@ module Utilrb
         # @yieldreturn [Boolean]
         def wait_for(period=0.05,timeout=nil,&block)
             start = Time.now
+            old_stop = @stop
             exec period do
                 stop if block.call
                 if timeout && timeout <= (Time.now-start).to_f
                     raise RuntimeError,"Timeout during wait_for"
                 end
             end
+            @stop = old_stop
         end
 
         # Steps with the given period until all
