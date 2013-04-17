@@ -207,7 +207,11 @@ module Utilrb
                     @state = @state_temp
                     @pool = nil
                 end
-                @callback.call @result,@exception if @callback
+                begin
+                    @callback.call @result,@exception if @callback
+                rescue Exception => e
+                    ThreadPool.report_exception("thread_pool: in #{self}, callback #{@callback} failed", e)
+                end
             end
 
             # Terminates the task if it is running
@@ -540,7 +544,7 @@ module Utilrb
                     begin
                         current_task.execute
                     rescue Exception => e
-                        puts e
+                        ThreadPool.report_exception(nil, e)
                     ensure
                         @mutex.synchronize do
                             @tasks_running.delete current_task
@@ -566,7 +570,15 @@ module Utilrb
             @spawned += 1
             @workers << thread
         rescue Exception => e
-            puts e
+            ThreadPool.report_exception(nil, e)
+        end
+
+        def self.report_exception(msg, e)
+            if msg
+                STDERR.puts msg
+            end
+            STDERR.puts e.message
+            STDERR.puts "  #{e.backtrace.join("\n  ")}"
         end
     end
 end
