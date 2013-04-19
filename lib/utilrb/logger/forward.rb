@@ -15,6 +15,11 @@ class Logger
             EOF
         end
 
+        # Forwarded to {Logger#silent}
+        def log_silent(&block)
+            logger.silent(&block)
+        end
+
         # Forwarded to {Logger#nest}
         def log_nest(size, level = nil, &block)
             logger.nest(size, level, &block)
