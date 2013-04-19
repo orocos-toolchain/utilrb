@@ -126,6 +126,22 @@ class TC_Logger < Test::Unit::TestCase
             extend Logger::Hierarchy
             extend Logger::Forward
         end
+
+        module A
+            extend Logger::Hierarchy
+            extend Logger::Forward
+
+            class B
+                extend Logger::Hierarchy
+                include Logger::Hierarchy
+            end
+        end
+    end
+
+    module HierarchyTestForSubclass
+        def self.logger; "other_logger" end
+        class HierarchyTest < HierarchyTest::HierarchyTest
+        end
     end
 
     module NotALoggingModule
@@ -141,7 +157,9 @@ class TC_Logger < Test::Unit::TestCase
     def test_hierarchy_can_resolve_parent_logger_in_subclasses_where_the_subclass_parent_module_is_not_providing_a_logger
         assert_equal "root_logger", NotALoggingModule::HierarchyTest.logger
     end
-
+    def test_hierarchy_resolves_the_parent_module_first_even_in_subclasses
+        assert_equal "other_logger", HierarchyTestForSubclass::HierarchyTest.logger
+    end
     def test_hierarchy_raises_if_no_parent_logger_can_be_found
         assert_raises(Logger::Hierarchy::NoParentLogger) { NotALoggingModule::NoLogger.extend Logger::Hierarchy }
     end
@@ -150,5 +168,16 @@ class TC_Logger < Test::Unit::TestCase
     end
     def test_hierarchy_raises_if_hierarchy_is_called_on_a_root_module
         assert_raises(Logger::Hierarchy::NoParentLogger) { RootModule.extend Logger::Hierarchy }
+    end
+
+    def test_instance_resolves_to_class_logger
+        klass = Class.new(HierarchyTest::HierarchyTest)
+        klass.send(:include, Logger::Hierarchy)
+        obj = klass.new
+        assert_equal "root_logger", obj.logger
+    end
+    def test_instance_resolves_to_own_logger_if_set
+        a_logger = HierarchyTest::A.make_own_logger
+        assert_same a_logger, HierarchyTest::A::B.logger
     end
 end
