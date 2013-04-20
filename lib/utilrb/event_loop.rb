@@ -325,7 +325,7 @@ module Utilrb
                         end
                         if exception
                             error_callback.call(exception) if error_callback
-                            raises = !known_errors.any? {|error| error === exception}
+                            raises = !known_errors.any? {|error| exception.is_a?(error)}
                             handle_error(exception,raises)
                         end
                     end
@@ -333,7 +333,7 @@ module Utilrb
             else
                 task.callback do |result,exception|
                     if exception
-                        raises = !known_errors.find {|error| error === exception}
+                        raises = !known_errors.find {|error| exception.is_a?(error)}
                         once do
                             error_callback.call(exception) if error_callback
                             handle_error(exception,raises)
