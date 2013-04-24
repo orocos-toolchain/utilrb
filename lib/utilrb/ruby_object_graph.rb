@@ -132,7 +132,9 @@ module Utilrb
             excludes = [live_objects, self, graph, references, orig_options, options, roots, roots_class].to_value_set
             live_objects_total = live_objects.size
             live_objects.delete_if do |obj|
-                if excludes.include?(obj) || obj.respond_to?(:__ruby_object_graph_internal__)
+                if obj.kind_of?(DRbObject)
+                    true
+                elsif excludes.include?(obj) || obj.respond_to?(:__ruby_object_graph_internal__)
                     true
                 else
                     references[obj.object_id] ||= ObjectRef.new(obj)
