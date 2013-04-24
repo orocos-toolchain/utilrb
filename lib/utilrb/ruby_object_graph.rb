@@ -345,10 +345,13 @@ module Utilrb
                         obj_id = obj_ref.obj.object_id
                         str =
                             if obj.respond_to?(:each)
-                                "#<#{obj.class}: #{obj.object_id}>"
+                                "#{obj.class}: #{obj.object_id}"
                             else
                                 obj.to_s
                             end
+
+                        str = str.encode('UTF-8', :invalid => :replace, :undef => :replace, :replace => "")
+                        str = str.gsub(/[^\w\.:<>]/, "")
 
                         color =
                             if obj.kind_of?(BGL::Graph)
@@ -359,8 +362,7 @@ module Utilrb
                                 :black
                             end
 
-                        obj_label_format_elements.clear
-                        obj_label_format_elements << obj_id << str.gsub(/[\\"\n]/, " ") << colors[color]
+                        obj_label_format_elements = [obj_id, str.gsub(/[\\"\n]/, " "), colors[color]]
                         str = obj_label_format % obj_label_format_elements
                         io.puts(str)
                     end
