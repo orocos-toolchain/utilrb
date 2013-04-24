@@ -13,9 +13,11 @@ if RUBY_VERSION >= "1.9"
         hdrs = lambda { try_compile("#include <vm_core.h>") }
         Debugger::RubyCoreSource.create_makefile_with_core(hdrs, "utilrb_ext")
     rescue LoadError
+        puts "not building with core source"
         create_makefile("utilrb_ext")
     end
 else
+    puts "not building with core source"
     create_makefile("utilrb_ext")
 end
 
