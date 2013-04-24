@@ -159,7 +159,8 @@ module Utilrb
                 :edge => "Edge[]",
                 :hash_key => "Hash[key]",
                 :hash_value => "Hash[value]",
-                :proc => "Proc"]
+                :proc => "Proc",
+                :ancestor => "Ancestor"]
             puts "RubyObjectGraph: #{live_objects.size} objects found, #{desired_seeds.size} seeds and #{live_objects_total} total live objects"
             loop do
                 old_graph_size = graph.size
@@ -204,6 +205,10 @@ module Utilrb
                                 rescue RangeError
                                 end
                             end
+                        end
+                    when Class
+                        for ref in obj.ancestors
+                            test_and_add_reference(obj_ref, ref, names[:ancestor])
                         end
                     else
                         if obj.respond_to?(:each)
