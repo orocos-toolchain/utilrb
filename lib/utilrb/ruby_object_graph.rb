@@ -257,6 +257,36 @@ module Utilrb
             end
         end
 
+        def live_chain_for(obj)
+            result = []
+
+            # Find one Roby task and look at the chain
+            ref = references[obj.object_id]
+            stack = [[ref.obj]]
+            graph.reverse.each_dfs(ref, BGL::Graph::TREE) do |source, target, info, kind|
+                source = source.obj
+                target = target.obj
+                if stack.last.first.object_id != source.object_id && stack.any? { |obj, _| obj.object_id == source.object_id }
+                    result << stack.dup if stack.size != 1
+                    while stack.last.first.object_id != source.object_id
+                        stack.pop
+                    end
+                end
+                stack.push [target, info]
+            end
+            if stack.size != 1
+                result << stack
+            end
+            result
+        end
+
+
+        def display_live_chains(chains)
+            chains.each do |stack|
+                puts stack.map { |obj, link| "#{link} #{obj}" }.join("\n  >")
+            end
+        end
+
         def to_dot
             roots = graph.vertices.find_all do |v|
                 v.root?(graph)
