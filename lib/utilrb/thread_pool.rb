@@ -338,6 +338,14 @@ module Utilrb
             end
         end
 
+        def clear
+            shutdown
+            join
+        rescue Exception
+        ensure
+            @shutdown = false
+        end
+
         # Checks if the thread pool is shutting down all threads.
         #
         # @return [boolean]

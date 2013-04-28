@@ -656,6 +656,8 @@ module Utilrb
 
         # Clears all timers, events and errors
         def clear
+            thread_pool.clear
+
             @errors.clear
             @events.clear
             @mutex.synchronize do
