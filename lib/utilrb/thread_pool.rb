@@ -456,8 +456,7 @@ module Utilrb
             task.reset if task.finished?
             @mutex.synchronize do
                 if shutdown? 
-                    warn "unable to add work while shutting down"
-                    return task
+                    raise "unable to add work while shutting down"
                 end
                 task.queued_at = Time.now
                 @tasks_waiting << task
