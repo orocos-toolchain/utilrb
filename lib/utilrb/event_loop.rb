@@ -99,6 +99,7 @@ module Utilrb
             # @raise [ArgumentError] if no period is specified
             # @return [Timer]
             def start(period = @period,instantly = true)
+                cancel
                 @stopped = false
                 @period = period
                 raise ArgumentError,"no period is given" unless @period
@@ -627,6 +628,7 @@ module Utilrb
         # @param [Timer] timer The timer.
         def add_timer(timer)
             @mutex.synchronize do
+                raise "timer #{timer}:#{timer.doc} was already added!" if @timers.include?(timer)
                 @timers << timer
             end
         end
