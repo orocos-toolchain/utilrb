@@ -43,14 +43,14 @@ begin
 
     task :doc => :yard
 
+
 rescue LoadError => e
     puts "'utilrb' cannot be build -- loading gem failed: #{e}"
 end
 
 task :full_test do
-    ENV['UTILRB_EXT_MODE'] = 'no'
-    system("testrb test/")
+    ENV.delete_if { |name,val| name == "UTILRB_EXT_MODE" }
+    system('testrb -I. test')
     ENV['UTILRB_EXT_MODE'] = 'yes'
-    system("testrb test/")
+    system('testrb -I. test')
 end
-
