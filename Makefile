@@ -4,7 +4,7 @@ include $(shell rospack find rtt)/../env.mk
 install: gems
 	rake
 gems:
-	if [ -d ../rtt_gems ]; then gem install ../rtt_gems/*.gem; else gem install rake flexmock rdoc nokogiri facets; fi
+	if [ -d ../rtt_gems ]; then gem install ../rtt_gems/*.gem; else gem install rake flexmock rdoc rake-compiler hoe hoe-yard facets; fi
 	touch gems
 clean:
 	rake clean
