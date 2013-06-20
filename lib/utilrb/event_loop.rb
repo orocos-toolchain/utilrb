@@ -196,6 +196,7 @@ module Utilrb
             @number_of_events_to_process = 0  # number of events which are processed in the current step
             @thread_pool = ThreadPool.new
             @thread = Thread.current #the event loop thread
+            @stop = nil
         end
 
         # Integrates a blocking operation call into the EventLoop like {Utilrb::EventLoop#defer}

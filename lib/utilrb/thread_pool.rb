@@ -137,6 +137,7 @@ module Utilrb
                 @mutex = Mutex.new
                 @pool = nil
                 @state_temp = nil
+                @state = nil
                 reset
             end
 
