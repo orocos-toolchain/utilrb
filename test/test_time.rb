@@ -1,4 +1,4 @@
-require './test_config'
+require 'test/test_config'
 require 'utilrb/time'
 
 class TC_Time < Test::Unit::TestCase

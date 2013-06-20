@@ -1,4 +1,4 @@
-require './test_config'
+require 'test/test_config'
 require 'utilrb/unbound_method'
 require 'flexmock'
 
