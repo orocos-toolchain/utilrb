@@ -12,4 +12,9 @@
   
   <rosdep name="ruby"/>
   <rosdep name="nokogiri"/>
+  <depend package="hoe" />
+  <depend package="hoe-yard" />
+  <depend package="rake-compiler" />
+  <depend package="flexmock" optional="1" />
+
 </package>

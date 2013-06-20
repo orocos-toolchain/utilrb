@@ -11,14 +11,14 @@ if RUBY_VERSION >= "1.9"
         require 'debugger/ruby_core_source'
         $CFLAGS += " -DHAS_RUBY_SOURCE"
         hdrs = lambda { try_compile("#include <vm_core.h>") }
-        Debugger::RubyCoreSource.create_makefile_with_core(hdrs, "utilrb_ext")
+        Debugger::RubyCoreSource.create_makefile_with_core(hdrs, "utilrb/utilrb")
     rescue LoadError
         puts "not building with core source"
-        create_makefile("utilrb_ext")
+        create_makefile("utilrb/utilrb")
     end
 else
     puts "not building with core source"
-    create_makefile("utilrb_ext")
+    create_makefile("utilrb/utilrb")
 end
 
 ## WORKAROUND a problem with mkmf.rb
@@ -27,10 +27,10 @@ end
 #
 # The issue is that RubyGems *does* call make install. Ergo, gem install utilrb
 # is broken right now
-lines = File.readlines("Makefile")
-lines.delete_if { |l| l =~ /^install:/ }
-lines << "install:"
-File.open("Makefile", 'w') do |io|
-      io.write lines.join("\n")
-end
+#lines = File.readlines("Makefile")
+#lines.delete_if { |l| l =~ /^install:/ }
+#lines << "install:"
+#File.open("Makefile", 'w') do |io|
+#      io.write lines.join("\n")
+#end
 
