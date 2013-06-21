@@ -14,7 +14,7 @@ Utilrb::Rake.hoe do
             ['flexmock', '>= 0.8.6']
 
         self.summary = 'Yet another Ruby toolkit'
-        self.description = paragraphs_of('README.txt', 3..5).join("\n\n")
+        self.description = paragraphs_of('README.rdoc', 3..5).join("\n\n")
     end
     hoe_spec.spec.extensions << 'ext/extconf.rb'
     Rake.clear_tasks(/^default$/)
