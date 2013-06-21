@@ -49,7 +49,11 @@ module Utilrb
             task_clobber.add_description "Remove #{target} products"
 
             name = ::Rake.application.current_scope.dup
-            name << task.name
+            if name.respond_to?(:conj)
+                name.conj(task.name)
+            else
+                name << task.name
+            end
             task_re = ::Rake::Task.define_task "re#{target}" do
                 FileUtils.rm_rf options[:target_dir]
                 ::Rake::Task[name.join(":")].invoke
