@@ -14,7 +14,7 @@ module Utilrb
 	    STDERR.puts "Utilrb: not loading the C extension"
 	else
 	    begin
-		require 'utilrb_ext'
+		require 'utilrb/utilrb'
 		UTILRB_EXT_MODE = true
 		STDERR.puts "Utilrb: loaded C extension" if ENV['UTILRB_EXT_MODE']
 	    rescue LoadError => e

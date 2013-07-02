@@ -99,6 +99,7 @@ module Utilrb
             # @raise [ArgumentError] if no period is specified
             # @return [Timer]
             def start(period = @period,instantly = true)
+                cancel
                 @stopped = false
                 @period = period
                 raise ArgumentError,"no period is given" unless @period
@@ -195,6 +196,7 @@ module Utilrb
             @number_of_events_to_process = 0  # number of events which are processed in the current step
             @thread_pool = ThreadPool.new
             @thread = Thread.current #the event loop thread
+            @stop = nil
         end
 
         # Integrates a blocking operation call into the EventLoop like {Utilrb::EventLoop#defer}
@@ -627,6 +629,7 @@ module Utilrb
         # @param [Timer] timer The timer.
         def add_timer(timer)
             @mutex.synchronize do
+                raise "timer #{timer}:#{timer.doc} was already added!" if @timers.include?(timer)
                 @timers << timer
             end
         end

@@ -117,7 +117,7 @@ extern "C" void Init_swap();
 extern "C" void Init_weakref(VALUE mUtilrb);
 extern "C" void Init_proc();
 
-extern "C" void Init_utilrb_ext()
+extern "C" void Init_utilrb()
 {
     mUtilrb = rb_define_module("Utilrb");
 

@@ -333,7 +333,7 @@ module Utilrb
         def include_dirs
             result = Shellwords.shellsplit(cflags_only_I).map { |v| v[2..-1] }
             if result.any?(&:empty?)
-                raise Invalid, "empty include directory (-I without argument) found in pkg-config package #{name}"
+                raise Invalid.new(name), "empty include directory (-I without argument) found in pkg-config package #{name}"
             end
             result
         end
@@ -343,7 +343,7 @@ module Utilrb
         def library_dirs
             result = Shellwords.shellsplit(libs_only_L).map { |v| v[2..-1] }
             if result.any?(&:empty?)
-                raise Invalid, "empty link directory (-L without argument) found in pkg-config package #{name}"
+                raise Invalid.new(name), "empty link directory (-L without argument) found in pkg-config package #{name}"
             end
             result
         end
