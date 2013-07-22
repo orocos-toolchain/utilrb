@@ -14,24 +14,26 @@ class Logger
         # logger. If +new_progname+ and/or +new_level+ are nil, the associated
         # value are taken from the parent's logger.
         def make_own_logger(new_progname = nil, new_level = nil)
-            @logger ||= self.logger.dup
+            new_logger = @logger || self.logger.dup
             if new_progname
-                @logger.progname = new_progname
+                new_logger.progname = new_progname
             end
             if new_level
-                @logger.level = new_level
+                new_logger.level = new_level
             end
-            log_children.each do |child|
-                child.reset_default_logger
-            end
-            @logger
+            self.logger = new_logger
         end
 
         # Allows to change the logger object at this level of the hierarchy
         #
         # This is usually not used directly: a new logger can be created with
         # Hierarchy#make_own_logger and removed with Hierarchy#reset_own_logger
-        attr_writer :logger
+        def logger=(new_logger)
+            @logger = new_logger
+            log_children.each do |child|
+                child.reset_default_logger
+            end
+        end
 
         # Removes a logger defined at this level of the module hierarchy. The
         # logging methods will now access the parent's module logger.
