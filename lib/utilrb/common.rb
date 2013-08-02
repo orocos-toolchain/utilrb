@@ -8,6 +8,8 @@ module Utilrb
         RUBY_IS_191 = (RUBY_VERSION >= "1.9") && (RUBY_VERSION < "1.9.2")
     end
 
+    LIB_DIR = File.expand_path(File.dirname(__FILE__))
+
     unless defined? UTILRB_EXT_MODE
 	if ENV['UTILRB_EXT_MODE'] == 'no'
 	    UTILRB_EXT_MODE = nil
