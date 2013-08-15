@@ -122,7 +122,11 @@ class Logger
                     m = self
                     while m
                         if m.name && !m.spacename.empty?
-                            parent_module = constant(m.spacename)
+                            parent_module =
+                                begin
+                                    constant(m.spacename)
+                                rescue NameError
+                                end
                             if parent_module.respond_to?(:logger)
                                 break
                             end
