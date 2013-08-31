@@ -42,7 +42,8 @@ begin
     Rake.clear_tasks(/^default$/)
     task :default => :compile
 
-    task :doc => :yard
+    task :docs => :yard
+    task :redocs => :yard
 
 
 rescue LoadError => e
