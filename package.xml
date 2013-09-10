@@ -1,0 +1,29 @@
+<package>
+  <name>utilrb</name>
+  <version>1.6.6</version>
+  <description>
+    Ruby toolkit: This library is a collection of useful Ruby classes
+  </description>
+  <author>Sylvain Joyeux/sylvain.joyeux@m4x.org</author>
+  <maintainer email="orocos-dev@lists.mech.kuleuven.be">Orocos Development Team</maintainer>
+  <license>CeCILL-B (BSD-like)</license>
+
+  <buildtool_depend>cmake</buildtool_depend>
+  <export>
+    <build_type>
+      cmake
+    </build_type>
+  </export>
+  <build_depend >ruby</build_depend>
+  <build_depend >rake</build_depend>
+  <build_depend >libxslt</build_depend>
+  <build_depend >nokogiri</build_depend>
+  <build_depend >facets</build_depend>
+
+  <run_depend >ruby</run_depend>
+  <run_depend >libxslt</run_depend>
+  <run_depend >nokogiri</run_depend>
+  <run_depend >facets</run_depend>
+
+
+</package>

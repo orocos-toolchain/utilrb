@@ -1,3 +1,4 @@
+$LOAD_PATH.unshift File.expand_path('lib', File.dirname(__FILE__))
 require 'rake'
 
 begin 
@@ -41,7 +42,8 @@ begin
     Rake.clear_tasks(/^default$/)
     task :default => :compile
 
-    task :doc => :yard
+    task :docs => :yard
+    task :redocs => :yard
 
 
 rescue LoadError => e
