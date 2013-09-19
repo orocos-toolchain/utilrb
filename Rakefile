@@ -8,21 +8,22 @@ begin
 
     hoe_spec = Hoe.spec 'utilrb' do
         developer "Sylvain Joyeux", "sylvain.joyeux@m4x.org"
-        self.extra_deps <<
+        self.readme_file = 'README.rd'
+
+        extra_deps <<
             ['facets', '>= 2.4.0'] <<
             ['rake',     '>= 0.9'] <<
             ["rake-compiler",   "~> 0.8.0"] <<
             ["hoe-yard",   ">= 0.1.2"]
 
-        self.extra_dev_deps <<
+        extra_dev_deps <<
             ['flexmock', '>= 0.8.6'] <<
             ['debugger-ruby_core_source', '>= 0']
 
-        self.summary = 'Yet another Ruby toolkit'
-        self.description = paragraphs_of('README.rdoc', 3..5).join("\n\n")
-    end
+        licenses << 'BSD'
 
-    hoe_spec.spec.extensions = FileList["ext/**/extconf.rb"]
+        spec_extras[:extensions] = FileList["ext/**/extconf.rb"]
+    end
 
     require 'rubygems/package_task'
     Gem::PackageTask.new(hoe_spec.spec) do |pkg|
