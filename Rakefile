@@ -14,6 +14,7 @@ begin
             ['facets', '>= 2.4.0'] <<
             ['rake',     '>= 0.9'] <<
             ["rake-compiler",   "~> 0.8.0"] <<
+            ["hoe", ">= 3.7.1"] <<
             ["hoe-yard",   ">= 0.1.2"]
 
         extra_dev_deps <<
