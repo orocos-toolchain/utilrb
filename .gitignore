@@ -6,3 +6,6 @@ ext/Makefile
 lib/utilrb_ext.so
 doc/
 coverage/
+tmp/
+.yardoc
+lib/utilrb/utilrb.so
