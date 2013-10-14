@@ -1,4 +1,4 @@
-require 'test/test_config'
+require './test/test_config'
 require 'flexmock'
 require 'tempfile'
 

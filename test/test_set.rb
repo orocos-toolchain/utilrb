@@ -1,4 +1,4 @@
-require 'test/test_config'
+require './test/test_config'
 require 'utilrb/set'
 
 class TC_Set < Test::Unit::TestCase

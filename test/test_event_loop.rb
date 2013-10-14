@@ -1,4 +1,4 @@
-require 'test/test_config'
+require './test/test_config'
 require 'utilrb/event_loop'
 require 'minitest/spec'
 

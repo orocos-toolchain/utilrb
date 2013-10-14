@@ -1,4 +1,4 @@
-require 'test/test_config'
+require './test/test_config'
 
 class TC_Misc < Test::Unit::TestCase
     def test_super_idiom
