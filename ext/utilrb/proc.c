@@ -25,10 +25,10 @@ static VALUE proc_references(VALUE rbproc)
         return env_references(proc->envval);
     return rb_ary_new();
 }
-#elif RUBY_IS_19
-#warning "Ruby core sources cannot be found, Proc#references will not be available. Install the debugger-ruby_core_source gem to enable"
-#else
+#elif RUBY_IS_18
 #warning "compiling on Ruby 1.8, Proc#references will not be available"
+#else
+#warning "Ruby core sources cannot be found, Proc#references will not be available. Install the debugger-ruby_core_source gem to enable"
 #endif
 
 void Init_proc()

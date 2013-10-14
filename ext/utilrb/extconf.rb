@@ -5,8 +5,11 @@ if try_link("int main() { }", "-module")
     $LDFLAGS += " -module"
 end
 
-if RUBY_VERSION >= "1.9"
-    $CFLAGS += " -DRUBY_IS_19"
+if RUBY_VERSION < "1.9"
+    $CFLAGS += " -DRUBY_IS_18"
+    puts "not building with core source"
+    create_makefile("utilrb/utilrb")
+else
     begin
         require 'debugger/ruby_core_source'
         $CFLAGS += " -DHAS_RUBY_SOURCE"
@@ -16,9 +19,6 @@ if RUBY_VERSION >= "1.9"
         puts "not building with core source"
         create_makefile("utilrb/utilrb")
     end
-else
-    puts "not building with core source"
-    create_makefile("utilrb/utilrb")
 end
 
 ## WORKAROUND a problem with mkmf.rb
