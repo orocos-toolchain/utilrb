@@ -19,7 +19,7 @@ class TC_Kernel < Test::Unit::TestCase
             end
         end
         name('test')
-        unknown_method
+        unknown_method()
     end
 
     def test_validate_options
@@ -152,7 +152,7 @@ class TC_Kernel < Test::Unit::TestCase
                 end
             end
             name('test')
-            unknown_method
+            unknown_method()
             EOD
             io.flush
 
