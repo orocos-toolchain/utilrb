@@ -1,3 +1,5 @@
+require 'fcntl'
+
 module Utilrb
     class SpawnFailed < RuntimeError; end
     def self.spawn(*cmdline)
