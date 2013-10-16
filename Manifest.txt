@@ -11,7 +11,6 @@ ext/utilrb/proc.c
 ext/utilrb/ruby_internals-1.8.h
 ext/utilrb/ruby_internals-1.9.h
 ext/utilrb/ruby_allocator.hh
-ext/utilrb/swap.cc
 ext/utilrb/utilrb.cc
 ext/utilrb/value_set.cc
 ext/utilrb/weakref.cc
@@ -48,7 +47,6 @@ lib/utilrb/kernel/load_dsl_file.rb
 lib/utilrb/kernel/options.rb
 lib/utilrb/kernel/poll.rb
 lib/utilrb/kernel/require.rb
-lib/utilrb/kernel/swap.rb
 lib/utilrb/kernel/with_module.rb
 lib/utilrb/logger.rb
 lib/utilrb/logger/forward.rb
