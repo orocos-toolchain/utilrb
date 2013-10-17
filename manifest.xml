@@ -15,5 +15,6 @@
   <depend package="hoe-yard" />
   <depend package="rake-compiler" />
   <depend package="flexmock" optional="1" />
+  <depend package="readline" />
 
 </package>
