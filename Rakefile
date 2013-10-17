@@ -36,7 +36,6 @@ begin
         ext.name = 'utilrb'
         ext.ext_dir = 'ext/utilrb'
         ext.lib_dir = 'lib/utilrb'
-        ext.config_options << "-DRUBINIUS"
         ext.source_pattern ="*.{c,cc,cpp}"
     end
 
