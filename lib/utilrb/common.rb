@@ -16,6 +16,8 @@ module Utilrb
 	    STDERR.puts "Utilrb: not loading the C extension"
 	else
 	    begin
+                # We need readline
+                require 'readline'
 		require 'utilrb/utilrb'
 		UTILRB_EXT_MODE = true
 		STDERR.puts "Utilrb: loaded C extension" if ENV['UTILRB_EXT_MODE']
