@@ -5,6 +5,7 @@ if try_link("int main() { }", "-module")
     $LDFLAGS += " -module"
 end
 
+$LDFLAGS += "  -lreadline"
 if RUBY_VERSION < "1.9"
     $CFLAGS += " -DRUBY_IS_18"
     puts "not building with core source"
