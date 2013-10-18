@@ -41,7 +41,7 @@ static VALUE readline_print(VALUE self, VALUE msg)
     return Qnil;
 }
 
-extern void Init_readline()
+extern void Init_utilrb_readline()
 {
     VALUE mReadline = rb_define_module("Readline");
     rb_define_singleton_method(mReadline, "save_prompt", readline_save_prompt, 0);
