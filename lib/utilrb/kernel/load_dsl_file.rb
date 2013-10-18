@@ -160,10 +160,7 @@ module Kernel
                 end
             end
 
-            old_constants, new_constants = nil
-            if !Utilrb::RUBY_IS_191
-                old_constants = Kernel.constants
-            end
+            old_constants, new_constants = Kernel.constants, nil
 
             sandbox = sandbox.new(proxied_object)
             sandbox.with_module(*context) do
@@ -184,7 +181,7 @@ module Kernel
 
             # Check if the user defined new constants by using class K and/or
             # mod Mod
-            if !Utilrb::RUBY_IS_191 && !new_constants
+            if !new_constants
                 new_constants = Kernel.constants
             end
 

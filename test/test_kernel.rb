@@ -180,7 +180,7 @@ class TC_Kernel < Test::Unit::TestCase
         end
     end
 
-    if !Utilrb::RUBY_IS_19
+    if Utilrb::RUBY_IS_18
     def test_eval_dsl_file_does_not_allow_class_definition
         obj = Class.new do
             def real_method
