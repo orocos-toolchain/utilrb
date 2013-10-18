@@ -3,7 +3,7 @@
 # the standard class extensions used by www.rock-robotics.org projects.
 module Utilrb
     unless defined? Utilrb::VERSION
-	VERSION = "1.6.6"
+	VERSION = "2.0.1"
         RUBY_IS_19  = (RUBY_VERSION >= "1.9.2")
         RUBY_IS_191 = (RUBY_VERSION >= "1.9") && (RUBY_VERSION < "1.9.2")
     end
