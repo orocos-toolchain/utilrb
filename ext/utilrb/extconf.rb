@@ -13,10 +13,11 @@ if RUBY_VERSION < "1.9"
 else
     begin
         require 'debugger/ruby_core_source'
-        $CFLAGS += " -DHAS_RUBY_SOURCE"
         hdrs = lambda { try_compile("#include <vm_core.h>") }
+        $CFLAGS += " -DHAS_RUBY_SOURCE"
         Debugger::RubyCoreSource.create_makefile_with_core(hdrs, "utilrb/utilrb")
-    rescue LoadError
+    rescue Exception
+        $CFLAGS.gsub!(/ -DHAS_RUBY_SOURCE/, '')
         puts "not building with core source"
         create_makefile("utilrb/utilrb")
     end
