@@ -231,6 +231,11 @@ module Utilrb
             thread_pool.sync(sync_key,*args,&block)
         end
 
+        # (see ThreadPool#sync_timeout)
+        def sync_timeout(sync_key,timeout,*args,&block)
+            thread_pool.sync_timeout(sync_key,timeout,*args,&block)
+        end
+
         def pretty_print(pp) # :nodoc:
             pp.text "EventLoop "
         end
