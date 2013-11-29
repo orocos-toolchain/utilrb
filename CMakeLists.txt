@@ -17,3 +17,7 @@ install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/ext/ DESTINATION ${RUBY_EXTENSIONS
   PATTERN "*.cc" EXCLUDE 
   )
 INSTALL(FILES package.xml DESTINATION share/utilrb)
+
+# Install env-hook to set RUBYLIB environment variable
+CONFIGURE_FILE(env-hooks/00.utilrb.sh.in ${CMAKE_CURRENT_BINARY_DIR}/env-hooks/00.utilrb.sh @ONLY)
+INSTALL(FILES ${CMAKE_CURRENT_BINARY_DIR}/env-hooks/00.utilrb.sh DESTINATION etc/catkin/profile.d)

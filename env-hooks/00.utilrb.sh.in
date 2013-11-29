@@ -1,0 +1,14 @@
+#!/bin/sh
+
+_RUBY_VERSION=`ruby -r rbconfig -e "print RbConfig::CONFIG['ruby_version']"`
+_RUBY_ARCH=`ruby -r rbconfig -e "print RbConfig::CONFIG['arch']"`
+export RUBYOPT=-rubygems
+
+if [ `uname -s` = Darwin ]; then
+    export RUBYLIB=@CMAKE_INSTALL_PREFIX@/lib:@CMAKE_INSTALL_PREFIX@/lib/typelib:@CMAKE_INSTALL_PREFIX@/lib/ruby/${_RUBY_VERSION}/${_RUBY_ARCH}:@CMAKE_INSTALL_PREFIX@/lib/ruby/${_RUBY_VERSION}:/Library/Ruby/Gems/${_RUBY_VERSION}:/Library/Ruby/Gems/${RUBY_VERSION}/${RUBY_ARCH}:/Library/Ruby/Gems
+else
+    export RUBYLIB=@CMAKE_INSTALL_PREFIX@/lib:@CMAKE_INSTALL_PREFIX@/lib/typelib:@CMAKE_INSTALL_PREFIX@/lib/ruby/${_RUBY_VERSION}/${_RUBY_ARCH}:@CMAKE_INSTALL_PREFIX@/lib/ruby/${_RUBY_VERSION}:
+fi
+
+unset _RUBY_VERSION
+unset _RUBY_ARCH
