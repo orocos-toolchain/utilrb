@@ -18,6 +18,8 @@ install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/ext/ DESTINATION ${RUBY_EXTENSIONS
   )
 INSTALL(FILES package.xml DESTINATION share/utilrb)
 
-# Install env-hook to set RUBYLIB environment variable
-CONFIGURE_FILE(env-hooks/00.utilrb.sh.in ${CMAKE_CURRENT_BINARY_DIR}/env-hooks/00.utilrb.sh @ONLY)
-INSTALL(FILES ${CMAKE_CURRENT_BINARY_DIR}/env-hooks/00.utilrb.sh DESTINATION etc/catkin/profile.d)
+# Install an env-hook if catkin is found
+find_package(catkin)
+if(catkin_FOUND)
+  catkin_add_env_hooks(00.utilrb SHELLS sh DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/env-hooks)
+endif()
