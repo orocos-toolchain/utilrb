@@ -20,7 +20,7 @@ install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/ext/ DESTINATION ${RUBY_EXTENSIONS
 INSTALL(FILES package.xml DESTINATION share/utilrb)
 
 # Install an env-hook if catkin is found
-find_package(catkin)
+find_package(catkin QUIET)
 if(catkin_FOUND)
   catkin_add_env_hooks(00.utilrb SHELLS sh DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/env-hooks)
 endif()
