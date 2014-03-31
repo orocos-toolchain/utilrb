@@ -5,6 +5,7 @@ project(utilrb)
 FIND_PACKAGE(Ruby REQUIRED)
 
 ADD_CUSTOM_TARGET(utilrb_ext ALL
+  COMMAND rake clean
   COMMAND rake
   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 
