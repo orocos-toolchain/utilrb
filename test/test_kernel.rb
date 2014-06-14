@@ -224,7 +224,7 @@ class TC_Kernel < Minitest::Test
             flunk("did not raise NameError for KnownConstant")
         rescue NameError => e
             assert e.message =~ /KnownConstant/, e.message
-            expected = "test_kernel.rb:14"
+            expected = "test_kernel.rb:12"
             assert e.backtrace.first =~ /#{expected}/, "wrong backtrace when checking constant resolution: #{e.backtrace.join("\n")}, expected #{expected}"
         end
 
@@ -233,7 +233,7 @@ class TC_Kernel < Minitest::Test
             flunk("did not raise NoMethodError for unknown_method")
         rescue NoMethodError => e
             assert e.message =~ /unknown_method/
-            expected = "test_kernel.rb:22"
+            expected = "test_kernel.rb:20"
             assert e.backtrace.first =~ /#{expected}/, "wrong backtrace when checking method resolution: #{e.backtrace[0]}, expected #{expected}"
         end
 
