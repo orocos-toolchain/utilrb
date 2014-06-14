@@ -108,7 +108,7 @@ describe Utilrb::ThreadPool do
         it "must not execute a task and a sync call in parallel if they have the same sync key" do
             pool = Utilrb::ThreadPool.new(5,5)
             time = Time.now
-            t = pool.process_with_options :sync_key => 1 do
+            pool.process_with_options :sync_key => 1 do
                 sleep 0.2
             end
             pool.sync 1 do 
@@ -125,7 +125,7 @@ describe Utilrb::ThreadPool do
         it "must execute a task and a sync call in parallel if they have different sync keys" do
             pool = Utilrb::ThreadPool.new(5,5)
             time = Time.now
-            t = pool.process_with_options :sync_key => 1 do
+            pool.process_with_options :sync_key => 1 do
                 sleep 0.2
             end
             pool.sync 2 do 
@@ -209,7 +209,7 @@ describe Utilrb::ThreadPool do
     describe "when shutting down" do
         it "must terminate all threads" do 
             pool = Utilrb::ThreadPool.new(5)
-            task = pool.process do 
+            pool.process do 
                 sleep 0.2
             end
             pool.shutdown()
@@ -239,7 +239,7 @@ describe Utilrb::ThreadPool::Task do
         end
         it "must raise if wrong option is given." do 
             assert_raises ArgumentError do 
-                task = Utilrb::ThreadPool::Task.new :bla => 123 do 
+                Utilrb::ThreadPool::Task.new :bla => 123 do 
                 end
             end
         end

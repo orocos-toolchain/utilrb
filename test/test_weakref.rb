@@ -61,7 +61,7 @@ Utilrb.require_ext('TC_WeakRef') do
         end
 
         def test_finalized_refs
-            obj, ref_id = create_deep_obj(100)
+            _, ref_id = create_deep_obj(100)
             create_deep_ref(100) # erase the stack ...
             GC.start
             assert_raises(RangeError) do

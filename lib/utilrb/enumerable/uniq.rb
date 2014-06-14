@@ -54,7 +54,7 @@ Utilrb.unless_ext do
 	#  each_uniq { |obj| ... }
 	# 
 	# Yields all unique values found in +enum+
-	def each_uniq(&iterator)
+	def each_uniq
 	    seen = Set.new
 	    each do |obj|
 		if !seen.include?(obj)

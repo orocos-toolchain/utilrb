@@ -1,10 +1,8 @@
 require './test/test_config'
-require 'flexmock'
+require 'flexmock/test_unit'
 require 'tempfile'
 
 require 'utilrb/kernel'
-
-require 'flexmock/test_unit'
 
 class TC_Kernel < Test::Unit::TestCase
     # Do NOT move this block. Some tests are checking the error lines in the

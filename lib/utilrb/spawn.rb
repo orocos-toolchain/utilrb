@@ -47,7 +47,7 @@ module Utilrb
                     Dir.chdir(workdir)
                 end
                 exec(*cmdline)
-            rescue Exception => e
+            rescue Exception
                 write.write("FAILED")
             end
         end

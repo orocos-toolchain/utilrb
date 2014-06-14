@@ -215,7 +215,7 @@ module Utilrb
 
             running_line = nil
             @file = file.map do |line|
-                line.gsub! /\s*#.*$/, ''
+                line = line.gsub(/\s*#.*$/, '')
                 line = line.strip
                 next if line.empty?
 
@@ -412,7 +412,7 @@ module Utilrb
             result = []
             each_pkgconfig_directory do |dir|
                 path = File.join(dir, "#{name}.pc")
-                if File.exists?(path)
+                if File.exist?(path)
                     result << path
                 end
             end
@@ -463,6 +463,7 @@ module Utilrb
             end
             return @default_search_path
         end
+        @default_search_path = nil
 
         # Returns the system-wide standard suffixes that should be appended to
         # new prefixes to find pkg-config files
