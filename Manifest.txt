@@ -98,7 +98,6 @@ patches/gc_live_objects.patch
 test/data/test_pkgconfig.pc
 test/data/test_pkgconfig_empty.pc
 test/test_array.rb
-test/test_config.rb
 test/test_dir.rb
 test/test_enumerable.rb
 test/test_event_loop.rb

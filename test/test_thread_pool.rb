@@ -1,8 +1,6 @@
-require './test/test_config'
+require 'utilrb/test'
 require 'utilrb/thread_pool'
 require 'minitest/spec'
-
-MiniTest::Unit.autorun
 
 describe Utilrb::ThreadPool do
     describe "when created" do

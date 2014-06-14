@@ -1,8 +1,6 @@
-require './test/test_config'
+require 'utilrb/test'
 require 'utilrb/event_loop'
 require 'minitest/spec'
-
-MiniTest::Unit.autorun
 
 describe Utilrb::EventLoop::Forwardable do
     class Dummy

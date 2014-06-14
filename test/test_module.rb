@@ -1,11 +1,11 @@
-require './test/test_config'
+require 'utilrb/test'
 
 require 'flexmock/test_unit'
 require 'set'
 require 'enumerator'
 require 'utilrb/module'
 
-class TC_Module < Test::Unit::TestCase
+class TC_Module < Minitest::Test
     def test_include
         class_extension = Module.new do
             def tag; end

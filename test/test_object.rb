@@ -1,9 +1,9 @@
-require './test/test_config'
+require 'utilrb/test'
 
 require 'utilrb/object'
 require 'utilrb/module/attr_predicate'
 
-class TC_Object < Test::Unit::TestCase
+class TC_Object < Minitest::Test
     def test_address
 	assert_equal("2aaaab38b398", Object.address_from_id(0x1555559c59cc).to_s(16))
 
@@ -48,9 +48,9 @@ class TC_Object < Test::Unit::TestCase
 	obj1, obj2 = klass.new, klass.new
 	assert_same(obj1.as_hash, obj2.as_hash)
 	obj1.as_hash = Hash.new
-	assert_not_same(obj1.as_hash, obj2.as_hash)
+	refute_same(obj1.as_hash, obj2.as_hash)
 
-	assert_not_same(obj1.block, obj2.block)
+	refute_same(obj1.block, obj2.block)
 	obj1.block = obj2.block
 	assert_same(obj1.block, obj2.block)
     end

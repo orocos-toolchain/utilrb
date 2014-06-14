@@ -1,7 +1,7 @@
-require './test/test_config'
+require 'utilrb/test'
 require 'utilrb/set'
 
-class TC_Set < Test::Unit::TestCase
+class TC_Set < Minitest::Test
     def test_to_s
 	obj = Set.new
 	obj << 1
