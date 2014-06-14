@@ -57,8 +57,6 @@ lib/utilrb/logger/log_pp.rb
 lib/utilrb/logger/root.rb
 lib/utilrb/logger/silent.rb
 lib/utilrb/marshal/load_with_missing_constants.rb
-lib/utilrb/models/inherited_enumerable.rb
-lib/utilrb/models/registration.rb
 lib/utilrb/module.rb
 lib/utilrb/module/ancestor_p.rb
 lib/utilrb/module/attr_enumerable.rb
@@ -110,7 +108,6 @@ test/test_hash.rb
 test/test_kernel.rb
 test/test_logger.rb
 test/test_misc.rb
-test/test_models.rb
 test/test_module.rb
 test/test_object.rb
 test/test_pkgconfig.rb
