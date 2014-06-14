@@ -75,14 +75,12 @@ lib/utilrb/object/address.rb
 lib/utilrb/object/attribute.rb
 lib/utilrb/object/scoped_eval.rb
 lib/utilrb/object/singleton_class.rb
-lib/utilrb/objectstats.rb
 lib/utilrb/pathname.rb
 lib/utilrb/pathname/find_matching_parent.rb
 lib/utilrb/pkgconfig.rb
 lib/utilrb/qt/mime_data/mime_data.rb
 lib/utilrb/qt/variant/from_ruby.rb
 lib/utilrb/rake_common.rb
-lib/utilrb/ruby_object_graph.rb
 lib/utilrb/set.rb
 lib/utilrb/set/to_s.rb
 lib/utilrb/socket/tcp_server.rb
@@ -115,7 +113,6 @@ test/test_misc.rb
 test/test_models.rb
 test/test_module.rb
 test/test_object.rb
-test/test_objectstats.rb
 test/test_pkgconfig.rb
 test/test_proc.rb
 test/test_set.rb
