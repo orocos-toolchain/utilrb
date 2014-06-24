@@ -122,5 +122,12 @@ class TC_Module < Minitest::Test
         mod = Module.new { extend intermediate }
         assert_same obj, mod.objects
     end
+
+    def test_is_singleton
+        m = Module.new
+        assert !m.is_singleton?
+        s = Object.new.singleton_class
+        assert s.is_singleton?
+    end
 end
 
