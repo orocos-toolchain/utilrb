@@ -1,5 +1,9 @@
 module Utilrb
     module Timepoints
+        def timepoints
+            @timepoints || Array.new
+        end
+
         def clear_timepoints
             @timepoints ||= Array.new
             @timepoints.clear
@@ -17,6 +21,17 @@ module Utilrb
                 t
             end
             result
+        end
+
+        def merge_timepoints(other)
+            data =
+                if other.respond_to?(:to_ary)
+                    other.to_ary
+                else
+                    other.timepoints
+                end
+            @timepoints = (timepoints + data).sort_by(&:first)
+            self
         end
     end
 end
