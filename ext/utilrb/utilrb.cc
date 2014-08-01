@@ -63,7 +63,8 @@ extern "C" void Init_utilrb()
 
 #ifndef RUBINIUS
     rb_define_method(rb_mEnumerable, "each_uniq", RUBY_METHOD_FUNC(enumerable_each_uniq), 0);
-    rb_define_method(rb_mKernel, "is_singleton?", RUBY_METHOD_FUNC(kernel_is_singleton_p), 0);
+    if (!rb_respond_to(rb_mEnumerable, rb_intern("singleton_class?")))
+        rb_define_method(rb_cModule, "singleton_class?", RUBY_METHOD_FUNC(kernel_is_singleton_p), 0);
 
     rb_define_singleton_method(rb_mKernel, "crash!", RUBY_METHOD_FUNC(kernel_crash), 0);
     rb_define_singleton_method(rb_mKernel, "immediate?", RUBY_METHOD_FUNC(kernel_is_immediate), 1);

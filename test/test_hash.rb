@@ -1,10 +1,10 @@
-require './test/test_config'
+require 'utilrb/test'
 require 'enumerator'
 require 'set'
 
 require 'utilrb/hash'
 
-class TC_Hash < Test::Unit::TestCase
+class TC_Hash < Minitest::Test
     def test_slice
 	test = { :a => 1, :b => 2, :c => 3 }
 	assert_equal({:a => 1, :c => 3}, test.slice(:a, :c))

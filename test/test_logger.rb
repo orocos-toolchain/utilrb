@@ -1,8 +1,8 @@
-require './test/test_config'
+require 'utilrb/test'
 require 'utilrb/logger'
 require 'flexmock/test_unit'
 
-class TC_Logger < Test::Unit::TestCase
+class TC_Logger < Minitest::Test
     module Root
         extend Logger::Root('TC_Logger', Logger::INFO)
 
@@ -69,7 +69,7 @@ class TC_Logger < Test::Unit::TestCase
         assert_same Root.logger, child.logger
 
         child.make_own_logger('child', Logger::DEBUG)
-        assert_not_same Root.logger, child.logger
+        refute_same Root.logger, child.logger
         assert_equal "child", child.logger.progname
         assert_equal Logger::DEBUG, child.logger.level
         assert_equal "TC_Logger", Root.logger.progname
@@ -88,7 +88,7 @@ class TC_Logger < Test::Unit::TestCase
     def test_logger_hierarch_reset_own
         child = Root::Child
         child.make_own_logger('child', Logger::DEBUG)
-        assert_not_same Root.logger, child.logger
+        refute_same Root.logger, child.logger
         child.reset_own_logger
         test_logger_hierarchy
     end

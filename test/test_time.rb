@@ -1,7 +1,7 @@
-require './test/test_config'
+require 'utilrb/test'
 require 'utilrb/time'
 
-class TC_Time < Test::Unit::TestCase
+class TC_Time < Minitest::Test
     def test_to_hms
 	assert_equal("0:00:00.000", Time.at(0).to_hms)
 	assert_equal("0:00:00.100", Time.at(0.1).to_hms)

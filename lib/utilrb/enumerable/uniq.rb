@@ -2,15 +2,9 @@ require 'utilrb/common'
 require 'enumerator'
 require 'set'
 
-enumerator = if defined?(Enumerable::Enumerator)
-                 Enumerable::Enumerator
-             else
-                 Enumerator
-             end
-
 # Enumerator object which removes duplicate entries. 
 # See also Object#enum_uniq and Enumerable#each_uniq
-class UniqEnumerator < enumerator
+class UniqEnumerator < Enumerator
     # Creates the enumerator on +obj+ using the method +enum_with+ to
     # enumerate. The method will be called with the arguments in +args+.
     #
@@ -60,7 +54,7 @@ Utilrb.unless_ext do
 	#  each_uniq { |obj| ... }
 	# 
 	# Yields all unique values found in +enum+
-	def each_uniq(&iterator)
+	def each_uniq
 	    seen = Set.new
 	    each do |obj|
 		if !seen.include?(obj)
