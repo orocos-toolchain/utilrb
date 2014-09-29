@@ -74,10 +74,6 @@ module Utilrb
                 @event_loop.cancel_timer self
             end
 
-            def single_shot?
-                @single_shot
-            end
-
             def stopped?
                 @stopped 
             end
@@ -99,6 +95,7 @@ module Utilrb
             # @raise [ArgumentError] if no period is specified
             # @return [Timer]
             def start(period = @period,instantly = true)
+                cancel
                 @stopped = false
                 @period = period
                 raise ArgumentError,"no period is given" unless @period
@@ -195,6 +192,7 @@ module Utilrb
             @number_of_events_to_process = 0  # number of events which are processed in the current step
             @thread_pool = ThreadPool.new
             @thread = Thread.current #the event loop thread
+            @stop = nil
         end
 
         # Integrates a blocking operation call into the EventLoop like {Utilrb::EventLoop#defer}
@@ -227,6 +225,11 @@ module Utilrb
         # (see ThreadPool#sync)
         def sync(sync_key,*args,&block)
             thread_pool.sync(sync_key,*args,&block)
+        end
+
+        # (see ThreadPool#sync_timeout)
+        def sync_timeout(sync_key,timeout,*args,&block)
+            thread_pool.sync_timeout(sync_key,timeout,*args,&block)
         end
 
         def pretty_print(pp) # :nodoc:
@@ -587,7 +590,7 @@ module Utilrb
             #copy all work otherwise it would not be allowed to 
             #call any event loop functions from a timer
             timers,call = @mutex.synchronize do
-                                    @every_cylce_events.delete_if &:ignore?
+                                    @every_cylce_events.delete_if(&:ignore?)
                                     @every_cylce_events.each do |event|
                                         add_event event
                                     end
@@ -627,6 +630,7 @@ module Utilrb
         # @param [Timer] timer The timer.
         def add_timer(timer)
             @mutex.synchronize do
+                raise "timer #{timer}:#{timer.doc} was already added!" if @timers.include?(timer)
                 @timers << timer
             end
         end
@@ -889,7 +893,6 @@ module Utilrb
 
                     line_no = __LINE__; str = %Q{
                     def #{ali}(*args, &block)
-                        options = Hash.new
                         accessor,error = #{if options[:known_errors]
                                             %Q{
                                                 begin
@@ -915,7 +918,7 @@ module Utilrb
                                 raise error
                             end
                         else
-                            work = Proc.new do |*args|
+                            work = Proc.new do |*callback_args|
                                     acc,err = #{accessor} # cache accessor
                                     if !acc
                                         if err
@@ -924,7 +927,7 @@ module Utilrb
                                             raise DesignatedObjectNotFound,'designated object is nil'
                                         end
                                     else
-                                        acc.__send__(:#{method}, *args, &block)
+                                        acc.__send__(:#{method}, *callback_args, &block)
                                     end
                                 end
                             callback = #{filter ? "block.to_proc.arity == 2 ? Proc.new { |r,e| block.call(#{filter}(r),e)} : Proc.new {|r| block.call(#{filter}(r))}" : "block"}

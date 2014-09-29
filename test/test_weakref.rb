@@ -1,8 +1,8 @@
-require 'test/unit/testcase'
+require 'utilrb/test'
 require 'utilrb/weakref'
 
 Utilrb.require_ext('TC_WeakRef') do
-    class TC_WeakRef < Test::Unit::TestCase
+    class TC_WeakRef < Minitest::Test
         WeakRef = Utilrb::WeakRef
         def test_normal
             obj = Object.new
@@ -61,7 +61,7 @@ Utilrb.require_ext('TC_WeakRef') do
         end
 
         def test_finalized_refs
-            obj, ref_id = create_deep_obj(100)
+            _, ref_id = create_deep_obj(100)
             create_deep_ref(100) # erase the stack ...
             GC.start
             assert_raises(RangeError) do

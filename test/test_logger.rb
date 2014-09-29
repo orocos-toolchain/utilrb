@@ -1,8 +1,8 @@
-require './test_config'
+require 'utilrb/test'
 require 'utilrb/logger'
 require 'flexmock/test_unit'
 
-class TC_Logger < Test::Unit::TestCase
+class TC_Logger < Minitest::Test
     module Root
         extend Logger::Root('TC_Logger', Logger::INFO)
 
@@ -37,8 +37,29 @@ class TC_Logger < Test::Unit::TestCase
         assert child.respond_to?(:warn)
     end
 
-    def test_logger_hierarchy_on_anonymous_tasks
+    def test_logger_hierarchy_on_anonymous_classes
         child = Class.new(Root::Klass)
+        assert_same Root.logger, child.logger
+        assert child.respond_to?(:warn)
+    end
+
+    def test_logger_hierarchy_on_instances_of_anonymous_classes
+        child_m = Class.new(Root::Klass) do
+            include Logger::Hierarchy
+        end
+        child = child_m.new
+        assert_same Root.logger, child.logger
+        assert child.respond_to?(:warn)
+    end
+
+    def test_logger_hierarchy_on_classes_that_have_almost_a_class_name
+        child_m = Class.new(Root::Klass) do
+            include Logger::Hierarchy
+            def self.name
+                "A::NonExistent::Constant::Name"
+            end
+        end
+        child = child_m.new
         assert_same Root.logger, child.logger
         assert child.respond_to?(:warn)
     end
@@ -48,7 +69,7 @@ class TC_Logger < Test::Unit::TestCase
         assert_same Root.logger, child.logger
 
         child.make_own_logger('child', Logger::DEBUG)
-        assert_not_same Root.logger, child.logger
+        refute_same Root.logger, child.logger
         assert_equal "child", child.logger.progname
         assert_equal Logger::DEBUG, child.logger.level
         assert_equal "TC_Logger", Root.logger.progname
@@ -67,7 +88,7 @@ class TC_Logger < Test::Unit::TestCase
     def test_logger_hierarch_reset_own
         child = Root::Child
         child.make_own_logger('child', Logger::DEBUG)
-        assert_not_same Root.logger, child.logger
+        refute_same Root.logger, child.logger
         child.reset_own_logger
         test_logger_hierarchy
     end

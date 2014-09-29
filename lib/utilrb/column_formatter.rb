@@ -53,18 +53,18 @@ class ColumnFormatter
 	# First, determine the columns width and height, and
 	# convert data into strings
 	data = data.map do |line_data|
-	    line_data = line_data.inject({}) do |h, (label, data)|
-		h[label.to_s] = data.to_s
+	    line_data = line_data.inject({}) do |h, (label, value)|
+		h[label.to_s] = value.to_s
 		h
 	    end
 		
-	    line_data.each do |label, data|
+	    line_data.each do |label, value|
 		unless width.has_key?(label)
 		    width[label] = label.length
 		end
 
-		if width[label] < data.length
-		    width[label] = data.length
+		if width[label] < value.length
+		    width[label] = value.length
 		end
 	    end
 	end

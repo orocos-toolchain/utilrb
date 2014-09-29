@@ -1,9 +1,9 @@
-require './test_config'
+require 'utilrb/test'
 
 require 'utilrb/dir'
 require 'enumerator'
 
-class TC_Dir < Test::Unit::TestCase
+class TC_Dir < Minitest::Test
     def test_empty
 	this_dir = File.dirname(__FILE__)
 	assert(!Dir.new(this_dir).empty?)

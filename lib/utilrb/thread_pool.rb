@@ -1,6 +1,7 @@
 require 'thread'
 require 'set'
 require 'utilrb/kernel/options'
+require 'timeout'
 
 module Utilrb
     # ThreadPool implementation inspired by
@@ -137,6 +138,7 @@ module Utilrb
                 @mutex = Mutex.new
                 @pool = nil
                 @state_temp = nil
+                @state = nil
                 reset
             end
 
@@ -432,6 +434,36 @@ module Utilrb
             @mutex.synchronize do
                 while(!@sync_keys.add?(sync_key))
                     @cond_sync_key.wait @mutex #wait until someone has removed a key
+                end
+            end
+            begin
+                result = block.call(*args)
+            ensure
+                @mutex.synchronize do
+                    @sync_keys.delete sync_key
+                end
+                @cond_sync_key.signal
+                @cond.signal # worker threads are just waiting for work no matter if it is
+                # because of a deletion of a sync_key or a task was added
+            end
+            result
+        end
+
+        # Same as sync but raises Timeout::Error if sync_key cannot be obtained after
+        # the given execution time.
+        #
+        # @param [Object] sync_key The sync key
+        # @param [Float] timeout The timeout
+        # @yield [*args] the code block block 
+        # @return [Object] The result of the code block
+        def sync_timeout(sync_key,timeout,*args,&block)
+            raise ArgumentError,"no sync key" unless sync_key
+
+            Timeout::timeout(timeout) do
+                @mutex.synchronize do
+                    while(!@sync_keys.add?(sync_key))
+                        @cond_sync_key.wait @mutex #wait until someone has removed a key
+                    end
                 end
             end
             begin

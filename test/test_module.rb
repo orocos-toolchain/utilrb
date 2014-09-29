@@ -1,11 +1,11 @@
-require './test_config'
+require 'utilrb/test'
 
 require 'flexmock/test_unit'
 require 'set'
 require 'enumerator'
 require 'utilrb/module'
 
-class TC_Module < Test::Unit::TestCase
+class TC_Module < Minitest::Test
     def test_include
         class_extension = Module.new do
             def tag; end
@@ -121,6 +121,13 @@ class TC_Module < Test::Unit::TestCase
         intermediate = Module.new { include defmod }
         mod = Module.new { extend intermediate }
         assert_same obj, mod.objects
+    end
+
+    def test_is_singleton
+        m = Module.new
+        assert !m.is_singleton?
+        s = Object.new.singleton_class
+        assert s.is_singleton?
     end
 end
 

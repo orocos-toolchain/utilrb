@@ -50,16 +50,16 @@ module Utilrb
         end
         @loaded_packages = Hash.new
 
-        def self.load(path)
+        def self.load(path, preset_variables)
             pkg_name = File.basename(path, ".pc")
             pkg = Class.instance_method(:new).bind(PkgConfig).call(pkg_name)
-            pkg.load(path)
+            pkg.load(path, preset_variables)
             pkg
         end
 
         # Returns the pkg-config object that matches the given name, and
         # optionally a version string
-        def self.get(name, version_spec = nil)
+        def self.get(name, version_spec = nil, preset_variables = Hash.new)
             if !(candidates = loaded_packages[name])
                 paths = find_all_package_files(name)
                 if paths.empty?
@@ -68,7 +68,7 @@ module Utilrb
 
                 candidates = loaded_packages[name] = Array.new
                 paths.each do |p|
-                    candidates << PkgConfig.load(p)
+                    candidates << PkgConfig.load(p, preset_variables)
                 end
             end
 
@@ -84,8 +84,8 @@ module Utilrb
         # ...
         # @return [PkgConfig] the pkg-config description
         # @raise [NotFound] if the package is not found
-        def self.new(name, version_spec = nil)
-            get(name, version_spec)
+        def self.new(name, version_spec = nil, options = Hash.new)
+            get(name, version_spec, options)
         end
 
         # Returns the first package in +candidates+ that match the given version
@@ -206,16 +206,16 @@ module Utilrb
         SHELL_VARS = %w{Cflags Libs Libs.private}
 
         # Loads the information contained in +path+
-        def load(path)
+        def load(path, preset_variables = Hash.new)
             @path = path
             @file = File.readlines(path).map(&:strip)
 
-            raw_variables = Hash.new
+            raw_variables = preset_variables.dup
             raw_fields    = Hash.new
 
             running_line = nil
             @file = file.map do |line|
-                line.gsub! /\s*#.*$/, ''
+                line = line.gsub(/\s*#.*$/, '')
                 line = line.strip
                 next if line.empty?
 
@@ -333,7 +333,7 @@ module Utilrb
         def include_dirs
             result = Shellwords.shellsplit(cflags_only_I).map { |v| v[2..-1] }
             if result.any?(&:empty?)
-                raise Invalid, "empty include directory (-I without argument) found in pkg-config package #{name}"
+                raise Invalid.new(name), "empty include directory (-I without argument) found in pkg-config package #{name}"
             end
             result
         end
@@ -343,7 +343,7 @@ module Utilrb
         def library_dirs
             result = Shellwords.shellsplit(libs_only_L).map { |v| v[2..-1] }
             if result.any?(&:empty?)
-                raise Invalid, "empty link directory (-L without argument) found in pkg-config package #{name}"
+                raise Invalid.new(name), "empty link directory (-L without argument) found in pkg-config package #{name}"
             end
             result
         end
@@ -412,7 +412,7 @@ module Utilrb
             result = []
             each_pkgconfig_directory do |dir|
                 path = File.join(dir, "#{name}.pc")
-                if File.exists?(path)
+                if File.exist?(path)
                     result << path
                 end
             end
@@ -463,6 +463,7 @@ module Utilrb
             end
             return @default_search_path
         end
+        @default_search_path = nil
 
         # Returns the system-wide standard suffixes that should be appended to
         # new prefixes to find pkg-config files

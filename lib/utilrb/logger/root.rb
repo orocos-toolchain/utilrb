@@ -42,8 +42,8 @@ class Logger
     def self.Root(progname, base_level, &block)
 	begin	
 	    base_level = ENV['BASE_LOG_LEVEL'].upcase.to_sym if ENV['BASE_LOG_LEVEL']
-	    base_level = Logger.const_get( base_level ) if base_level.is_a? Symbol
-	rescue Exception => e
+	    base_level = ::Logger.const_get( base_level ) if base_level.is_a? Symbol
+	rescue Exception
 	    raise ArgumentError, "Log level #{base_level} is not available in the ruby Logger"
 	end
 
@@ -51,15 +51,15 @@ class Logger
         formatter =
             if block then lambda(&block)
             elsif HAS_COLOR
-                lambda do |severity, time, progname, msg|
-                    console.color("#{progname}[#{severity}]: #{msg}\n", *LEVEL_TO_COLOR[severity])
+                lambda do |severity, time, name, msg|
+                    console.color("#{name}[#{severity}]: #{msg}\n", *LEVEL_TO_COLOR[severity])
                 end
-            else lambda { |severity, time, progname, msg| "#{progname}[#{severity}]: #{msg}\n" }
+            else lambda { |severity, time, name, msg| "#{name}[#{severity}]: #{msg}\n" }
             end
 
         Module.new do
-            include Logger::Forward
-            include Logger::HierarchyElement
+            include ::Logger::Forward
+            include ::Logger::HierarchyElement
 
             def has_own_logger?; true end
 

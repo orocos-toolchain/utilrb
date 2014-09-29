@@ -1,9 +1,9 @@
-require './test_config'
+require 'utilrb/test'
 
 require 'utilrb/gc'
 require 'enumerator'
 
-class TC_GC < Test::Unit::TestCase
+class TC_GC < Minitest::Test
     def allocate(&block)
 	# Allocate twice since it seems the last object stays on stack
 	# (and is not GC'ed)

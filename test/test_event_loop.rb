@@ -1,8 +1,6 @@
-require './test_config'
+require 'utilrb/test'
 require 'utilrb/event_loop'
 require 'minitest/spec'
-
-MiniTest::Unit.autorun
 
 describe Utilrb::EventLoop::Forwardable do
     class Dummy
@@ -143,10 +141,10 @@ describe Utilrb::EventLoop do
             val1 = nil
             val2 = nil
             val3 = nil
-            timer1 = event_loop.every 0.1 do 
+            event_loop.every 0.1 do 
                 val1 = 123
             end
-            timer2 = event_loop.every 0.2 do 
+            event_loop.every 0.2 do 
                 val2 = 345
             end
             event_loop.once 0.3 do 

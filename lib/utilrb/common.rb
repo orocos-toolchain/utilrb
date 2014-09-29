@@ -3,10 +3,11 @@
 # the standard class extensions used by www.rock-robotics.org projects.
 module Utilrb
     unless defined? Utilrb::VERSION
-	VERSION = "1.6.6"
-        RUBY_IS_19  = (RUBY_VERSION >= "1.9.2")
-        RUBY_IS_191 = (RUBY_VERSION >= "1.9") && (RUBY_VERSION < "1.9.2")
+	VERSION = "2.0.1"
+        RUBY_IS_18  = (RUBY_VERSION < "1.9.0")
     end
+
+    LIB_DIR = File.expand_path(File.dirname(__FILE__))
 
     unless defined? UTILRB_EXT_MODE
 	if ENV['UTILRB_EXT_MODE'] == 'no'
@@ -14,7 +15,9 @@ module Utilrb
 	    STDERR.puts "Utilrb: not loading the C extension"
 	else
 	    begin
-		require 'utilrb_ext'
+                # We need readline
+                require 'readline'
+		require 'utilrb/utilrb'
 		UTILRB_EXT_MODE = true
 		STDERR.puts "Utilrb: loaded C extension" if ENV['UTILRB_EXT_MODE']
 	    rescue LoadError => e

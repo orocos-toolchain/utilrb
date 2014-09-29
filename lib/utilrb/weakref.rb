@@ -8,7 +8,11 @@ Utilrb.require_ext("Utilrb::WeakRef") do
                     raise ArgumentError, "cannot create a weakref of a weakref"
                 end
                 unless WeakRef.refcount(obj)
-                    ObjectSpace.define_finalizer(obj, self.class.method(:do_object_finalize))
+                    begin
+                        ObjectSpace.define_finalizer(obj, self.class.method(:do_object_finalize))
+                    rescue RuntimeError => e
+                        raise ArgumentError, "cannot define finalizer for #{obj}", e.backtrace
+                    end
                 end
                 do_initialize(obj)
             end
