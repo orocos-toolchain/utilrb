@@ -295,18 +295,6 @@ class TC_Kernel < Minitest::Test
         end
     end
 
-    Utilrb.require_ext('is_singleton?') do
-	def test_is_singleton
-	    klass = Class.new
-	    singl_klass = (class << klass; self end)
-	    obj = klass.new
-
-	    assert(!klass.is_singleton?)
-	    assert(!obj.is_singleton?)
-	    assert(singl_klass.is_singleton?)
-	end
-    end
-
     def test_poll
         flexmock(Kernel).should_receive(:sleep).with(2).twice
         counter = 0
