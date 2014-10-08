@@ -20,27 +20,38 @@ class TC_Kernel < Minitest::Test
         unknown_method()
     end
 
-    def test_validate_options
-        valid_options   = [ :a, :b, :c ]
-        valid_test      = { :a => 1, :c => 2 }
-        invalid_test    = { :k => nil }
-        # Should not raise
-        validate_options(valid_test, valid_options)
-        assert_raises(ArgumentError) { validate_options(invalid_test, valid_options) }
+    def test_validate_options_passes_options_unmodified_if_they_are_valid_and_there_is_no_additional_defaults
+        options = { :a => 1, :c => 2 }
+        assert_equal options, validate_options(options, :a, :b, :c)
+    end
 
-        check_array = validate_options( valid_test, valid_options )
-        assert_equal( valid_test, check_array )
-        check_empty_array = validate_options( nil, valid_options )
-        assert_equal( {}, check_empty_array )
+    def test_validate_options_accepts_a_list_of_valid_options_as_array
+        options = { :a => 1, :c => 2 }
+        assert_equal options, validate_options(options, [:a, :b, :c])
+    end
 
-	# Check default value settings
-        default_values = { :a => nil, :b => nil, :c => nil, :d => 15, :e => [] }
-        new_options = nil
-        # Should not raise
-        new_options = validate_options(valid_test, default_values)
-	assert_equal(15, new_options[:d])
-	assert_equal([], new_options[:e])
-        assert( !new_options.has_key?(:b) )
+    def test_validate_options_raises_ArgumentError_if_given_an_unknown_option
+        assert_raises(ArgumentError) { validate_options(Hash[c: 10], :b) }
+    end
+
+    def test_validate_options_does_not_add_options_without_default_to_the_returned_value
+        assert_equal Hash.new, validate_options(Hash.new, :a, :b, :c)
+    end
+
+    def test_validate_options_sets_defaults
+        assert_equal Hash[c: 10], validate_options(Hash.new, c: 10)
+    end
+
+    def test_validate_options_does_not_override_nil_by_the_default_value
+        assert_equal Hash[c: nil], validate_options(Hash[c: nil], c: 10)
+    end
+
+    def test_validate_options_does_not_take_nil_as_a_default_value
+        assert_equal Hash.new, validate_options(Hash.new, c: nil)
+    end
+
+    def test_validate_options_can_handle_string_keys
+        assert_equal Hash[a: 10, c: nil], validate_options(Hash['c' => nil], 'a' => 10, :c =>  10)
     end
 
     def test_arity_of_methods
