@@ -1,6 +1,6 @@
 <package>
   <name>utilrb</name>
-  <version>1.6.6</version>
+  <version>2.7.0</version>
   <description>
     Ruby toolkit: This library is a collection of useful Ruby classes
   </description>
@@ -9,11 +9,9 @@
   <license>CeCILL-B (BSD-like)</license>
 
   <buildtool_depend>cmake</buildtool_depend>
-  <export>
-    <build_type>
-      cmake
-    </build_type>
-  </export>
+  <buildtool_depend>catkin</buildtool_depend>
+  <run_depend>catkin</run_depend>
+
   <build_depend >ruby</build_depend>
   <build_depend >rake</build_depend>
   <build_depend >libxslt</build_depend>
@@ -25,5 +23,10 @@
   <run_depend >nokogiri</run_depend>
   <run_depend >facets</run_depend>
 
+  <export>
+    <build_type>
+      cmake
+    </build_type>
+  </export>
 
 </package>

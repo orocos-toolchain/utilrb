@@ -3,6 +3,7 @@ coverage.html
 ext/*.o
 ext/*.so
 ext/Makefile
+ext/*.log
 lib/utilrb_ext.so
 doc/
 coverage/

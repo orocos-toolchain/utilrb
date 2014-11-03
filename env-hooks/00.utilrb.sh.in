@@ -1,0 +1,10 @@
+#!/bin/sh
+
+export RUBYOPT=-rubygems
+
+export RUBYLIB=@CMAKE_INSTALL_PREFIX@/lib:@CMAKE_INSTALL_PREFIX@/lib/typelib:@CMAKE_INSTALL_PREFIX@/@RUBY_EXTENSIONS_INSTALL_DIR@:@CMAKE_INSTALL_PREFIX@/@RUBY_LIBRARY_INSTALL_DIR@
+
+if [ `uname -s` = Darwin ]; then
+    export RUBYLIB=$RUBYLIB:/Library/Ruby/Gems/@RUBY_VERSION@:/Library/Ruby/Gems/@RUBY_VERSION@/@RUBY_ARCH@:/Library/Ruby/Gems
+fi
+
