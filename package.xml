@@ -12,16 +12,17 @@
   <buildtool_depend>catkin</buildtool_depend>
   <run_depend>catkin</run_depend>
 
-  <build_depend >ruby</build_depend>
-  <build_depend >rake</build_depend>
-  <build_depend >libxslt</build_depend>
-  <build_depend >nokogiri</build_depend>
-  <build_depend >facets</build_depend>
+  <build_depend>ruby</build_depend>
+  <build_depend>facets</build_depend>
+  <build_depend>hoe</build_depend>
+  <build_depend>flexmock</build_depend>
+  <build_depend>libreadline</build_depend>
 
-  <run_depend >ruby</run_depend>
-  <run_depend >libxslt</run_depend>
-  <run_depend >nokogiri</run_depend>
-  <run_depend >facets</run_depend>
+  <run_depend>ruby</run_depend>
+  <run_depend>facets</run_depend>
+  <run_depend>hoe</run_depend>
+  <run_depend>flexmock</run_depend>
+  <run_depend>libreadline</run_depend>
 
   <export>
     <build_type>

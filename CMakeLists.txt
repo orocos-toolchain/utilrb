@@ -5,10 +5,17 @@ project(utilrb)
 find_package(Ruby REQUIRED)
 
 include_directories( ${RUBY_INCLUDE_DIRS})
-if(NOT ${RUBY_VERSION} VERSION_LESS "1.9")
-  add_definitions(-DRUBY_IS_19)
+if(${RUBY_VERSION} VERSION_LESS "1.9")
+  add_definitions(-DRUBY_IS_18)
 endif()
-add_library( utilrb_ext MODULE ext/swap.cc ext/utilrb_ext.cc ext/value_set.cc ext/weakref.cc ext/proc.cc )
+
+add_library( utilrb_ext MODULE
+  ext/utilrb/proc.c
+  ext/utilrb/readline.c
+  ext/utilrb/utilrb.cc
+  ext/utilrb/value_set.cc
+  ext/utilrb/weakref.cc
+)
 set_target_properties(utilrb_ext PROPERTIES PREFIX "")
 if(APPLE)
   set_target_properties(utilrb_ext PROPERTIES SUFFIX ".bundle")
