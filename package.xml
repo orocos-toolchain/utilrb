@@ -9,21 +9,20 @@
   <license>CeCILL-B (BSD-like)</license>
 
   <buildtool_depend>cmake</buildtool_depend>
+  <run_depend>catkin</run_depend>
+
+  <build_depend>ruby</build_depend>
+  <build_depend>hoe</build_depend>
+  <build_depend>rake-compiler</build_depend>
+  <build_depend>libreadline-dev</build_depend>
+
+  <run_depend>ruby</run_depend>
+  <run_depend>libreadline</run_depend>
+
   <export>
     <build_type>
       cmake
     </build_type>
   </export>
-  <build_depend >ruby</build_depend>
-  <build_depend >rake</build_depend>
-  <build_depend >libxslt</build_depend>
-  <build_depend >nokogiri</build_depend>
-  <build_depend >facets</build_depend>
-
-  <run_depend >ruby</run_depend>
-  <run_depend >libxslt</run_depend>
-  <run_depend >nokogiri</run_depend>
-  <run_depend >facets</run_depend>
-
 
 </package>

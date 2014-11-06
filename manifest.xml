@@ -10,11 +10,11 @@
   </copyright>
   <license>CeCILL-B (BSD-like)</license>
   
-  <depend package="ruby"/>
-  <depend package="hoe" />
-  <depend package="hoe-yard" />
-  <depend package="rake-compiler" />
-  <depend package="flexmock" optional="1" />
-  <depend package="readline" />
+  <rosdep name="ruby"/>
+  <rosdep name="hoe" />
+  <depend_optional package="hoe-yard" />
+  <rosdep name="rake-compiler" />
+  <depend_optional package="flexmock" />
+  <rosdep name="libreadline" />
 
 </package>
