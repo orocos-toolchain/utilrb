@@ -320,6 +320,12 @@ module Utilrb
                                             if e.is_a?(Symbol) && e == :ignore_error
                                                 nil
                                             elsif e.is_a? Exception
+                                                # If the new exception has no
+                                                # backtrace, propagate the one
+                                                # that we already have
+                                                if !e.backtrace || e.backtrace.empty?
+                                                    e.set_backtrace(exception.backtrace)
+                                                end
                                                 e
                                             else
                                                 exception

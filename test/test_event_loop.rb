@@ -138,42 +138,32 @@ describe Utilrb::EventLoop do
     describe "when executed" do
         it "must call the timers at the right point in time." do
             event_loop = Utilrb::EventLoop.new
-            val1 = nil
-            val2 = nil
-            val3 = nil
-            event_loop.every 0.1 do 
-                val1 = 123
-            end
-            event_loop.every 0.2 do 
-                val2 = 345
-            end
-            event_loop.once 0.3 do 
-                val3 = 444
-            end
+            vals = [0, 0, 0]
+            event_loop.every(1) { vals[0] += 1 }
+            event_loop.every(2) { vals[1] += 1 }
+            event_loop.every(3) { vals[2] += 1 }
 
             time = Time.now
-            while Time.now - time < 0.101
-                event_loop.step
-            end
+            time_mock = flexmock(Time)
+            time_mock.should_receive(:now).and_return { time }
+
             event_loop.steps
-            assert_equal 123,val1
-            assert_equal nil,val2
-            assert_equal nil,val3
-            val1 = nil
-
-            time = Time.now
-            while Time.now - time < 0.101
-                event_loop.step
-            end
-            assert_equal 123,val1
-            assert_equal 345,val2
-            assert_equal nil,val3
-
-            time = Time.now
-            while Time.now - time < 0.101
-                event_loop.step
-            end
-            assert_equal 444,val3
+            assert_equal [1, 1, 1], vals
+            time += 0.51
+            event_loop.steps
+            assert_equal [1, 1, 1], vals
+            time += 0.51
+            event_loop.steps
+            assert_equal [2, 1, 1], vals
+            time += 0.51
+            event_loop.steps
+            assert_equal [2, 1, 1], vals
+            time += 0.51
+            event_loop.steps
+            assert_equal [3, 2, 1], vals
+            time += 1
+            event_loop.steps
+            assert_equal [4, 2, 2], vals
             event_loop.clear
         end
 
