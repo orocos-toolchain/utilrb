@@ -610,21 +610,23 @@ module Utilrb
         end
 
         def thread_execute_task(task)
-            current_task.execute
+            task.execute
         rescue Exception => e
             ThreadPool.report_exception(nil, e)
         ensure
             @mutex.synchronize do
-                @tasks_running.delete current_task
-                @sync_keys.delete(current_task.sync_key) if current_task.sync_key
-                @avg_run_time = moving_average(@avg_run_time,(current_task.stopped_at-current_task.started_at))
+                @tasks_running.delete task
+                @sync_keys.delete(task.sync_key) if task.sync_key
+                @avg_run_time = moving_average(
+                    @avg_run_time,
+                    task.stopped_at-task.started_at)
             end
-            if current_task.sync_key
+            if task.sync_key
                 @cond_sync_key.signal
                 @cond.signal # maybe another thread is waiting for a sync key
             end
-            current_task.finalize # propagate state after it was deleted from the internal lists
-            @callback_on_task_finished.call(current_task) if @callback_on_task_finished
+            task.finalize # propagate state after it was deleted from the internal lists
+            @callback_on_task_finished.call(task) if @callback_on_task_finished
         end
 
         def thread_main_loop
