@@ -261,10 +261,29 @@ module Utilrb
         # @return [Fixnum]
         attr_reader :max
 
-        # The real number of worker threads.
+        # The number of worker threads that have been spawned so far
         #
-        # @return [Fixnum]
-        attr_reader :spawned
+        # @return [Integer]
+        # @see waiting_threads
+        def spawned_threads
+            @mutex.synchronize do
+                @workers.size
+            end
+        end
+
+        def spawned
+            spawned_threads
+        end
+
+        # The number of threads that are waiting for work
+        #
+        # @return [Integer]
+        # @see spawned_threads
+        def waiting_threads
+            @mutex.synchronize do
+                @waiting
+            end
+        end
 
         # The number of worker threads waiting for work.
         #
@@ -306,7 +325,6 @@ module Utilrb
             @avg_wait_time = 0          # average time a task has to wait for execution in s [Float]
 
             @workers = []               # thread pool
-            @spawned = 0
             @waiting = 0
             @shutdown = false
             @callback_on_task_finished = nil
@@ -402,7 +420,7 @@ module Utilrb
         # @return [Boolean]
         def process?
             @mutex.synchronize do
-                 waiting != spawned || @tasks_waiting.length > 0
+                 waiting != @workers.size || @tasks_waiting.length > 0
             end
         end
 
@@ -492,7 +510,7 @@ module Utilrb
                 end
                 task.queued_at = Time.now
                 @tasks_waiting << task
-                if @waiting == 0 && @spawned < @max
+                if @waiting == 0 && @workers.size < @max
                     spawn_thread
                 end
                 @cond.signal
@@ -629,11 +647,9 @@ module Utilrb
                 # we do not have to lock here
                 # because spawn_thread must be called from
                 # a synchronized block
-                @spawned -= 1
                 @workers.delete thread
             end
 
-            @spawned += 1
             @workers << thread
         rescue Exception => e
             ThreadPool.report_exception(nil, e)
