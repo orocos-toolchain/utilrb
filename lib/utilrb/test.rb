@@ -59,6 +59,15 @@ module Utilrb
     end
 end
 
+# Workaround a problem with flexmock and minitest not being compatible with each
+# other (currently). See github.com/jimweirich/flexmock/issues/15.
+if defined?(FlexMock) && !FlexMock::TestUnitFrameworkAdapter.method_defined?(:assertions)
+    class FlexMock::TestUnitFrameworkAdapter
+        attr_accessor :assertions
+    end
+    FlexMock.framework_adapter.assertions = 0
+end
+
 module Minitest
     class Spec
         include Utilrb::SelfTest
