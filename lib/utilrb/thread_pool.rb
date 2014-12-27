@@ -391,7 +391,7 @@ module Utilrb
         # 
         # @return [Fixnum] the number of tasks
         def backlog
-           @mutex.synchronize do 
+            @mutex.synchronize do
                 @tasks_waiting.length
             end
         end
@@ -401,7 +401,7 @@ module Utilrb
         # @return [Array<Task>] The tasks
         def tasks
             @mutex.synchronize do
-                 @tasks_running.dup + @tasks_waiting.dup
+                @tasks_running.dup + @tasks_waiting.dup
             end
         end
 
