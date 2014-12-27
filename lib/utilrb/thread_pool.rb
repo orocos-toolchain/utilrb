@@ -552,53 +552,79 @@ module Utilrb
             return new_val if current_val == 0
             current_val * 0.95 + new_val * 0.05
         end
+
+        def thread_find_one_task
+            t, i = @tasks_waiting.each_with_index.find do |t,i|
+                !t.sync_key || @sync_keys.add?(t.sync_key)
+            end
+
+            if t
+                @tasks_waiting.delete_at(i)
+                t.pre_execute(self) # block tasks so that no one is using it at the same time
+                @tasks_running << t
+                @avg_wait_time = moving_average(@avg_wait_time,(Time.now-t.queued_at))
+                t
+            end
+        end
+
+        # Waits for work to be available or thread termination
+        #
+        # If work is available, it acquires the task (calling
+        # {Task#pre_execute}) and returns it
+        #
+        # It must be called with the main synchronization mutex taken
+        #
+        # @return [Task,nil] the task to be processed, or nil if the thread
+        #   should be terminated
+        def thread_get_work
+            while !shutdown?
+                task = thread_find_one_task
+                return if !task
+
+                if @trim_requests > 0
+                    @trim_requests -= 1
+                    return
+                end
+                @waiting += 1
+                @cond.wait @mutex
+                @waiting -= 1
+            end
+        end
+
+        def thread_execute_task(task)
+            current_task.execute
+        rescue Exception => e
+            ThreadPool.report_exception(nil, e)
+        ensure
+            @mutex.synchronize do
+                @tasks_running.delete current_task
+                @sync_keys.delete(current_task.sync_key) if current_task.sync_key
+                @avg_run_time = moving_average(@avg_run_time,(current_task.stopped_at-current_task.started_at))
+            end
+            if current_task.sync_key
+                @cond_sync_key.signal
+                @cond.signal # maybe another thread is waiting for a sync key
+            end
+            current_task.finalize # propagate state after it was deleted from the internal lists
+            @callback_on_task_finished.call(current_task) if @callback_on_task_finished
+        end
+
+        def thread_main_loop
+            while !shutdown?
+                current_task = @mutex.synchronize do
+                    thread_get_work
+                end
+                return if !current_task
+                thread_execute_task(current_task)
+            end
+        end
+
         
         # spawns a worker thread
         # must be called from a synchronized block
         def spawn_thread
             thread = Thread.new do
-                while !shutdown? do
-                    current_task = @mutex.synchronize do
-                        while !shutdown?
-                            task = @tasks_waiting.each_with_index do |t,i|
-                                if !t.sync_key || @sync_keys.add?(t.sync_key)
-                                    @tasks_waiting.delete_at(i)
-                                    t.pre_execute(self) # block tasks so that no one is using it at the same time
-                                    @tasks_running << t
-                                    @avg_wait_time = moving_average(@avg_wait_time,(Time.now-t.queued_at))
-                                    break t
-                                end
-                            end
-                            break task unless task.is_a? Array
-
-                            if @trim_requests > 0
-                                @trim_requests -= 1
-                                break
-                            end
-                            @waiting += 1
-                            @cond.wait @mutex
-                            @waiting -= 1
-                        end or break
-                    end or break
-                    begin
-                        current_task.execute
-                    rescue Exception => e
-                        ThreadPool.report_exception(nil, e)
-                    ensure
-                        @mutex.synchronize do
-                            @tasks_running.delete current_task
-                            @sync_keys.delete(current_task.sync_key) if current_task.sync_key
-                            @avg_run_time = moving_average(@avg_run_time,(current_task.stopped_at-current_task.started_at))
-                        end
-                        if current_task.sync_key
-                            @cond_sync_key.signal
-                            @cond.signal # maybe another thread is waiting for a sync key
-                        end
-                        current_task.finalize # propagate state after it was deleted from the internal lists
-                        @callback_on_task_finished.call(current_task) if @callback_on_task_finished
-                    end
-                    trim if auto_trim
-                end
+                thread_main_loop
 
                 # we do not have to lock here
                 # because spawn_thread must be called from
@@ -606,6 +632,7 @@ module Utilrb
                 @spawned -= 1
                 @workers.delete thread
             end
+
             @spawned += 1
             @workers << thread
         rescue Exception => e
