@@ -2,405 +2,593 @@ require 'utilrb/test'
 require 'utilrb/thread_pool'
 require 'minitest/spec'
 
-describe Utilrb::ThreadPool do
-    describe "when created" do
-        it "must create min number of threads." do 
-            pool = Utilrb::ThreadPool.new(5)
-            sleep 0.1
-            assert_equal 5,pool.waiting
-            assert_equal 5,pool.spawned
-            assert_equal 5,(pool.instance_variable_get(:@workers)).size
-            pool.shutdown
-            pool.join
-        end
+module ThreadPoolHelpers
+    def setup
+        @mutex = Mutex.new
+        @cv = ConditionVariable.new
+        @waiting_threads = Set.new
+        @blocked_threads = Set.new
+        super
+    end
 
-        it "must create min number of threads." do 
-            pool = Utilrb::ThreadPool.new(5)
-            sleep 0.1
-            assert_equal 5,pool.waiting
-            assert_equal 5,pool.spawned
-            assert_equal 5,(pool.instance_variable_get(:@workers)).size
-            pool.shutdown
-            pool.join
+    # Check that {pool} ends up in a state where a certain number of threads are
+    # blocked in processing and the rest sleep waiting for work
+    #
+    # For this to work, one must only use {wait} or {block} to put a work thread
+    # to sleep
+    #
+    # @param [Integer] expected_tasks the number of thread that should end up
+    #   sleeping while processing their work block
+    #
+    # @param [Integer] timeout waiting to reach the expected state, in seconds
+    #
+    # @example wait for a process block to sleep
+    #   pool.process { wait }
+    #   assert_tasks_sleep_in_process_block(1)
+    #   # At this point, one thread is processing the block above *and* is
+    #   # sleeping within the 'wait' call. The rest of the threads are waiting
+    #   # for work
+    #
+    #   # This will wake up the sleeping work thread
+    #   broadcast
+    #   # And this waits for the work thread to finalize its task and
+    #   # get back to waiting for more work
+    #   assert_tasks_sleep_in_process_block(0)
+    def assert_tasks_sleep_in_process_block(expected_tasks, timeout = 1)
+        start_time = Time.now
+        while true
+            if Time.now - start_time > timeout
+                blocked_or_waiting = @waiting_threads.size +
+                    @blocked_threads.size
+                sleeping_workers = pool.workers.count { |t| t.status == 'sleep' }
+                flunk("pool did not reach #{expected_tasks} processing tasks in sleep state: #{@blocked_threads.size} are blocked in their process block, #{@waiting_threads.size} are waiting in their process block; among #{pool.workers.size} spawned workers #{sleeping_workers} are currently sleeping and #{pool.waiting_threads} are waiting for work")
+            end
+
+            done = @mutex.synchronize do
+                blocked_or_waiting = @waiting_threads.size +
+                    @blocked_threads.size
+
+                (blocked_or_waiting == expected_tasks) &&
+                    (pool.waiting_threads + expected_tasks == pool.spawned_threads) &&
+                    pool.workers.all? { |t| t.status == 'sleep' }
+
+            end
+            if done
+                return
+            end
+            Thread.pass
         end
     end
 
-    describe "when under heavy load" do
-        it "must spawn upto max threads." do 
-            pool = Utilrb::ThreadPool.new(5,20)
-            0.upto 19 do 
-                pool.process do 
-                    sleep 0.12
+    # Helper method to implement test-related blocking behaviour in process
+    # blocks
+    #
+    # @see wait block
+    def process_and_block(set)
+        begin
+            t = Thread.current
+            set << t
+            while set.include?(t)
+                yield
+            end
+        ensure
+            set.delete t
+        end
+    end
+
+    # Call in a process block for it to block and wait for #broadcast to be
+    # called in a way that's friendly to {assert_tasks_sleep_in_process_block}
+    def wait
+        @mutex.synchronize do
+            process_and_block(@waiting_threads) { @cv.wait(@mutex) }
+        end
+    end
+
+    # Call in a process block for it to block forever in a way that's friendly
+    # to {assert_tasks_sleep_in_process_block}
+    def block
+        @mutex.synchronize do
+            process_and_block(@blocked_threads) do
+                begin
+                    @mutex.unlock
+                    sleep
+                ensure
+                    @mutex.lock
                 end
             end
-            assert_equal 20,pool.backlog
-            assert_equal 20,pool.tasks.size
-            sleep 0.1
-            assert_equal 0,pool.backlog
-            assert_equal 0,pool.waiting
-            assert_equal 20,pool.spawned
-            sleep 0.1
-            assert_equal 20,pool.waiting
-            assert_equal 20,pool.spawned
+        end
+    end
+
+    # Wake up all process blocks that are blocked by {wait} in a way that's
+    # friendly to {assert_tasks_sleep_in_process_block}
+    def broadcast
+        @mutex.synchronize do
+            @waiting_threads.clear
+            @cv.broadcast
+        end
+    end
+
+    # Wait for the provided thread to be in sleep state
+    def wait_thread_sleeps(thread)
+        while true
+            if thread.status == 'sleep'
+                break
+            end
+            Thread.pass
+        end
+    end
+end
+
+describe Utilrb::ThreadPool do
+    include ThreadPoolHelpers
+
+    def pool
+        @pool ||= Utilrb::ThreadPool.new(5)
+    end
+
+    after do
+        broadcast
+        if @pool
             pool.shutdown
-            pool.join
+            #pool.join
+        end
+    end
+
+    describe "#initalize" do
+        it "creates the minimum number of threads" do 
+            assert_equal 5, pool.spawned
+        end
+    end
+
+    describe "#process" do
+        describe "before the threads started processing" do
+            it "has all threads in spawned and all tasks in backlog" do
+                # Basically disable the internal handling in #spawn_thread
+                pool.disable_processing
+                8.times do
+                    pool.process { }
+                end
+                assert_equal 8,pool.backlog
+            end
         end
 
-        it "must be possible to resize its limit" do 
-            pool = Utilrb::ThreadPool.new(5,5)
-            0.upto 19 do 
-                pool.process do 
-                    sleep 0.32
+        describe "if there are more tasks than threads" do
+            it "has all threads in spawned and remaining tasks in backlog" do
+                8.times do
+                    pool.process { wait }
+                end
+                assert_tasks_sleep_in_process_block(5)
+                assert_equal 3,pool.backlog
+                assert_equal 0,pool.waiting
+                assert_equal 5,pool.spawned
+                assert_equal 5,pool.running
+            end
+        end
+
+        describe "if there are more threads than tasks" do
+            it "has all threads in spawned and unused threads in waiting" do
+                3.times do
+                    pool.process { block }
+                end
+                assert_tasks_sleep_in_process_block(3)
+                assert_equal 0,pool.backlog
+                assert_equal 2,pool.waiting
+                assert_equal 5,pool.spawned
+                assert_equal 3,pool.running
+            end
+        end
+    end
+
+    describe "#resize" do
+        describe "increasing the max number of threads" do
+            it "spawns threads as required by the waiting tasks" do 
+                8.times do
+                    pool.process { block }
+                end
+                assert_tasks_sleep_in_process_block(5)
+
+                pool.resize(5,10)
+                assert_tasks_sleep_in_process_block(8)
+
+                assert_equal 8,pool.spawned
+                assert_equal 0,pool.backlog
+                assert_equal 0,pool.waiting
+                assert_equal 8,pool.running
+            end
+
+            it "does not spawn more than max threads" do
+                8.times do
+                    pool.process { block }
+                end
+                assert_tasks_sleep_in_process_block(5)
+
+                pool.resize(5,6)
+                assert_tasks_sleep_in_process_block(6)
+
+                assert_equal 6,pool.spawned
+                assert_equal 2,pool.backlog
+                assert_equal 0,pool.waiting
+                assert_equal 6,pool.running
+            end
+
+            it "trims threads that are above the limit" do
+                8.times do
+                    pool.process { }
+                end
+                assert_tasks_sleep_in_process_block(0)
+
+                pool.resize(2,3)
+                assert_tasks_sleep_in_process_block(0)
+
+                assert_equal 3,pool.spawned
+                assert_equal 0,pool.backlog
+                assert_equal 3,pool.waiting
+                assert_equal 0,pool.running
+            end
+        end
+    end
+
+    describe "the auto_trim parameter" do
+        before do
+            pool.resize(5, 10)
+        end
+        describe "it is true" do
+            before do
+                pool.resize(5, 10)
+                pool.auto_trim = true
+            end
+            it "the pool reduces its size after the work is done" do
+                5.times { pool.process { block } }
+                3.times.map { pool.process { wait } }
+                assert_tasks_sleep_in_process_block(8)
+                broadcast
+                assert_tasks_sleep_in_process_block(5)
+                assert_equal 5,pool.spawned_threads
+                assert_equal 0,pool.waiting_threads
+            end
+            it "does not reduce the size below the low limit" do
+                3.times { pool.process { block } }
+                5.times { pool.process { wait } }
+                assert_tasks_sleep_in_process_block(8)
+                broadcast
+                assert_tasks_sleep_in_process_block(3)
+                assert_equal 5,pool.spawned_threads
+                assert_equal 2,pool.waiting_threads
+            end
+        end
+
+        describe "it is false" do
+            before do
+                pool.auto_trim = false
+            end
+            it "does not reduce its size" do
+                5.times { pool.process { block } }
+                3.times { pool.process { wait } }
+                assert_tasks_sleep_in_process_block(8)
+                broadcast
+                assert_tasks_sleep_in_process_block(5)
+                assert_equal 8,pool.spawned_threads
+                assert_equal 3,pool.waiting_threads
+            end
+        end
+    end
+
+    describe "the execution logic" do
+        it "does not execute tasks with the same key in parallel" do
+            50.times do |i|
+                pool.process_with_options :sync_key => 1 do
+                    wait
                 end
             end
-            sleep 0.1
-            assert_equal 0,pool.waiting
-            assert_equal 5,pool.spawned
-            pool.resize(5,20)
-            sleep 0.1
-            assert_equal 0,pool.waiting
-            assert_equal 20,pool.spawned
-            sleep 0.4
-            assert_equal 20,pool.spawned
-            assert_equal 20,pool.waiting
-            pool.shutdown
-            pool.join
-        end
-
-        it "must reduce its number of threads after the work is done if auto_trim == true." do 
-            pool = Utilrb::ThreadPool.new(5,20)
-            pool.auto_trim = true
-            0.upto 19 do 
-                pool.process do 
-                    sleep 0.15
+            assert_tasks_sleep_in_process_block(1)
+            50.times do |i|
+                assert_equal (50 - i - 1), pool.backlog
+                assert_equal 1, pool.running
+                broadcast
+                if i != 49
+                    assert_tasks_sleep_in_process_block(1)
                 end
             end
-            sleep 0.13
-            assert_equal 0,pool.waiting
-            assert_equal 20,pool.spawned
-            sleep 0.4
-            assert_equal 5,pool.waiting
-            assert_equal 5,pool.spawned
-            pool.shutdown
-            pool.join
-        end
-
-        it "must not execute tasks with the same sync key in parallel" do
-            pool = Utilrb::ThreadPool.new(5,10)
-            pool.auto_trim = true
-            time = Time.now
-            0.upto 10 do 
-                t = pool.process_with_options :sync_key => time do
-                    sleep 0.1
-                end
-                assert_equal time, t.sync_key
-            end
-            while pool.backlog > 0
-                sleep 0.1
-            end
-            pool.shutdown
-            pool.join
-            assert Time.now - time >= 1.0
-        end
-
-        it "must not execute a task and a sync call in parallel if they have the same sync key" do
-            pool = Utilrb::ThreadPool.new(5,5)
-            time = Time.now
-            pool.process_with_options :sync_key => 1 do
-                sleep 0.2
-            end
-            pool.sync 1 do 
-                sleep 0.2
-            end
-            while pool.backlog > 0
-                sleep 0.1
-            end
-            pool.shutdown
-            pool.join
-            assert Time.now - time >= 0.4
         end
 
         it "must execute a task and a sync call in parallel if they have different sync keys" do
-            pool = Utilrb::ThreadPool.new(5,5)
-            time = Time.now
             pool.process_with_options :sync_key => 1 do
-                sleep 0.2
+                wait
             end
-            pool.sync 2 do 
-                sleep 0.2
-            end
-            while pool.backlog > 0
-                sleep 0.1
-            end
-            pool.shutdown
-            pool.join
-            assert Time.now - time < 0.4
+            assert_tasks_sleep_in_process_block(1)
+            # This will block forever if parallel execution is not possible
+            pool.sync(2) { }
+            broadcast
+            # !! DO NOT use #process_all_pending_work
+            # Since the two tasks are supposed to be executed in parallel,
+            # calling #broadcast and #wait_pool_sleeps must be enough to
+            # process everything
+            assert_tasks_sleep_in_process_block(0)
         end
     end
 
-    describe "when running" do
-        it "must call on_task_finished for each finised task." do 
-            pool = Utilrb::ThreadPool.new(5)
-            count = 0
+    describe "#on_task_finished" do
+        it "sets up the block to be called when task finish normally" do
+            finished = Queue.new
             pool.on_task_finished do |task|
-                count += 1
+                finished << task
             end
-            task = pool.process do 
-                sleep 0.05
+            tasks = 10.times.map do |i|
+                pool.process { }
             end
-            task = pool.process do 
-                raise
+            finished_tasks = Timeout.timeout(1) do
+                10.times.map do
+                    finished.pop
+                end
             end
-            sleep 0.1
-            assert_equal 2,count
-            pool.shutdown
-            pool.join
+            assert_equal tasks.to_set, finished_tasks.to_set
         end
 
-        it "must be able to reque a task" do 
-            pool = Utilrb::ThreadPool.new(5)
-            count = 0
-            task = pool.process do 
-                count += 1
+        it "sets up the block to be called when task finishes with an exception" do
+            finished = Queue.new
+            pool.on_task_finished do |task|
+                finished << task
             end
-            while !task.finished?
-                sleep 0.001
+            tasks = 10.times.map do |i|
+                pool.process { raise }
             end
-            pool << task 
-            while !task.finished?
-                sleep 0.001
+            finished_tasks = Timeout.timeout(1) do
+                10.times.map do
+                    finished.pop
+                end
             end
-            assert_equal 2, count
+            assert_equal tasks.to_set, finished_tasks.to_set
         end
 
-        it "must process the next task if thread gets available" do 
-            pool = Utilrb::ThreadPool.new(1)
-            count = 0
-            pool.process do 
-                sleep 0.1
-                count +=1
+        it "executes all queued tasks, waiting for threads if needed" do
+            mock = flexmock
+            20.times do |i|
+                mock.should_receive(:called).with(i).once
+                pool.process do
+                    mock.called(i)
+                end
             end
-            pool.process do 
-                sleep 0.1
-                count +=1
-            end
-            sleep 0.25
-            assert_equal 2, count
-
-            task3 = Utilrb::ThreadPool::Task.new do
-                count +=1
-                sleep 0.1
-            end
-            task4 = Utilrb::ThreadPool::Task.new do
-                count +=1
-                sleep 0.1
-            end
-            pool << task3
-            pool << task4
-            sleep 0.15
-            pool.shutdown
-            pool.join
-            assert_equal 4, count
+            pool.process_all_pending_work
         end
     end
 
-    describe "when shutting down" do
-        it "must terminate all threads" do 
+    describe "#<<" do
+        it "reques an existing task" do 
+            recorder = flexmock
+            recorder.should_receive(:called).with(0).once
+            recorder.should_receive(:called).with(1).once
+            id = 0
+            task = pool.process { recorder.called(id) }
+            pool.process_all_pending_work
+            id = 1
+            pool << task
+            pool.process_all_pending_work
+        end
+    end
+
+    describe "#shutdown" do
+        it "terminates all threads" do 
             pool = Utilrb::ThreadPool.new(5)
-            pool.process do 
-                sleep 0.2
-            end
-            pool.shutdown()
+            pool.shutdown
             pool.join
+            assert pool.workers.empty?
+        end
+    end
+
+    describe "#join" do
+        it "raises ArgumentError if called without #shutdown first" do
+            assert_raises(ArgumentError) { pool.join }
         end
     end
 end
 
 
 describe Utilrb::ThreadPool::Task do
-    describe "when created" do
-        it "must raise if no block is given." do 
+    include ThreadPoolHelpers
+
+    def assert_task_state(task, *states)
+        all_states = [:running, :finished, :exception, :terminated, :successfull, :started]
+        (all_states - states).each do |s|
+            assert !task.send("#{s}?"), "state #{s}? unexpectedly set on #{task}"
+        end
+        states.each do |s|
+            assert task.send("#{s}?"), "state #{s}? unexpectedly unset on #{task}"
+        end
+    end
+
+    describe "#initialize" do
+        it "raises if no block is given." do 
             assert_raises(ArgumentError) do
                 Utilrb::ThreadPool::Task.new
             end
         end
-        it "must be in waiting state." do 
+        it "sets the task in waiting state." do 
             task = Utilrb::ThreadPool::Task.new do 
             end
-            assert !task.running?
-            assert !task.finished?
-            assert !task.exception?
-            assert !task.terminated?
-            assert !task.successfull?
-            assert !task.started?
+            assert_task_state(task)
             assert_equal :waiting, task.state
         end
-        it "must raise if wrong option is given." do 
-            assert_raises ArgumentError do 
-                Utilrb::ThreadPool::Task.new :bla => 123 do 
-                end
-            end
-        end
-        it "must set its options." do
+        it "sets the sync_key option if given" do
             task = Utilrb::ThreadPool::Task.new :sync_key => 2 do 
                 123
             end
-            assert_equal 2,task.sync_key
+            assert_equal 2, task.sync_key
         end
     end
 
-    describe "when executed" do
-        it "must be in finished state if task successfully executed." do
-            task = Utilrb::ThreadPool::Task.new do 
-                123
-            end
+    describe "#reset" do
+        it "gets the state back to waiting" do
+            task = Utilrb::ThreadPool::Task.new { }
             task.pre_execute
             task.execute
             task.finalize
-            assert !task.running?
-            assert task.finished?
-            assert !task.exception?
-            assert !task.terminated?
-            assert task.successfull?
-            assert task.started?
+            task.reset
+            assert_task_state(task)
+            assert_equal :waiting, task.state
+        end
+    end
+
+    describe "#pre_execute" do
+        it "sets the state to running" do
+            task = Utilrb::ThreadPool::Task.new { }
+            task.pre_execute
+            assert_task_state(task, :started, :running)
+        end
+    end
+
+    describe "#finalize" do
+        def prepare_task(options = Hash.new)
+            task = Utilrb::ThreadPool::Task.new(options, &proc)
+            task.pre_execute
+            task.execute
+            task
         end
 
-        it "must call the callback after it is finished." do 
-            task = Utilrb::ThreadPool::Task.new do 
-                123
-            end
-            result = nil
-            task.callback do |val,e|
-                result = val
-            end
-            task.pre_execute
-            task.execute
+        it "sets the task in finished state if the work did not raise" do
+            task = prepare_task { 123 }
             task.finalize
-
-            assert_equal 123,result
-            assert !task.running?
-            assert task.finished?
-            assert !task.exception?
-            assert !task.terminated?
-            assert task.successfull?
-            assert task.started?
+            assert_task_state(task, :started, :finished, :successfull)
         end
 
-        it "must be in exception state if exception was raised." do 
-            task = Utilrb::ThreadPool::Task.new do 
-                raise
+        it "calls the registered callback" do 
+            task = prepare_task { 123 }
+            mock = flexmock
+            mock.should_receive(:called).with(123, nil).once
+            task.callback do |val, e|
+                mock.called(val, e)
             end
-            task.pre_execute
-            task.execute
             task.finalize
-            assert !task.running?
-            assert task.finished?
-            assert task.exception?
-            assert !task.terminated?
-            assert !task.successfull?
-            assert task.started?
-
-            task = Utilrb::ThreadPool::Task.new do 
-                raise
-            end
-            result = nil
-            task.callback do |val,e|
-                result = val ? val : e
-            end
-            task.pre_execute
-            task.execute
-            task.finalize
-            assert !task.running?
-            assert task.finished?
-            assert task.exception?
-            assert !task.terminated?
-            assert !task.successfull?
-            assert task.started?
-            assert_equal RuntimeError, result.class
         end
 
-        it "must return the default value if an error was raised." do 
-            task = Utilrb::ThreadPool::Task.new :default => 123 do 
-                raise
+        describe "an exception being raised by the work block" do
+            it "sets the task to exception state" do 
+                task = prepare_task { raise }
+                task.finalize
+                assert_task_state(task, :started, :finished, :exception)
             end
-            result = nil
-            task.callback do |val,e|
-                result = val
-            end
-            task.pre_execute
-            task.execute
-            task.finalize
-            assert !task.running?
-            assert task.finished?
-            assert task.exception?
-            assert !task.terminated?
-            assert !task.successfull?
-            assert task.started?
-            assert_equal 123,result
-        end
 
-        it "must calculate its elapsed time." do 
-            task = Utilrb::ThreadPool::Task.new do 
-                sleep 0.2
-            end
-            assert_in_delta 0.0,task.time_elapsed,0.0001
-            thread = Thread.new do 
-                task.pre_execute
-                task.execute
+            it "passes the exception to the callback" do
+                error = Exception.new
+                task = prepare_task { raise error }
+
+                mock = flexmock
+                mock.should_receive(:called).with(nil, error).once
+                task.callback do |val, e|
+                    mock.called(val, e)
+                end
                 task.finalize
             end
-            sleep 0.1
-            assert_in_delta 0.1,task.time_elapsed,0.01
-            thread.join
-            assert_in_delta 0.2,task.time_elapsed,0.001
-            sleep 0.1
-            assert_in_delta 0.2,task.time_elapsed,0.001
+
+            it "passes both the default value and the error to the callback" do 
+                error = Exception.new
+                task = prepare_task(:default => 123) { raise error }
+
+                mock = flexmock
+                mock.should_receive(:called).with(123, error).once
+                task.callback do |val,e|
+                    mock.called(val, e)
+                end
+                task.finalize
+            end
         end
     end
 
-    describe "when terminated" do
-        it "it must be in terminated state." do 
+    it "calculates the time spent during execution" do 
+        task = Utilrb::ThreadPool::Task.new do 
+            sleep 0.2
+        end
+        assert_in_delta 0.0,task.time_elapsed,0.0001
+        thread = Thread.new do 
+            start_time = Time.now
+            task.pre_execute
+            task.execute
+            task.finalize
+            (Time.now - start_time)
+        end
+        time_spent = thread.value
+        # !! time_spent MUST be called separately as it ensures that the thread
+        # !! finished
+        assert_in_delta time_spent, task.time_elapsed, 0.01
+    end
+
+    describe "#terminate!" do
+        it "sets the task to terminated state" do 
             task = Utilrb::ThreadPool::Task.new do 
-                sleep 10
+                sleep
             end
             thread = Thread.new do
                 task.pre_execute
                 task.execute
                 task.finalize
             end
-            sleep 0.1
+            wait_thread_sleeps(thread)
             task.terminate!
             thread.join
 
-            assert !task.running?
-            assert task.finished?
-            assert !task.exception?
-            assert task.terminated?
-            assert !task.successfull?
-            assert task.started?
+            assert_task_state(task, :started, :finished, :terminated)
         end
     end
 
-    describe "when terminated" do
-        it "must be in state terminated." do 
-            task = Utilrb::ThreadPool::Task.new do 
-                sleep 10
+    describe "#wait" do
+        attr_reader :task
+
+        before do
+            @task = Utilrb::ThreadPool::Task.new { }
+        end
+
+        describe "a task in pending state" do
+            it "should block the caller and wake it up when the task finishes" do
+                thread = Thread.new { task.wait; sleep }
+                wait_thread_sleeps(thread)
+                task.pre_execute
+                task.execute
+                assert_equal 'sleep', thread.status
+                task.finalize
+                assert_equal 'run', thread.status
+                Timeout.timeout(1) do
+                    thread.raise RuntimeError
+                    thread.join rescue nil
+                end
             end
-            thread = Thread.new do
+        end
+        describe "a task in running state" do
+            it "should block the caller and wake it up when the task finishes" do
+                task.pre_execute
+                thread = Thread.new { task.wait; sleep }
+                wait_thread_sleeps(thread)
+                task.execute
+                assert_equal 'sleep', thread.status
+                task.finalize
+                assert_equal 'run', thread.status
+                Timeout.timeout(1) do
+                    thread.raise RuntimeError
+                    thread.join rescue nil
+                end
+            end
+        end
+        describe "a finished task not yet finalized" do
+            it "should block the caller and wake it up when the task finishes" do
+                task.pre_execute
+                task.execute
+                thread = Thread.new { task.wait; sleep }
+                wait_thread_sleeps(thread)
+                task.finalize
+                assert_equal 'run', thread.status
+                Timeout.timeout(1) do
+                    thread.raise RuntimeError
+                    thread.join rescue nil
+                end
+            end
+        end
+        describe "a task in finished state" do
+            it "should return right away" do
                 task.pre_execute
                 task.execute
                 task.finalize
+                Timeout.timeout(1) do
+                    task.wait
+                end
             end
-            sleep 0.1
-            task.terminate!()
-            thread.join
-
-            assert !task.running?
-            assert task.finished?
-            assert !task.exception?
-            assert task.terminated?
-            assert !task.successfull?
-            assert task.started?
         end
     end
 end
