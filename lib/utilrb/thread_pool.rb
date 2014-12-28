@@ -653,7 +653,7 @@ module Utilrb
         end
 
         def thread_main_loop
-            while !shutdown?
+            while true
                 current_task = @mutex.synchronize do
                     thread_get_work
                 end
