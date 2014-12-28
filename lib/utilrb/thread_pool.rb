@@ -411,6 +411,13 @@ module Utilrb
             end
         end
 
+        # Number of tasks that are currently running
+        def running
+            @mutex.synchronize do
+                @tasks_running.size
+            end
+        end
+
         # Returns an array of the current waiting and running tasks
         #
         # @return [Array<Task>] The tasks
@@ -548,6 +555,16 @@ module Utilrb
             @cond.broadcast
         end
 
+        # The current list of threads created by the pool
+        #
+        # It is a copy of the actual list, and can only be interpreted as a
+        # "snapshot" of the actual list as the pool might change the list
+        # between the call and the time you evaluate the list.
+        def workers
+            @mutex.synchronize do
+                @workers.dup
+            end
+        end
 
         # Blocks until all threads were terminated.
         # This does not terminate any thread by itself and will block for ever
