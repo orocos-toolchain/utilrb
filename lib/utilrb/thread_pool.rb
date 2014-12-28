@@ -660,12 +660,10 @@ module Utilrb
             thread = Thread.new do
                 thread_main_loop
 
-                # we do not have to lock here
-                # because spawn_thread must be called from
-                # a synchronized block
-                @workers.delete thread
+                @mutex.synchronize do
+                    @workers.delete thread
+                end
             end
-
             @workers << thread
         rescue Exception => e
             ThreadPool.report_exception(nil, e)
