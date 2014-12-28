@@ -553,7 +553,17 @@ module Utilrb
         # This does not terminate any thread by itself and will block for ever
         # if shutdown was not called.
         def join
-            @workers.first.join until @workers.empty?
+            while true
+                if !@shutdown
+                    raise ArgumentError, "#join called without calling #shutdown"
+                end
+
+                w = @mutex.synchronize do
+                    @workers.first
+                end
+                return if !w
+                w.join
+            end
             self
         end
 
