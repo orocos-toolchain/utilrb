@@ -682,7 +682,60 @@ module Utilrb
             end
         end
 
+        # Wait for one task to finish
+        #
+        # It returns right away if there is no pending work. Otherwise, it waits
+        # for one of the waiting or running tasks to finish and returns then
+        #
+        # @yield the method yields in a context where it is safe to check
+        #   whether what you want from the tasks has happened between the time
+        #   where you checked it last and the time you called {wait_for_one}.
+        #   Note that you should probably not call any method from the event
+        #   loop itself in this context, as most of them are synchronized.
+        #
+        # @return [void]
+        #
+        # @example To properly use this method, you have to make sure that
+        #   whatever you want from pending tasks did not already happen by
+        #   providing a block
+        #
+        #   thread_pool.wait_for_one do
+        #     break if what_I_am_really_waiting_for_happened?
+        #   end
+        # 
+        def wait_for_one
+            @mutex.synchronize do
+                all_tasks = @tasks_waiting + @tasks_running
+                return if all_tasks.empty?
+
+                yield if block_given?
+
+                signal = ConditionVariable.new
+                wait_for_one_setup_notification(signal, @mutex, *all_tasks) do
+                    # Note that the tasks in +all_tasks+ cannot have changed
+                    # state while we were setting this up
+                    while true
+                        signal.wait(@mutex)
+                        if all_tasks.any?(&:finished?)
+                            return
+                        end
+                    end
+                end
+            end
+        end
+
         private
+
+        # Helper method for {wait_for_one} that sets up the notification
+        def wait_for_one_setup_notification(signal, mutex, task, *tasks, &block)
+            task.register_termination_notification(signal, mutex) do
+                if tasks.empty?
+                    yield
+                else
+                    wait_for_one_setup_notification(signal, mutex, *tasks, &block)
+                end
+            end
+        end
 
         #calculates the moving average 
         def moving_average(current_val,new_val)
@@ -764,7 +817,6 @@ module Utilrb
                 thread_execute_task(current_task)
             end
         end
-
         
         # spawns a worker thread
         # must be called from a synchronized block
