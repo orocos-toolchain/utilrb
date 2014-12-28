@@ -517,8 +517,12 @@ module Utilrb
         # @param [Task] task The task.
         # @return [Task]
         def <<(task)
-            raise "cannot add task #{task} it is still running" if task.thread
-            task.reset if task.finished?
+            if task.finished?
+                task.reset
+            elsif task.started?
+                raise "cannot add task #{task} it is still running"
+            end
+
             @mutex.synchronize do
                 if shutdown? 
                     raise "unable to add work while shutting down"
