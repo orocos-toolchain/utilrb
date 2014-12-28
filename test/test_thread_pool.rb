@@ -117,6 +117,15 @@ module ThreadPoolHelpers
             Thread.pass
         end
     end
+
+    def signal
+        @mutex.synchronize do
+            task = @waiting_threads.to_a[rand(@waiting_threads.size)]
+            @waiting_threads.delete(task)
+            @cv.broadcast
+            task
+        end
+    end
 end
 
 describe Utilrb::ThreadPool do
@@ -385,6 +394,22 @@ describe Utilrb::ThreadPool do
     describe "#join" do
         it "raises ArgumentError if called without #shutdown first" do
             assert_raises(ArgumentError) { pool.join }
+        end
+    end
+
+    describe "#wait_for_one" do
+        it "returns as soon as one task has been processed" do
+            pool.resize(5)
+            50.times do
+                pool.process { wait }
+            end
+            50.times do |i|
+                expected_count = [50 - i, 5].min
+                assert_tasks_sleep_in_process_block(expected_count)
+                assert_equal (50 - i), expected_count + pool.backlog
+                signal
+                pool.wait_for_one
+            end
         end
     end
 end
