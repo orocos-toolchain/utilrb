@@ -371,6 +371,17 @@ module Utilrb
         # @return [boolean]
         def shutdown?; @shutdown; end
 
+        # Disable all processing
+        def disable_processing
+            @__max, @__min = @max, @min
+            resize(0, 0)
+        end
+
+        # Enable all processing
+        def enable_processing
+            resize(@__max, @__min)
+        end
+
         # Changes the minimum and maximum number of threads
         #
         # @param [Fixnum] min the minimum number of threads
