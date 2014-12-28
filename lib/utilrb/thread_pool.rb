@@ -542,7 +542,6 @@ module Utilrb
         # Shuts down all threads.
         #
         def shutdown()
-            tasks = nil
             @mutex.synchronize do
                 @shutdown = true
             end
