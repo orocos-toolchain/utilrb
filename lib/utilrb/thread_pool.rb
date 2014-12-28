@@ -253,12 +253,12 @@ module Utilrb
 
         # The minimum number of worker threads.
         #
-        # @return [Fixnum]
+        # @return [Integer]
         attr_reader :min
 
         # The maximum number of worker threads.
         #
-        # @return [Fixnum]
+        # @return [Integer]
         attr_reader :max
 
         # The number of worker threads that have been spawned so far
