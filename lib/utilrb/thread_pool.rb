@@ -375,16 +375,31 @@ module Utilrb
         #
         # @param [Fixnum] min the minimum number of threads
         # @param [Fixnum] max the maximum number of threads
-        def resize (min, max = nil)
+        def resize (min, max = min)
+            if max < min
+                raise ArgumentError, "max number of threads (#{max}) is lower than min (#{min})"
+            end
+
             @mutex.synchronize do
-                @min = min
-                @max = max || min
-                count = [@tasks_waiting.size,@max].min
-                0.upto(count) do 
-                    spawn_thread
+                @min, @max = min, max
+
+                if @workers.size >= @max
+                    too_many = (@workers.size - @max)
+                    if @trim_requests != too_many
+                        @trim_requests = too_many
+                        if too_many > 0
+                            @cond.broadcast
+                        end
+                    end
+                else
+                    threads_needed = [@max, @tasks_waiting.size + @workers.size].min
+                    threads_needed = [@min, threads_needed].max
+                    spawn_needed = [threads_needed - @workers.size, 0].max
+                    spawn_needed.times do
+                        spawn_thread
+                    end
                 end
             end
-            trim true
         end
 
         # Number of tasks waiting for execution
@@ -510,26 +525,14 @@ module Utilrb
                 end
                 task.queued_at = Time.now
                 @tasks_waiting << task
-                if @waiting == 0 && @workers.size < @max
+
+                tasks_size = (@tasks_waiting.size + @tasks_running.size)
+                while @workers.size < @max && @workers.size < tasks_size
                     spawn_thread
                 end
                 @cond.signal
             end
             task
-        end
-
-        # Trims the number of threads if threads are waiting for work and 
-        # the number of spawned threads is higher than the minimum number.
-        #
-        # @param [boolean] force Trim even if no thread is waiting.
-        def trim (force = false)
-            @mutex.synchronize do
-                if (force || @waiting > 0) && @spawned - @trim_requests > @min
-                    @trim_requests += 1
-                    @cond.signal
-                end
-            end
-            self
         end
 
         # Shuts down all threads.
@@ -572,16 +575,13 @@ module Utilrb
         end
 
         def thread_find_one_task
-            t, i = @tasks_waiting.each_with_index.find do |t,i|
+            task, idx = @tasks_waiting.each_with_index.find do |t, _|
                 !t.sync_key || @sync_keys.add?(t.sync_key)
             end
-
-            if t
-                @tasks_waiting.delete_at(i)
-                t.pre_execute(self) # block tasks so that no one is using it at the same time
-                @tasks_running << t
-                @avg_wait_time = moving_average(@avg_wait_time,(Time.now-t.queued_at))
-                t
+            if task
+                @tasks_waiting.delete_at(idx)
+                @tasks_running << task
+                task
             end
         end
 
@@ -596,13 +596,23 @@ module Utilrb
         #   should be terminated
         def thread_get_work
             while !shutdown?
-                task = thread_find_one_task
-                return if !task
-
                 if @trim_requests > 0
                     @trim_requests -= 1
                     return
                 end
+
+                if task = thread_find_one_task
+                    task.pre_execute(self)
+                    @avg_wait_time = moving_average(@avg_wait_time,
+                                                    Time.now-task.queued_at)
+                    return task
+                end
+
+                # Nothing to do ... check whether the thread should trim itself
+                if auto_trim && @workers.size > @min
+                    return
+                end
+
                 @waiting += 1
                 @cond.wait @mutex
                 @waiting -= 1
