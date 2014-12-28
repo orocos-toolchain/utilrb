@@ -139,6 +139,8 @@ module Utilrb
                 @pool = nil
                 @state_temp = nil
                 @state = nil
+                @termination_signal = nil
+                @termination_signals = Set.new
                 reset
             end
 
@@ -214,6 +216,7 @@ module Utilrb
                 rescue Exception => e
                     ThreadPool.report_exception("thread_pool: in #{self}, callback #{@callback} failed", e)
                 end
+                notify_termination
             end
 
             # Terminates the task if it is running
@@ -222,6 +225,60 @@ module Utilrb
                     return unless running?
                     @state = :stopping
                     @thread.raise exception
+                end
+            end
+
+            # Registers a signal to use to notify the caller that the task
+            # finished
+            #
+            # @param [#broadcast] signal the object that will do the signalling
+            #   (usually a {ConditionVariable} object). Set to nil if none is
+            #   needed
+            # @param [Mutex,nil] mutex a lock to acquire while signalling
+            # @yield a context in which the mutex is taken and the signal
+            #   registered
+            #
+            # As an example, see ThreadPool#wait
+            def register_termination_notification(signal, mutex = nil, &block)
+                @termination_signals << [signal, mutex]
+                yield
+            ensure
+                @termination_signals.delete([signal, mutex])
+            end
+
+            # Notifies that the task has finished using the notification objects
+            # registered with {register_termination_notification}
+            #
+            # This must be called in a context where the internal
+            # synchronization mutex is finished
+            def notify_termination
+                signals = @mutex.synchronize do
+                    signals, @termination_signals = @termination_signals, Array.new
+                    signals
+                end
+                signals.each do |signal, mutex|
+                    if mutex
+                        mutex.synchronize { signal.broadcast }
+                    else
+                        signal.broadcast
+                    end
+                end
+            end
+
+            # Wait for this task to finish working
+            #
+            # @param [ConditionVariable,nil] signal the condition variable that
+            #   should be used to notify the caller
+            def wait
+                @mutex.synchronize do
+                    @termination_signal ||= ConditionVariable.new
+                    register_termination_notification(@termination_signal, @mutex) do
+                        return if finished?
+                        while true
+                            @termination_signal.wait(@mutex)
+                            return if finished?
+                        end
+                    end
                 end
             end
 
@@ -604,6 +661,19 @@ module Utilrb
         def on_task_finished (&block)
             @mutex.synchronize do
                 @callback_on_task_finished = block
+            end
+        end
+
+        def process_all_pending_work
+            signal = ConditionVariable.new
+            while true
+                @mutex.synchronize do
+                    all_tasks = @tasks_waiting + @tasks_running
+                    return if all_tasks.empty?
+                    all_tasks.first.register_termination_notification(signal, @mutex) do
+                        signal.wait(@mutex)
+                    end
+                end
             end
         end
 
