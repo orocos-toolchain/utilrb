@@ -546,13 +546,14 @@ module Utilrb
         # @yield [*args] the code block block 
         # @return [Object] The result of the code block
         def sync(sync_key,*args,&block)
-            raise ArgumentError,"no sync key" unless sync_key
-
-            @mutex.synchronize do
-                while(!@sync_keys.add?(sync_key))
-                    @cond_sync_key.wait @mutex #wait until someone has removed a key
+            if sync_key
+                @mutex.synchronize do
+                    while(!@sync_keys.add?(sync_key))
+                        @cond_sync_key.wait @mutex #wait until someone has removed a key
+                    end
                 end
             end
+
             begin
                 result = block.call(*args)
             ensure
@@ -594,6 +595,15 @@ module Utilrb
                 # because of a deletion of a sync_key or a task was added
             end
             result
+        end
+
+        # Execute a task synchronously
+        def sync_task(task)
+            sync(task.sync_key) do
+                task.pre_execute
+                task.execute
+                task.finalize
+            end
         end
 
         # Processes the given {Task} as soon as the next thread is available

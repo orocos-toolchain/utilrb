@@ -147,6 +147,27 @@ module Utilrb
             alias :stop :cancel
         end
 
+        # A timer specialized for {EventLoop#async_every}
+        class AsyncTimer < Timer
+            # The thread pool task that actually does this timer's job
+            attr_accessor :task
+
+            def initialize(event_loop,period,task)
+                super(event_loop,period)
+                @task = task
+            end
+
+            # Executes this timer explicitely
+            def execute
+                event_loop.execute_async_timer(self)
+                if task.exception
+                    raise task.exception
+                else
+                    task.result
+                end
+            end
+        end
+
         # An event loop event
         class Event
             def initialize(block)
@@ -582,6 +603,44 @@ module Utilrb
 
         def reraise_error(error)
             raise error, error.message, error.backtrace + caller(1)
+        end
+
+        # Executes a timer "as-if" it was scheduled normally
+        def execute_async_timer(timer)
+            # This one is tricky ... I hope I got it right
+            #
+            # The first thing we really need to do if flush the event loop. Any
+            # that has been schedule before now has to be processed to ensure
+            # that we're in the state the caller expects us to be in.  We don't
+            # process every_cycle / timers, as they can't be meaningful w.r.t.
+            # what the timer we want to execute (the order in their case is not
+            # guaranteed)
+            #
+            # Then we can actually execute the timer's asynchronous task
+            #
+            # *Then* we need to execute the timer's completion callbacks. For
+            # now, let's be content with re-flushing the event queue. A better
+            # option would be to be able to process only the callback.
+            #
+            # Note that #sync_task will raise the exception raised by the task's
+            # work block, so no need to flush the exceptions from the event
+            # queue
+
+            process_events
+            thread_pool.sync_task(timer.task)
+            process_events
+        end
+
+        def process_events
+            while true
+                event = @events.pop(true)
+                if !event.ignore?
+                    EventLoop.info "executing"
+                    EventLoop.log_pp(:info, event)
+                    handle_errors{event.call}
+                end
+            end
+        rescue ThreadError
         end
 
         # Handles all current events and timers. If a code
