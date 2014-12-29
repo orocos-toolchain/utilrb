@@ -220,6 +220,10 @@ module Utilrb
             end
 
             # Terminates the task if it is running
+            #
+            # This will forcefully raise an exception in the execution thread,
+            # which is dangerous. Use {terminate} instead unless you know what
+            # you are doing
             def terminate!(exception = Asked)
                 @mutex.synchronize do
                     return unless running?
