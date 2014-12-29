@@ -386,9 +386,7 @@ module Utilrb
                 end
             end
             if options[:queue]
-                @mutex.synchronize do
-                    @thread_pool << task
-                end
+                @thread_pool << task
             end
             task
         end
