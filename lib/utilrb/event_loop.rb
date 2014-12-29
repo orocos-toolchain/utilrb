@@ -271,18 +271,27 @@ module Utilrb
         # @option (see #defer)
         # @return [EventLoop::Timer] The thread pool task.
         def async_every(work,options=Hash.new,*args, &callback)
-            options, async_opt = Kernel.filter_options(options,:period,:start => true)
+            options, async_opt = Kernel.filter_options options,
+                period: nil, start: true, queue: true
+
             period = options[:period]
             raise ArgumentError,"No period given" unless period
-            task = nil
-            every period ,options[:start] do
-                if !task
-                    task = async_with_options(work,async_opt,*args,&callback)
-                elsif task.finished?
+            task = async_with_options(work,
+                async_opt.merge(queue: options[:start] && options[:queue]),
+                *args,&callback)
+
+            timer = AsyncTimer.new(self,period,task) do
+                if task.finished?
                     add_task task
                 end
-                task
             end
+            if options[:start]
+                # We never set the 'instantly flag'. If queue is true, we simply
+                # psas it to #async_with_options which will add it to the thread
+                # pool right away
+                timer.start(period, false)
+            end
+            timer
         end
 
         # Integrates a blocking operation call into the EventLoop by
@@ -321,7 +330,12 @@ module Utilrb
         # @param (see ThreadPool::Task#initialize)
         # @return [ThreadPool::Task] The thread pool task.
         def defer(options=Hash.new,*args,&block)
-            options, task_options = Kernel.filter_options(options,{:callback => nil,:known_errors => [],:on_error => nil})
+            options, task_options = Kernel.filter_options options,
+                callback: nil,
+                known_errors: Array.new,
+                on_error:nil,
+                queue: true
+
             callback = options[:callback]
             error_callback = options[:on_error]
             known_errors = Array(options[:known_errors])
@@ -371,8 +385,10 @@ module Utilrb
                     end
                 end
             end
-            @mutex.synchronize do
-                @thread_pool << task
+            if options[:queue]
+                @mutex.synchronize do
+                    @thread_pool << task
+                end
             end
             task
         end
@@ -418,13 +434,27 @@ module Utilrb
         # the given code block with the given period from the
         # event loop thread.
         #
-        # @param [Float] period The period of the timer in seconds
-        # @parma [Boolean] start Startet the timerright away.
-        # @yield The code block.
-        # @return [Utilrb::EventLoop::Timer]
-        def every(period,start=true,&block)
+        # @param [Numeric] period period of the timer in seconds
+        # @param [Hash] options
+        # @option options [Boolean] start (true) enables the timer right away,
+        #   otherwise, this method is really equivalent to calling Timer.new
+        # @option options [Boolean] queue (true) if true, the timer's block will
+        #   be processed in the next event loop. Otherwise, after the first
+        #   period passed. This option has no effect if start is false.
+        # @yield a code block that should be executed periodically
+        # @return [Timer]
+        def every(period,options = Hash.new,&block)
+            # Backward compatibility
+            if !options.kind_of?(Hash)
+                options = Hash[start: !!options]
+            end
+            options = Kernel.validate_options options,
+                start: true, queue: true
+
             timer = Timer.new(self,period,&block)
-            timer.start if start # adds itself to the event loop
+            if options[:start]
+                timer.start(period,options[:queue])
+            end
             timer
         end
 
