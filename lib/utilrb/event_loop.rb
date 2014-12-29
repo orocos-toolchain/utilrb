@@ -1005,15 +1005,15 @@ module Utilrb
                                           else
                                                 accessor.to_s
                                           end}
+                        if !accessor
+                            error ||= DesignatedObjectNotFound.new 'designated object is nil'
+                            raise error
+                        end
+
                         if !block
                             begin
-                                if !accessor
-                                    error ||= DesignatedObjectNotFound.new 'designated object is nil'
-                                    raise error
-                                else
-                                    result = #{sync_key != :nil ? "#{event_loop}.sync(#{sync_key}){accessor.__send__(:#{method}, *args)}" : "accessor.__send__(:#{method}, *args)"}
-                                    #{filter ? "#{filter}(result)" : "result"}
-                                end
+                                result = #{sync_key != :nil ? "#{event_loop}.sync(#{sync_key}){accessor.__send__(:#{method}, *args)}" : "accessor.__send__(:#{method}, *args)"}
+                                #{filter ? "#{filter}(result)" : "result"}
                             rescue Exception => error
                                 #{"#{on_error}(error)" if on_error}
                                 raise error
