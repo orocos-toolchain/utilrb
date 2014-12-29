@@ -3,8 +3,8 @@ require 'rake'
 
 begin 
     require 'hoe'
-
     Hoe::plugin :yard
+    Hoe::RUBY_FLAGS.gsub!(/-w/, '')
 
     hoe_spec = Hoe.spec 'utilrb' do
         developer "Sylvain Joyeux", "sylvain.joyeux@m4x.org"
