@@ -780,7 +780,7 @@ module Utilrb
         def handle_error(error,save = true)
             call do
                 on_error = @mutex.synchronize do
-                    @on_error.find_all{|key,e| error.is_a? key}.map(&:last).flatten
+                    @on_error.find_all{|key,e| key === error}.map(&:last).flatten
                 end
                 on_error.each do |handler|
                     handler.call error
