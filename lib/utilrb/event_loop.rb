@@ -1017,11 +1017,12 @@ module Utilrb
 
 
                 def self.def_event_loop_delegator(klass,accessor,event_loop, method, options = Hash.new )
-                    options = Kernel.validate_options options, :filter => nil,
-                                                               :alias => method,
-                                                               :sync_key => :accessor,
-                                                               :known_errors => nil,
-                                                               :on_error => nil
+                    options = Kernel.validate_options options,
+                        filter: nil,
+                        alias: method,
+                        sync_key: :accessor,
+                        known_errors: nil,
+                        on_error: nil
 
                     raise ArgumentError, "accessor is nil" unless accessor
                     raise ArgumentError, "event_loop is nil" unless event_loop
