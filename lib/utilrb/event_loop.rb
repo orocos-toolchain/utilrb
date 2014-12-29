@@ -166,6 +166,11 @@ module Utilrb
                     task.result
                 end
             end
+
+            # Wait for any pending execution to finish
+            def wait
+                task.wait
+            end
         end
 
         # An event loop event
@@ -428,6 +433,16 @@ module Utilrb
             !@events.empty? || !@errors.empty?
         end
 
+        # Returns true if the next call to {step} will process something
+        #
+        # @param [Time] time the logical processing time at which timers should
+        #   be evaluated
+        #
+        # @return [Boolean]
+        def has_pending_work?(time = Time.now)
+            events? || @timers.any? { |t| t.timeout?(time) }
+        end
+
         # Adds a timer to the event loop which will execute 
         # the given code block with the given period from the
         # event loop thread.
@@ -676,16 +691,20 @@ module Utilrb
         #
         # @param [Time] time The time the step is executed for.
         # @yield The code block
-        def step(time = Time.now,&block)
+        def step(time = Time.now,options=Hash.new,&block)
+            options = Kernel.validate_options options,
+                process_every: true
             validate_thread
             reraise_error(@errors.shift) if !@errors.empty?
 
             #copy all work otherwise it would not be allowed to 
             #call any event loop functions from a timer
             timers,call = @mutex.synchronize do
-                                    @every_cylce_events.delete_if(&:ignore?)
-                                    @every_cylce_events.each do |event|
-                                        add_event event
+                                    if options[:process_every]
+                                        @every_cylce_events.delete_if(&:ignore?)
+                                        @every_cylce_events.each do |event|
+                                            add_event event
+                                        end
                                     end
 
                                     # check all timers
@@ -724,6 +743,31 @@ module Utilrb
         # callbacks to be execxuted you must call step explicitly just after
         def process_all_async_work
             thread_pool.process_all_pending_work
+        end
+
+        # Process all events that can be processed until none are left
+        #
+        # @param [Hash] options
+        # @option options [Boolean] wait_for_threads (false) if true, the loop
+        #   will wait for all threads in the thread pool to finish all pending
+        #   work before returning
+        # @return[void]
+        def process_all_pending_work(time = Time.now, options = Hash.new)
+            while true
+                process_every = true
+                while has_pending_work?
+                    step(time, process_every: false)
+                    process_every = false
+                end
+
+                if options[:wait_for_threads]
+                    thread_pool.wait_for_one do
+                        # A thread finished and queued some work in the meantime
+                        break if has_pending_work?
+                    end
+                end
+                return if !has_pending_work?
+            end
         end
 
         # Adds a timer to the event loop
