@@ -631,6 +631,14 @@ module Utilrb
             Thread.pass
         end
 
+        # Wait for all the async work currently queued to finish processing
+        #
+        # This does not call {step}, so if you want the async processing
+        # callbacks to be execxuted you must call step explicitly just after
+        def process_all_async_work
+            thread_pool.process_all_pending_work
+        end
+
         # Adds a timer to the event loop
         #
         # @param [Timer] timer The timer.
