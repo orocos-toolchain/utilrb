@@ -113,7 +113,7 @@ module Utilrb
             #   the timer waits until the first period passed.
             # @raise [ArgumentError] if no period is specified
             # @return [Timer]
-            def start(period = @period,instantly = true)
+            def start(period = @period, instantly = true, time = Time.now)
                 cancel
                 @stopped = false
                 @period = period
@@ -121,7 +121,7 @@ module Utilrb
                 @last_call = if instantly
                                  Time.at(0)
                              else
-                                 Time.now
+                                 time
                              end
                 @event_loop.add_timer self
                 self
@@ -173,19 +173,18 @@ module Utilrb
             end
 
             # Queues this timer explicitely
-            def queue(reset = true)
+            def queue(reset_time = Time.now)
                 event_loop.thread_pool << task
-                if reset
-                    reset(Time.now)
+                if reset_time
+                    reset(reset_time)
                 end
             end
 
             # Executes this timer explicitely
-            def execute(reset = true)
-                time = Time.now
+            def execute(reset_time = Time.now)
                 event_loop.execute_async_timer(self)
-                if reset
-                    reset(time)
+                if reset_time
+                    reset(reset_time)
                 end
                 if task.exception
                     raise task.exception
