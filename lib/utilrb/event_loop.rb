@@ -622,11 +622,9 @@ module Utilrb
         def exec(period=0.05,&block)
             @stop = false
             reset_timers
-            while !@stop
-                last_step = Time.now
-                step(last_step,&block)
-                diff = (Time.now-last_step).to_f
-                sleep(period-diff) if diff < period && !@stop
+            periodic_loop(period) do
+                return if @stop
+                step(Time.now,&block)
             end
         end
 
@@ -642,15 +640,41 @@ module Utilrb
         # @param [Float] timeout The timeout in seconds
         # @yieldreturn [Boolean]
         def wait_for(period=0.05,timeout=nil,&block)
-            start = Time.now
-            old_stop = @stop
-            exec period do
-                stop if block.call
-                if timeout && timeout <= (Time.now-start).to_f
-                    raise RuntimeError,"Timeout during wait_for"
+            time = Time.now
+            periodic_loop(period, timeout) do
+                if process_all_pending_work(time,
+                        wait_for_threads: true,
+                        exit_condition: block)
+                    return
                 end
             end
-            @stop = old_stop
+        end
+
+        # Generic implementation of a periodic loop
+        #
+        # @param [Numeric] period the period in seconds
+        # @param [Numeric] timeout the timeout in seconds
+        def periodic_loop(period, timeout = nil)
+            if timeout
+                timeout = Time.now + timeout
+            end
+            while true
+                cycle_time = Time.now
+                if timeout && (cycle_time > timeout)
+                    return
+                end
+
+                yield
+
+                # No point in sleeping for the next period ... we're going to
+                # hit the timeout anyway
+                if timeout && (cycle_time + period > timeout)
+                    return
+                end
+
+                diff = Time.now-cycle_time
+                sleep(period-diff) if diff < period
+            end
         end
 
         # Steps with the given period until all
@@ -791,22 +815,39 @@ module Utilrb
         # @option options [Boolean] wait_for_threads (false) if true, the loop
         #   will wait for all threads in the thread pool to finish all pending
         #   work before returning
-        # @return[void]
+        # @option options [#call] exit_condition a block that will be used to
+        #   terminate the processing early. The block should return true if the
+        #   exit condition is reached and false otherwise
+        # @return[Boolean] true if the exit condition was reached and false if
+        #   the call terminated because all pending work has been performed.
         def process_all_pending_work(time = Time.now, options = Hash.new)
+            exit_condition = options[:exit_condition] || proc { false }
+            step(time, process_every: true)
             while true
-                process_every = true
-                while has_pending_work?
+                while has_pending_work?(time)
+                    if exit_condition.call
+                        return true
+                    end
+
                     step(time, process_every: false)
-                    process_every = false
+                end
+
+                if exit_condition.call
+                    return true
                 end
 
                 if options[:wait_for_threads]
                     thread_pool.wait_for_one do
                         # A thread finished and queued some work in the meantime
-                        break if has_pending_work?
+                        break if has_pending_work?(time)
                     end
                 end
-                return if !has_pending_work?
+
+                if exit_condition.call
+                    return true
+                elsif !has_pending_work?(time)
+                    return false
+                end
             end
         end
 
