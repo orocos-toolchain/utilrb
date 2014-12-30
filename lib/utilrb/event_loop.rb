@@ -1,5 +1,18 @@
 require 'utilrb/thread_pool'
+require 'utilrb/module/attr_predicate'
+require 'utilrb/logger/root'
 
+class Proc
+    def pretty_print(pp)
+        code = File.readlines(source_location[0])
+        code_line = source_location[1]
+        code_start = [code_line - 5, 0].max
+        code[code_start, 10].each do |line|
+            pp.breakable
+            pp.text line.chomp
+        end
+    end
+end
 
 module Utilrb
     # Simple event loop which supports timers and defers blocking operations to
@@ -34,6 +47,12 @@ module Utilrb
     # 
     # @author Alexander Duda <Alexander.Duda@dfki.de>
     class EventLoop
+        extend Logger::Root("Utilrb::EventLoop", Logger::INFO)
+        include Logger::Hierarchy
+        include Logger::Forward
+
+        attr_predicate :trace?, true
+
         # Timer for the {EventLoop} which supports single shot and periodic activation
         #
         # @example
@@ -182,6 +201,16 @@ module Utilrb
 
             def call
                 @block.call
+            end
+
+
+            def pretty_print(pp)
+                pp.text "Utilrb::EventLoop::Event "
+                pp.nest(2) do
+                    pp.breakable
+                    pp.text @block.to_s
+                    @block.pretty_print(pp)
+                end
             end
 
             # If called the event will be ignored and
@@ -350,6 +379,13 @@ module Utilrb
             if callback
                 task.callback do |result,exception|
                     once do
+                        if trace?
+                            @mutex.synchronize do
+                                info "processing callback(#{result},#{exception})"
+                                log_pp :info, callback
+                            end
+                        end
+
                         if callback.arity == 1
                             callback.call result if !exception
                         else
@@ -678,8 +714,12 @@ module Utilrb
             while true
                 event = @events.pop(true)
                 if !event.ignore?
-                    EventLoop.info "executing"
-                    EventLoop.log_pp(:info, event)
+                    if trace?
+                        @mutex.synchronize do
+                            info "executing"
+                            log_pp(:info, event)
+                        end
+                    end
                     handle_errors{event.call}
                 end
             end
@@ -786,6 +826,12 @@ module Utilrb
         # @param [Boolean] every_step Automatically added for every step
         def add_event(event,every_step = false)
             raise ArgumentError "cannot add event which is ignored." if event.ignore?
+            if trace?
+                @mutex.synchronize do
+                    info "adding #{event}"
+                    log_pp(:info, event)
+                end
+            end
             if every_step
                 @mutex.synchronize do
                     @every_cylce_events << event
