@@ -123,7 +123,7 @@ describe Utilrb::EventLoop do
             expected_vals[0] = expected_vals[1] = mock_time_advance(0.51)
             event_loop.steps
             assert_equal expected_vals, vals
-            expected_vals[0] = expected_vals[2] = mock_time_advance(1)
+            expected_vals[0] = expected_vals[2] = mock_time_advance(1.01)
             event_loop.steps
             assert_equal expected_vals, vals
         end
@@ -161,6 +161,20 @@ describe Utilrb::EventLoop do
             assert_raises(exception0) { event_loop.step }
             assert_raises(exception1) { event_loop.step }
             event_loop.step
+        end
+    end
+
+    describe "#process_timers" do
+        it "does not execute the same timer twice" do
+            # This is truly a corner-case ... We basically want
+            # process_timers(time) to be idempotent for timers with zero period
+            recorder.should_receive(:called).once
+            event_loop.every 0 do
+                recorder.called
+            end
+            time = Time.now
+            event_loop.process_timers(time)
+            event_loop.process_timers(time)
         end
     end
 

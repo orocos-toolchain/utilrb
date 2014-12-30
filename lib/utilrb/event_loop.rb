@@ -133,7 +133,7 @@ module Utilrb
             # @param [Time] time The time used for checking
             # @return [Boolean}
             def timeout?(time = Time.now)
-                time - @last_call >= @period
+                time - @last_call > @period
             end
 
             # Returns true if the timer is a single shot timer.
