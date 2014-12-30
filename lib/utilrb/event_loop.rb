@@ -251,7 +251,6 @@ module Utilrb
             @every_cylce_events = Set.new     # stores all events which are added to @events each step
             @on_error = {}                    # stores on error callbacks
             @errors = Queue.new               # stores errors which will be re raised at the end of the step
-            @number_of_events_to_process = 0  # number of events which are processed in the current step
             @thread_pool = ThreadPool.new
             @thread = Thread.current #the event loop thread
             @stop = nil
@@ -736,25 +735,77 @@ module Utilrb
             # work block, so no need to flush the exceptions from the event
             # queue
 
-            process_events
+            process_events(false)
             thread_pool.sync_task(timer.task)
-            process_events
+            process_events(false)
         end
 
-        def process_events
-            while true
-                event = @events.pop(true)
-                if !event.ignore?
-                    if trace?
-                        @mutex.synchronize do
-                            info "executing"
-                            log_pp(:info, event)
-                        end
+        # Execute a single event
+        def process_event(event)
+            if !event.ignore?
+                if trace?
+                    @mutex.synchronize do
+                        info "executing"
+                        log_pp(:info, event)
                     end
-                    handle_errors{event.call}
+                end
+                handle_errors{event.call}
+            end
+        end
+
+        # Execute the events registered by {every_cycle}
+        def process_every_cycle_events
+            events = @mutex.synchronize do
+                @every_cylce_events.delete_if(&:ignore?)
+                @every_cylce_events.dup
+            end
+            events.each do |ev|
+                process_event(ev)
+            end
+        end
+
+        # Execute the single-shot events registered with {add_event}
+        #
+        # @param [Boolean] process_new_events if true, new events
+        #   that are added while processing get processed as well. If false,
+        #   only the events that have been queued before the call of this method
+        #   are processed.
+        def process_events(process_new_events)
+            events = @events
+            if !process_new_events
+                @mutex.synchronize do
+                    @events, events = Queue.new, @events
                 end
             end
+
+            while true
+                event = events.pop(true)
+                process_event(event)
+            end
         rescue ThreadError
+        end
+
+        # Execute the timers
+        def process_timers(time)
+            timers = @mutex.synchronize do
+                timed_out = Array.new
+                @timers.delete_if do |timer|
+                    if !timer.stopped? && timer.timeout?(time)
+                        timed_out << timer
+                        timer.single_shot?
+                    end
+                end
+                timed_out
+            end
+            timers.each do |timer|
+                handle_errors{timer.call(time)}
+            end
+        end
+
+        def with_error_handling
+            reraise_error(@errors.shift) if !@errors.empty?
+            yield
+            reraise_error(@errors.shift) if !@errors.empty?
         end
 
         # Handles all current events and timers. If a code
@@ -766,43 +817,12 @@ module Utilrb
             options = Kernel.validate_options options,
                 process_every: true
             validate_thread
-            reraise_error(@errors.shift) if !@errors.empty?
 
-            #copy all work otherwise it would not be allowed to 
-            #call any event loop functions from a timer
-            timers,call = @mutex.synchronize do
-                                    if options[:process_every]
-                                        @every_cylce_events.delete_if(&:ignore?)
-                                        @every_cylce_events.each do |event|
-                                            add_event event
-                                        end
-                                    end
-
-                                    # check all timers
-                                    temp_timers = @timers.find_all do |timer|
-                                        timer.timeout?(time)
-                                    end
-                                    # delete single shot timer which elapsed
-                                    @timers -= temp_timers.find_all(&:single_shot?)
-                                    [temp_timers,block]
-                                end
-
-            # handle all current events but not the one which are added during processing.
-            # Step is recursively be called if wait_for is used insight an event code block.
-            # To make sure that all events and timer are processed in the right order
-            # @number_of_events_to_process and a second timeout check is used.
-            @number_of_events_to_process = [@events.size,@number_of_events_to_process].max
-            while @number_of_events_to_process > 0
-                event = @events.pop
-                @number_of_events_to_process -= 1
-                handle_errors{event.call} unless event.ignore?
+            with_error_handling do
+                process_events(false)
+                process_every_cycle_events
+                process_timers(time)
             end
-            timers.each do |timer|
-                next if timer.stopped?
-                handle_errors{timer.call(time)} if timer.timeout?(time)
-            end
-            handle_errors{call.call} if call
-            reraise_error(@errors.shift) if !@errors.empty?
             
             #allow thread pool to take over
             Thread.pass
@@ -828,15 +848,26 @@ module Utilrb
         # @return[Boolean] true if the exit condition was reached and false if
         #   the call terminated because all pending work has been performed.
         def process_all_pending_work(time = Time.now, options = Hash.new)
-            exit_condition = options[:exit_condition] || proc { false }
-            step(time, process_every: true)
+            validate_thread
+            options = Kernel.validate_options options,
+                exit_condition: proc { false }
+            exit_condition = options[:exit_condition]
+
+            # Start pumping by executing a full step
+            step(time)
+
             while true
                 while has_pending_work?(time)
                     if exit_condition.call
                         return true
                     end
 
-                    step(time, process_every: false)
+                    with_error_handling do
+                        log_nest(2) do
+                            process_events(true)
+                            process_timers(time)
+                        end
+                    end
                 end
 
                 if exit_condition.call
