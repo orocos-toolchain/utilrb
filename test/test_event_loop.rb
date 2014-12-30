@@ -553,6 +553,20 @@ describe Utilrb::EventLoop do
                 timer.execute
             end
         end
+        describe "#start" do
+            it "reenables a stopped timer" do
+                recorder.should_receive(:called).once
+                work = lambda { recorder.called }
+                timer = event_loop.async_every work, period: 100, queue: false do |_|
+                end
+                event_loop.process_all_async_work
+                event_loop.step
+                timer.stop
+                timer.start
+                event_loop.process_all_async_work
+                event_loop.step
+            end
+        end
     end
 end
 
