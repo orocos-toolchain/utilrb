@@ -692,6 +692,38 @@ module Utilrb
             end
         end
 
+        # Wait for a condition related to the end of a task
+        #
+        # This method waits for a condition to become true, checking each time a
+        # task finishes (i.e. it is assumed that the condition will be met
+        # because of a task's end)
+        #
+        # @return [Boolean] true if the condition was met, false if it was not
+        #   *and* there were no tasks left
+        def wait_for
+            @mutex.synchronize do
+                if yield
+                    return true
+                end
+
+                all_tasks = @tasks_waiting + @tasks_running
+                return false if all_tasks.empty?
+
+                signal = ConditionVariable.new
+                wait_for_setup_notification(signal, @mutex, *all_tasks) do
+                    # Note that the tasks in +all_tasks+ cannot have changed
+                    # state while we were setting this up
+                    while true
+                        signal.wait(@mutex)
+                        if yield
+                            return true
+                        end
+                    end
+                end
+            end
+            false
+        end
+
         # Wait for one task to finish
         #
         # It returns right away if there is no pending work. Otherwise, it waits
@@ -703,7 +735,7 @@ module Utilrb
         #   Note that you should probably not call any method from the event
         #   loop itself in this context, as most of them are synchronized.
         #
-        # @return [void]
+        # @return [Boolean] true if there were pending tasks and false otherwise
         #
         # @example To properly use this method, you have to make sure that
         #   whatever you want from pending tasks did not already happen by
@@ -714,35 +746,24 @@ module Utilrb
         #   end
         # 
         def wait_for_one
-            @mutex.synchronize do
-                all_tasks = @tasks_waiting + @tasks_running
-                return if all_tasks.empty?
+            all_tasks = @mutex.synchronize do
+                @tasks_waiting + @tasks_running
+            end
 
-                yield if block_given?
-
-                signal = ConditionVariable.new
-                wait_for_one_setup_notification(signal, @mutex, *all_tasks) do
-                    # Note that the tasks in +all_tasks+ cannot have changed
-                    # state while we were setting this up
-                    while true
-                        signal.wait(@mutex)
-                        if all_tasks.any?(&:finished?)
-                            return
-                        end
-                    end
-                end
+            wait_for do
+                all_tasks.any?(&:finished?)
             end
         end
 
         private
 
         # Helper method for {wait_for_one} that sets up the notification
-        def wait_for_one_setup_notification(signal, mutex, task, *tasks, &block)
+        def wait_for_setup_notification(signal, mutex, task, *tasks, &block)
             task.register_termination_notification(signal, mutex) do
                 if tasks.empty?
                     yield
                 else
-                    wait_for_one_setup_notification(signal, mutex, *tasks, &block)
+                    wait_for_setup_notification(signal, mutex, *tasks, &block)
                 end
             end
         end
