@@ -26,6 +26,9 @@ module Utilrb
         # @author Alexander Duda <Alexander.Duda@dfki.de>
         class Task
             Asked = Class.new(Exception)
+            # Raised by {acquire} if the task is already in use
+            class AlreadyInUse < Exception
+            end
 
             # The sync key is used to speifiy that a given task must not run in
             # paralles with another task having the same sync key. If no key is
@@ -75,6 +78,11 @@ module Utilrb
             # Custom description which can be used
             # to store a human readable object
             attr_accessor :description
+
+            # Checks if the task has been queued
+            #
+            # @return [Boolean]
+            def queued?; !!@queued_at end
 
             # Checks if the task was started
             #
@@ -138,26 +146,23 @@ module Utilrb
                 @mutex = Mutex.new
                 @pool = nil
                 @state_temp = nil
-                @state = nil
                 @termination_signal = nil
                 @termination_signals = Set.new
-                reset
+                acquire(nil)
             end
 
-            # Resets the tasks.
-            # This can be used to requeue a task that is already finished
-            def reset
-                if finished? || !started?
-                    @mutex.synchronize do
+            def acquire(queueing_time = Time.now)
+                @mutex.synchronize do
+                    if finished? || !queued?
                         @result = @default
                         @state = :waiting
                         @exception = nil
                         @started_at = nil
-                        @queued_at = nil
+                        @queued_at = queueing_time
                         @stopped_at = nil
+                    else
+                        raise AlreadyInUse, "cannot reset a task which is queued and not finished"
                     end
-                else
-                    raise RuntimeError,"cannot reset a task which is not finished"
                 end
             end
 
@@ -596,13 +601,9 @@ module Utilrb
         # @param [Task] task The task.
         # @return [Task]
         def <<(task)
-            if task.finished?
-                task.reset
-            elsif task.started?
-                raise "cannot add task #{task} it is still running"
-            end
-
             @mutex.synchronize do
+                task.acquire(Time.now)
+
                 if shutdown? 
                     raise "unable to add work while shutting down"
                 end
