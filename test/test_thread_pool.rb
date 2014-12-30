@@ -353,6 +353,13 @@ describe Utilrb::ThreadPool do
     end
 
     describe "#<<" do
+        it "raises if one tries to queue an already-queued task" do
+            pool.disable_processing
+            task = pool.process { }
+            assert_raises(Utilrb::ThreadPool::Task::AlreadyInUse) do
+                pool << task
+            end
+        end
         it "reques an existing task" do 
             recorder = flexmock
             recorder.should_receive(:called).with(0).once
@@ -387,7 +394,7 @@ describe Utilrb::ThreadPool::Task do
     include ThreadPoolHelpers
 
     def assert_task_state(task, *states)
-        all_states = [:running, :finished, :exception, :terminated, :successfull, :started]
+        all_states = [:queued, :running, :finished, :exception, :terminated, :successfull, :started]
         (all_states - states).each do |s|
             assert !task.send("#{s}?"), "state #{s}? unexpectedly set on #{task}"
         end
@@ -416,14 +423,14 @@ describe Utilrb::ThreadPool::Task do
         end
     end
 
-    describe "#reset" do
-        it "gets the state back to waiting" do
+    describe "#acquire" do
+        it "sets the state to waiting" do
             task = Utilrb::ThreadPool::Task.new { }
             task.pre_execute
             task.execute
             task.finalize
-            task.reset
-            assert_task_state(task)
+            task.acquire
+            assert_task_state(task, :queued)
             assert_equal :waiting, task.state
         end
     end
