@@ -827,6 +827,9 @@ module Utilrb
                 timed_out
             end
             timers.each do |timer|
+                if trace?
+                    info "executing timer #{timer}"
+                end
                 handle_errors{timer.call(time)}
             end
         end
@@ -882,13 +885,29 @@ module Utilrb
                 exit_condition: proc { false }
             exit_condition = options[:exit_condition]
 
+            cycle, subcycle = 0, 0
+
             # Start pumping by executing a full step
-            step(time)
+            with_error_handling do
+                if trace?
+                    info "process_all_pending_work: executing initial cycle #{cycle}.#{subcycle}"
+                end
+                log_nest(2) do
+                    process_events(true)
+                    process_every_cycle_events
+                    process_timers(time)
+                end
+            end
 
             while true
+                cycle, subcycle = cycle + 1, 0
                 while has_pending_work?(time)
                     if exit_condition.call
                         return true
+                    end
+
+                    if trace?
+                        info "process_all_pending_work: executing #{cycle}.#{subcycle}"
                     end
 
                     with_error_handling do
@@ -897,6 +916,7 @@ module Utilrb
                             process_timers(time)
                         end
                     end
+                    subcycle += 1
                 end
 
                 if exit_condition.call
@@ -904,6 +924,9 @@ module Utilrb
                 end
 
                 if options[:wait_for_threads]
+                    if trace?
+                        info "process_all_pending_work: waiting for #{thread_pool.backlog + thread_pool.running} tasks to queue more work after #{cycle}.#{subcycle}"
+                    end
                     thread_pool.wait_for_one do
                         # A thread finished and queued some work in the meantime
                         break if has_pending_work?(time)
@@ -915,6 +938,10 @@ module Utilrb
                 elsif !has_pending_work?(time)
                     return false
                 end
+            end
+        ensure
+            if trace?
+                info "process_all_pending_work: done"
             end
         end
 
