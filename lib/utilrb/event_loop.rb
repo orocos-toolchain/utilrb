@@ -882,6 +882,7 @@ module Utilrb
         def process_all_pending_work(time = Time.now, options = Hash.new)
             validate_thread
             options = Kernel.validate_options options,
+                wait_for_threads: false,
                 exit_condition: proc { false }
             exit_condition = options[:exit_condition]
 
@@ -927,9 +928,9 @@ module Utilrb
                     if trace?
                         info "process_all_pending_work: waiting for #{thread_pool.backlog + thread_pool.running} tasks to queue more work after #{cycle}.#{subcycle}"
                     end
-                    thread_pool.wait_for_one do
+                    thread_pool.wait_for do
                         # A thread finished and queued some work in the meantime
-                        break if has_pending_work?(time)
+                        has_pending_work?(time)
                     end
                 end
 
