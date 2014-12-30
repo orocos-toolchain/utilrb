@@ -11,6 +11,18 @@ module ThreadPoolHelpers
         super
     end
 
+    # Use in the #with clause of a flexmock specification to test whether the
+    # argument is the main thread
+    def in_main_thread
+        Thread.current
+    end
+
+    # Use in the #with clause of a flexmock specification to test whether the
+    # argument is not the main thread
+    def not_in_main_thread
+        on { |t| t != @main_thread }
+    end
+
     # Check that {pool} ends up in a state where a certain number of threads are
     # blocked in processing and the rest sleep waiting for work
     #
@@ -34,7 +46,7 @@ module ThreadPoolHelpers
     #   # And this waits for the work thread to finalize its task and
     #   # get back to waiting for more work
     #   assert_tasks_sleep_in_process_block(0)
-    def assert_tasks_sleep_in_process_block(expected_tasks, timeout = 1)
+    def assert_tasks_sleep_in_process_block(expected_tasks, expected_threads = 0, timeout = 1)
         start_time = Time.now
         while true
             if Time.now - start_time > timeout
@@ -48,7 +60,7 @@ module ThreadPoolHelpers
                 blocked_or_waiting = @waiting_threads.size +
                     @blocked_threads.size
 
-                (blocked_or_waiting == expected_tasks) &&
+                (blocked_or_waiting == expected_tasks + expected_threads) &&
                     (pool.waiting_threads + expected_tasks == pool.spawned_threads) &&
                     pool.workers.all? { |t| t.status == 'sleep' }
 
@@ -109,12 +121,26 @@ module ThreadPoolHelpers
     end
 
     # Wait for the provided thread to be in sleep state
-    def wait_thread_sleeps(thread)
+    def assert_thread_sleeps(thread, timeout = 5)
+        start = Time.now
         while true
             if thread.status == 'sleep'
                 break
+            elsif thread.status != 'run'
+                status_description =
+                    if thread.status.nil?
+                        "terminated with exception"
+                    elsif thread.status == false
+                        "terminated normally"
+                    elsif thread.status == "aborting"
+                        "is aborting"
+                    end
+                flunk("thread #{thread} was supposed to go to sleep, but it #{status_description}")
             end
             Thread.pass
+            if Time.now - start > timeout
+                raise TimeoutError
+            end
         end
     end
 
@@ -412,6 +438,54 @@ describe Utilrb::ThreadPool do
             end
         end
     end
+
+    describe "#sync_task" do
+        it "executes the task synchronously" do
+            recorder = flexmock
+            recorder.should_receive(:called).with(Thread.current).once
+            task = Utilrb::ThreadPool::Task.new do
+                recorder.called(Thread.current)
+            end
+            pool.sync_task(task)
+        end
+
+        it "waits for the sync key to be available" do
+            recorder = flexmock
+            pool.process_with_options(sync_key: 1) do
+                wait; recorder.called(Thread.current)
+            end
+            task1 = Utilrb::ThreadPool::Task.new(sync_key: 1) do
+                wait; recorder.called(Thread.current)
+            end
+            assert_tasks_sleep_in_process_block(1)
+            th = Thread.new { pool.sync_task(task1) }
+            recorder.should_receive(:called).with(th).once
+            recorder.should_receive(:called).with(not_in_main_thread).once
+            assert_tasks_sleep_in_process_block(1)
+            assert_thread_sleeps(th)
+            broadcast
+            assert_tasks_sleep_in_process_block(0, 1)
+            assert_thread_sleeps(th)
+            broadcast
+            Timeout.timeout(5) { th.join }
+        end
+
+        it "waits for the task and does not execute it if there is one already in flight" do
+            recorder = flexmock
+            # We keep the sync key as this behaviour should take precedence over
+            # the synchronization coming from sync_key
+            task = pool.process(:sync_key => 1) { wait; recorder.called(Thread.current) }
+            assert_tasks_sleep_in_process_block(1)
+            th = Thread.new { pool.sync_task(task) }
+            recorder.should_receive(:called).with(th).never
+            recorder.should_receive(:called).with(not_in_main_thread).once
+            assert_tasks_sleep_in_process_block(1)
+            assert_thread_sleeps(th)
+            broadcast
+            assert_tasks_sleep_in_process_block(0)
+            Timeout.timeout(5) { th.join }
+        end
+    end
 end
 
 
@@ -553,7 +627,7 @@ describe Utilrb::ThreadPool::Task do
                 task.execute
                 task.finalize
             end
-            wait_thread_sleeps(thread)
+            assert_thread_sleeps(thread)
             task.terminate!
             thread.join
 
@@ -571,7 +645,7 @@ describe Utilrb::ThreadPool::Task do
         describe "a task in pending state" do
             it "should block the caller and wake it up when the task finishes" do
                 thread = Thread.new { task.wait; sleep }
-                wait_thread_sleeps(thread)
+                assert_thread_sleeps(thread)
                 task.pre_execute
                 task.execute
                 assert_equal 'sleep', thread.status
@@ -587,7 +661,7 @@ describe Utilrb::ThreadPool::Task do
             it "should block the caller and wake it up when the task finishes" do
                 task.pre_execute
                 thread = Thread.new { task.wait; sleep }
-                wait_thread_sleeps(thread)
+                assert_thread_sleeps(thread)
                 task.execute
                 assert_equal 'sleep', thread.status
                 task.finalize
@@ -603,7 +677,7 @@ describe Utilrb::ThreadPool::Task do
                 task.pre_execute
                 task.execute
                 thread = Thread.new { task.wait; sleep }
-                wait_thread_sleeps(thread)
+                assert_thread_sleeps(thread)
                 task.finalize
                 assert_equal 'run', thread.status
                 Timeout.timeout(1) do

@@ -181,8 +181,17 @@ module Utilrb
             #
             # Unlike {Timer#queue}, the async work is scheduled right now. If
             # we're lucky, it will be available *before* the next event loop
+            #
+            # If the task is already being queued or executed, the method does
+            # nothing
             def queue(reset_time = Time.now)
-                event_loop.thread_pool << task
+                begin
+                    event_loop.thread_pool << task
+                rescue Utilrb::ThreadPool::Task::AlreadyInUse
+                    # It is being executed right now, act "as if" it was already
+                    # queued
+                end
+
                 if reset_time
                     reset(reset_time)
                 end

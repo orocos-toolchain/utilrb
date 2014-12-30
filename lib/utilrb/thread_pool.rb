@@ -600,10 +600,15 @@ module Utilrb
         # Execute a task synchronously
         def sync_task(task)
             sync(task.sync_key) do
+                task.acquire
                 task.pre_execute
                 task.execute
                 task.finalize
             end
+        rescue Task::AlreadyInUse
+            # If the task is already queued, we just wait for it to finish
+            # execution
+            task.wait
         end
 
         # Processes the given {Task} as soon as the next thread is available
