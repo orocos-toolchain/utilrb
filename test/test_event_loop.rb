@@ -512,6 +512,17 @@ describe Utilrb::EventLoop do
     end
 
     describe Utilrb::EventLoop::AsyncTimer do
+        describe "#on_completion" do
+            it "register completion blocks that are executed once the next time the work finished" do
+                recorder.should_receive(:called).with(in_main_thread).once
+                work = proc { }
+                timer = event_loop.async_every work, period: 0.1 do |_|
+                end
+                timer.on_completion { recorder.called(Thread.current) }
+                event_loop.process_all_async_work
+                event_loop.step
+            end
+        end
         describe "#execute" do
             it "allows for immediate synchronous execution of the timer's work" do
                 recorder.should_receive(:called).with(in_main_thread).once.
@@ -531,6 +542,15 @@ describe Utilrb::EventLoop do
                 timer = event_loop.async_every work, period: 0.1 do |_|
                 end
                 assert_raises(exception) { timer.execute }
+            end
+
+            it "calls the completion blocks" do
+                recorder.should_receive(:called).with(in_main_thread).once
+                work = lambda {}
+                timer = event_loop.async_every work, period: 0.1 do |_|
+                end
+                timer.on_completion { recorder.called(Thread.current) }
+                timer.execute
             end
         end
     end

@@ -169,6 +169,7 @@ module Utilrb
 
             def initialize(event_loop,period,task)
                 super(event_loop,period)
+                @completion_blocks = Array.new
                 @task = task
             end
 
@@ -191,6 +192,22 @@ module Utilrb
                 else
                     task.result
                 end
+            end
+
+            def finalize
+                # Allow for the completion blocks to re-add themselves
+                completion_blocks, @completion_blocks = @completion_blocks, Array.new
+                completion_blocks.each do |block|
+                    block.call
+                end
+            end
+
+            # Execute the given block the next time this timer finished its
+            # execution
+            #
+            # The block is executed in the event loop's context
+            def on_completion(&block)
+                @completion_blocks << block
             end
 
             # Wait for any pending execution to finish
@@ -316,15 +333,27 @@ module Utilrb
 
             period = options[:period]
             raise ArgumentError,"No period given" unless period
+
+            timer = nil # This is set later :(
             task = async_with_options(work,
                 async_opt.merge(queue: options[:start] && options[:queue]),
-                *args,&callback)
+                *args) do |result, error|
+
+                if callback.arity == 1 && !error
+                    callback.call(result)
+                else
+                    ret = callback.call(result, error)
+                end
+                timer.finalize
+                ret
+            end
 
             timer = AsyncTimer.new(self,period,task) do
                 if task.finished?
                     add_task task
                 end
             end
+
             if options[:start]
                 # We never set the 'instantly flag'. If queue is true, we simply
                 # psas it to #async_with_options which will add it to the thread
@@ -737,6 +766,7 @@ module Utilrb
 
             process_events(false)
             thread_pool.sync_task(timer.task)
+            timer.finalize
             process_events(false)
         end
 
