@@ -172,6 +172,14 @@ module Utilrb
                 @task = task
             end
 
+            # Queues this timer explicitely
+            def queue(reset = true)
+                event_loop.thread_pool << task
+                if reset
+                    reset(Time.now)
+                end
+            end
+
             # Executes this timer explicitely
             def execute(reset = true)
                 time = Time.now
