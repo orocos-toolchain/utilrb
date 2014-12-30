@@ -173,8 +173,12 @@ module Utilrb
             end
 
             # Executes this timer explicitely
-            def execute
+            def execute(reset = true)
+                time = Time.now
                 event_loop.execute_async_timer(self)
+                if reset
+                    reset(time)
+                end
                 if task.exception
                     raise task.exception
                 else
