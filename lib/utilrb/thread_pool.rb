@@ -280,9 +280,10 @@ module Utilrb
             #   should be used to notify the caller
             def wait
                 @mutex.synchronize do
+                    return if finished?
+
                     @termination_signal ||= ConditionVariable.new
                     register_termination_notification(@termination_signal, @mutex) do
-                        return if finished?
                         while true
                             @termination_signal.wait(@mutex)
                             return if finished?
