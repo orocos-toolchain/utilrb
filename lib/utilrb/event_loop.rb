@@ -776,16 +776,15 @@ module Utilrb
         #   only the events that have been queued before the call of this method
         #   are processed.
         def process_events(process_new_events)
-            events = @events
-            if !process_new_events
-                @mutex.synchronize do
-                    @events, events = Queue.new, @events
-                end
+            if process_new_events
+                max = @events.size
             end
 
-            while true
-                event = events.pop(true)
+            counter = 0
+            while !max || max > counter
+                event = @events.pop(true)
                 process_event(event)
+                counter += 1
             end
         rescue ThreadError
         end
