@@ -118,11 +118,10 @@ module Utilrb
                 @stopped = false
                 @period = period
                 raise ArgumentError,"no period is given" unless @period
-                @last_call = if instantly
-                                 Time.at(0)
-                             else
-                                 time
-                             end
+                @last_call = time
+                if instantly
+                    queue
+                end
                 @event_loop.add_timer self
                 self
             end
@@ -159,6 +158,11 @@ module Utilrb
                 @last_call = time
             end
 
+            # Queues this timer's execution for the next event loop
+            def queue(_time = Time.now)
+                @last_call = Time.at(0)
+            end
+
             alias :stop :cancel
         end
 
@@ -174,6 +178,9 @@ module Utilrb
             end
 
             # Queues this timer explicitely
+            #
+            # Unlike {Timer#queue}, the async work is scheduled right now. If
+            # we're lucky, it will be available *before* the next event loop
             def queue(reset_time = Time.now)
                 event_loop.thread_pool << task
                 if reset_time
@@ -335,10 +342,7 @@ module Utilrb
             raise ArgumentError,"No period given" unless period
 
             timer = nil # This is set later :(
-            task = async_with_options(work,
-                async_opt.merge(queue: options[:start] && options[:queue]),
-                *args) do |result, error|
-
+            task = async_with_options(work, async_opt.merge(queue: false), *args) do |result, error|
                 if callback.arity == 1 && !error
                     callback.call(result)
                 else
@@ -358,7 +362,7 @@ module Utilrb
                 # We never set the 'instantly flag'. If queue is true, we simply
                 # psas it to #async_with_options which will add it to the thread
                 # pool right away
-                timer.start(period, false)
+                timer.start(period, options[:queue])
             end
             timer
         end
