@@ -687,6 +687,7 @@ module Utilrb
         # @param [Float] period The period 
         # @param [Float] timeout The timeout in seconds
         # @yieldreturn [Boolean]
+        # @raise Timeout::Error if the timeout has been reached
         def wait_for(period=0.05,timeout=nil,&block)
             time = Time.now
             periodic_loop(period, timeout) do
@@ -696,6 +697,7 @@ module Utilrb
                     return
                 end
             end
+            raise Timeout::Error, "failed to reach specified condition within #{timeout}s"
         end
 
         # Generic implementation of a periodic loop
