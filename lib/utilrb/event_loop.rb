@@ -704,6 +704,22 @@ module Utilrb
         #
         # @param [Numeric] period the period in seconds
         # @param [Numeric] timeout the timeout in seconds
+        # @return [Boolean] true if the loop quits because the timeout has been
+        #   reached (see example below)
+        #
+        #
+        # @example periodic loop with timeout
+        #   A common way to quit a periodic loop when it reaches a condition is
+        #   to use break. The return value of 'true' if the loop times out helps
+        #   with this:
+        #
+        #   has_timed_out = periodic_loop 0.1, 5 do
+        #       if condition_reached
+        #           break
+        #       end
+        #   end
+        #   # Here, has_timed_out is true if the loop timed out and false if the
+        #   # loop quit because of the break
         def periodic_loop(period, timeout = nil)
             if timeout
                 timeout = Time.now + timeout
@@ -711,7 +727,7 @@ module Utilrb
             while true
                 cycle_time = Time.now
                 if timeout && (cycle_time > timeout)
-                    return
+                    return true
                 end
 
                 yield
@@ -719,12 +735,14 @@ module Utilrb
                 # No point in sleeping for the next period ... we're going to
                 # hit the timeout anyway
                 if timeout && (cycle_time + period > timeout)
-                    return
+                    return true
                 end
 
                 diff = Time.now-cycle_time
                 sleep(period-diff) if diff < period
             end
+            # Never reached !
+            false
         end
 
         # Steps with the given period until all
