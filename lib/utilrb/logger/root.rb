@@ -41,8 +41,13 @@ class Logger
     #
     def self.Root(progname, base_level, &block)
 	begin	
-	    base_level = ENV['BASE_LOG_LEVEL'].upcase.to_sym if ENV['BASE_LOG_LEVEL']
-	    base_level = ::Logger.const_get( base_level ) if base_level.is_a? Symbol
+            if ENV['BASE_LOG_LEVEL']
+                env_level = ENV['BASE_LOG_LEVEL'].upcase.to_sym 
+                # there is currently no disabled level on the ruby side
+                unless env_level == :DISABLE
+                    base_level = ::Logger.const_get( env_level ) 
+                end
+            end
 	rescue Exception
 	    raise ArgumentError, "Log level #{base_level} is not available in the ruby Logger"
 	end
