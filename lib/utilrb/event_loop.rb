@@ -210,11 +210,11 @@ module Utilrb
                 end
             end
 
-            def finalize
+            def finalize(result, error)
                 # Allow for the completion blocks to re-add themselves
                 completion_blocks, @completion_blocks = @completion_blocks, Array.new
                 completion_blocks.each do |block|
-                    block.call
+                    EventLoop.call_async_callback(block, result, error)
                 end
             end
 
@@ -330,6 +330,16 @@ module Utilrb
             pp.text "EventLoop "
         end
 
+        def self.call_async_callback(callback, result, error)
+            if callback.arity == 1
+                if !error
+                    callback.call(result)
+                end
+            else
+                callback.call(result, error)
+            end
+        end
+
         # Integrates a blocking operation call like {Utilrb::EventLoop#async}
         # but automatically re queues the call if period was passed and the
         # task was finished by the worker thread.  This means it will never re
@@ -352,12 +362,8 @@ module Utilrb
 
             timer = nil # This is set later :(
             task = async_with_options(work, async_opt.merge(queue: false), *args) do |result, error|
-                if callback.arity == 1 && !error
-                    callback.call(result)
-                else
-                    ret = callback.call(result, error)
-                end
-                timer.finalize
+                ret = EventLoop.call_async_callback(callback, result, error)
+                timer.finalize(result, error)
                 ret
             end
 
@@ -434,28 +440,24 @@ module Utilrb
                             end
                         end
 
-                        if callback.arity == 1
-                            callback.call result if !exception
-                        else
-                            e = callback.call result,exception
-                            #check if the error was overwritten in the
-                            #case of an error
-                            exception = if exception
-                                            if e.is_a?(Symbol) && e == :ignore_error
-                                                nil
-                                            elsif e.is_a? Exception
-                                                # If the new exception has no
-                                                # backtrace, propagate the one
-                                                # that we already have
-                                                if !e.backtrace || e.backtrace.empty?
-                                                    e.set_backtrace(exception.backtrace)
-                                                end
-                                                e
-                                            else
-                                                exception
-                                            end
-                                        end
-                        end
+                        e = EventLoop.call_async_callback(callback, result, exception)
+                        exception =
+                            if exception
+                                if e.is_a?(Symbol) && e == :ignore_error
+                                    nil
+                                elsif e.is_a? Exception
+                                    # If the new exception has no
+                                    # backtrace, propagate the one
+                                    # that we already have
+                                    if !e.backtrace || e.backtrace.empty?
+                                        e.set_backtrace(exception.backtrace)
+                                    end
+                                    e
+                                else
+                                    exception
+                                end
+                            end
+
                         if exception
                             error_callback.call(exception) if error_callback
                             raises = !known_errors.any? {|error| exception.is_a?(error)}
@@ -799,7 +801,7 @@ module Utilrb
 
             process_events(false)
             thread_pool.sync_task(timer.task)
-            timer.finalize
+            timer.finalize(timer.task.result, timer.task.exception)
             process_events(false)
         end
 
