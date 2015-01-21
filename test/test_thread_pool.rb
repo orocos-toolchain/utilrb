@@ -120,6 +120,21 @@ module ThreadPoolHelpers
         end
     end
 
+    # Waits for the provided thread to be in #wait
+    def assert_thread_waits(thread, timeout = 5)
+        start = Time.now
+        while true
+            if @waiting_threads.include?(thread)
+                return assert_thread_sleeps(thread, timeout - (Time.now - start))
+            else
+                Thread.pass
+                if Time.now - start > timeout
+                    raise TimeoutError
+                end
+            end
+        end
+    end
+
     # Wait for the provided thread to be in sleep state
     def assert_thread_sleeps(thread, timeout = 5)
         start = Time.now
@@ -465,24 +480,25 @@ describe Utilrb::ThreadPool do
             assert_thread_sleeps(th)
             broadcast
             assert_tasks_sleep_in_process_block(0, 1)
-            assert_thread_sleeps(th)
+            assert_thread_waits(th)
             broadcast
             Timeout.timeout(5) { th.join }
         end
 
-        it "waits for the task and does not execute it if there is one already in flight" do
+        it "executes the task once after an already-running task" do
             recorder = flexmock
             # We keep the sync key as this behaviour should take precedence over
             # the synchronization coming from sync_key
             task = pool.process(:sync_key => 1) { wait; recorder.called(Thread.current) }
             assert_tasks_sleep_in_process_block(1)
             th = Thread.new { pool.sync_task(task) }
-            recorder.should_receive(:called).with(th).never
+            recorder.should_receive(:called).with(th).once
             recorder.should_receive(:called).with(not_in_main_thread).once
             assert_tasks_sleep_in_process_block(1)
             assert_thread_sleeps(th)
             broadcast
-            assert_tasks_sleep_in_process_block(0)
+            assert_thread_waits(th)
+            broadcast
             Timeout.timeout(5) { th.join }
         end
     end

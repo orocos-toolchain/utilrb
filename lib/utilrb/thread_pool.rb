@@ -610,6 +610,7 @@ module Utilrb
             # If the task is already queued, we just wait for it to finish
             # execution
             task.wait
+            retry
         end
 
         # Processes the given {Task} as soon as the next thread is available
