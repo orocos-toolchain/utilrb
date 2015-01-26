@@ -44,9 +44,10 @@ class Logger
             if ENV['BASE_LOG_LEVEL']
                 env_level = ENV['BASE_LOG_LEVEL'].upcase.to_sym 
                 # there is currently no disabled level on the ruby side
-                unless env_level == :DISABLE
-                    base_level = ::Logger.const_get( env_level ) 
-                end
+                # but fatal is the closest
+                env_level = :FATAL if env_level == :DISABLE
+                
+                base_level = ::Logger.const_get( env_level ) 
             end
 	rescue Exception
 	    raise ArgumentError, "Log level #{base_level} is not available in the ruby Logger"
