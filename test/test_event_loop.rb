@@ -390,7 +390,7 @@ describe Utilrb::EventLoop do
                     @event_loop = event_loop
                     @obj = obj
                 end
-                def_event_loop_delegator :@obj,:@event_loop,:call
+                def_event_loop_delegator :obj,:@event_loop,:call
             end
         end
         let(:event_loop) { Utilrb::EventLoop.new }
@@ -405,26 +405,29 @@ describe Utilrb::EventLoop do
                 end
             end
 
-            it "raises DesignatedObjectNotFound right away on asynchronous method call" do
-                proxy = proxy_class.new(event_loop, nil)
-                assert_raises Utilrb::EventLoop::Forwardable::DesignatedObjectNotFound do
-                    proxy.call do |*_|
+            it "resolves the object from the spawned thread when called asynchronously" do
+                main_thread = Thread.current
+                target_obj = obj
+                proxy.singleton_class.class_eval do
+                    define_method :main_thread do
+                        main_thread
+                    end
+                    define_method :obj do
+                        if Thread.current != main_thread
+                            target_obj
+                        else raise "thread mismatch, expected to executed in a pool thrad"
+                        end
                     end
                 end
-            end
 
-            it "raises DesignatedObjectNotFound when processing on asynchronous method call" do
-                obj.should_receive(:call)
+                obj.should_receive(:call).once
                 event_loop.thread_pool.disable_processing
                 proxy.call do |*_|
                 end
                 proxy.obj = nil
                 event_loop.thread_pool.enable_processing
                 event_loop.process_all_async_work
-
-                assert_raises Utilrb::EventLoop::Forwardable::DesignatedObjectNotFound do
-                    event_loop.step
-                end
+                event_loop.step
             end
         end
 

@@ -1256,26 +1256,26 @@ module Utilrb
 
                     line_no = __LINE__; str = %Q{
                     def #{ali}(*args, &block)
-                        accessor,error = #{if options[:known_errors]
-                                            %Q{
-                                                begin
-                                                    #{accessor} # cache the accessor.
-                                                rescue #{Array(options[:known_errors]).join(",")} => e
-                                                   [nil,e]
-                                                end
-                                               }
-                                          else
-                                                accessor.to_s
-                                          end}
-                        if !accessor
-                            error ||= DesignatedObjectNotFound.new 'designated object is nil'
-                            raise error
-                        end
-
                         if !block
+                            accessor,error = #{if options[:known_errors]
+                                                %Q{
+                                                    begin
+                                                        #{accessor} # cache the accessor.
+                                                    rescue #{Array(options[:known_errors]).join(",")} => e
+                                                       [nil,e]
+                                                    end
+                                                   }
+                                              else
+                                                    accessor.to_s
+                                              end}
                             begin
-                                result = #{sync_key != :nil ? "#{event_loop}.sync(#{sync_key}){accessor.__send__(:#{method}, *args)}" : "accessor.__send__(:#{method}, *args)"}
-                                #{filter ? "#{filter}(result)" : "result"}
+                                if !accessor
+                                    error ||= DesignatedObjectNotFound.new "designated object (#{accessor}) is nil"
+                                    raise error
+                                else
+                                    result = #{sync_key != :nil ? "#{event_loop}.sync(#{sync_key}){accessor.__send__(:#{method}, *args)}" : "accessor.__send__(:#{method}, *args)"}
+                                    #{filter ? "#{filter}(result)" : "result"}
+                                end
                             rescue Exception => error
                                 #{"#{on_error}(error)" if on_error}
                                 raise error
@@ -1287,7 +1287,7 @@ module Utilrb
                                         if err
                                             raise err
                                         else
-                                            raise DesignatedObjectNotFound,'designated object is nil'
+                                            raise DesignatedObjectNotFound,"designated object (#{accessor}) is nil"
                                         end
                                     else
                                         acc.__send__(:#{method}, *callback_args)
