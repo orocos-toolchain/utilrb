@@ -109,7 +109,8 @@ module Utilrb
                     requested_op.include?(pkg.version <=> requested_version)
                 end
                 if !result
-                    raise NotFound.new(name), "no version of #{name} match #{version_spect}. Available versions are: #{candidates.map(&:raw_version).join(", ")}"
+                    name = candidates.first.name
+                    raise NotFound.new(name), "no version of #{name} match #{version_spec}. Available versions are: #{candidates.map(&:raw_version).join(", ")}"
                 end
                 result
             else
