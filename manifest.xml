@@ -18,4 +18,5 @@
   <depend_optional package="flexmock" />
   <rosdep name="libreadline" />
 
+  <test_depend name='flexmock' />
 </package>
