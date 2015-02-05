@@ -35,8 +35,10 @@ module Kernel
         user_option_spec.each do |opt|
             if opt.respond_to?(:to_hash)
                 opt.each do |key, value|
-                    if filter_options_handle_single_entry(known_options, options, key) && value
-                        known_options[key.to_sym] = value
+                    if filter_options_handle_single_entry(known_options, options, key)
+                        if !value.nil?
+                            known_options[key.to_sym] = value
+                        end
                     end
                 end
             elsif opt.respond_to?(:to_ary)

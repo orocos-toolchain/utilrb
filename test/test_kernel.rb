@@ -46,12 +46,20 @@ class TC_Kernel < Minitest::Test
         assert_equal Hash[c: nil], validate_options(Hash[c: nil], c: 10)
     end
 
+    def test_validate_options_does_take_false_as_default_value
+        assert_equal Hash[c: false], validate_options(Hash.new, c: false)
+    end
+
     def test_validate_options_does_not_take_nil_as_a_default_value
         assert_equal Hash.new, validate_options(Hash.new, c: nil)
     end
 
     def test_validate_options_can_handle_string_keys
         assert_equal Hash[a: 10, c: nil], validate_options(Hash['c' => nil], 'a' => 10, :c =>  10)
+    end
+
+    def test_filter_options_filters_keys_that_have_a_nil_value
+        assert_equal [Hash[c: 10], Hash.new], filter_options(Hash[c: 10], c: nil)
     end
 
     def test_arity_of_methods
