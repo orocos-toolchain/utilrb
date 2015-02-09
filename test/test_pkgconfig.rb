@@ -82,4 +82,28 @@ class TC_PkgConfig < Minitest::Test
             end
         end
     end
+
+    def test_missing_package
+        Utilrb::PkgConfig.get 'does_not_exist'
+        flunk("Utilrb::PkgConfig.get did not raise on a non existent package")
+    rescue Utilrb::PkgConfig::NotFound => e
+        assert_equal 'does_not_exist', e.name
+        assert(e.message =~ /does_not_exist/)
+    end
+
+    def test_missing_package_version
+        Utilrb::PkgConfig.get 'test_pkgconfig_package_version', '> 1.0'
+        flunk("Utilrb::PkgConfig.get did not raise on a non existent package version")
+    rescue Utilrb::PkgConfig::NotFound => e
+        assert_equal 'test_pkgconfig_package_version', e.name
+        assert(e.message =~ /test_pkgconfig_package_version/, "error message '#{e.message}' does not mention the problematic package")
+    end
+
+    def test_missing_dependency
+        Utilrb::PkgConfig.get 'test_pkgconfig_missing_dependency'
+        flunk("Utilrb::PkgConfig.get did not raise on a missing dependency")
+    rescue Utilrb::PkgConfig::NotFound => e
+        assert e.name == "missing_dependency"
+        assert e.message =~ /missing_dependency/
+    end
 end
