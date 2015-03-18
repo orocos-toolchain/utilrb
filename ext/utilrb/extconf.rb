@@ -1,4 +1,9 @@
 require 'mkmf'
+require 'rbconfig'
+
+if RbConfig::CONFIG['host_os'].include? "darwin"
+  $CFLAGS += " -I/opt/local/include"
+end
 
 CONFIG['LDSHARED'].gsub! '$(CC)', "$(CXX)"
 if try_link("int main() { }", "-module")
