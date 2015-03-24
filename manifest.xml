@@ -2,7 +2,7 @@
   <description brief="Ruby toolkit">
     This library is a collection of useful Ruby classes
   </description>
-  <author>Sylvain Joyeux/sylvain.joyeux@m4x.org</author>
+  <maintainer>Sylvain Joyeux/sylvain.joyeux@m4x.org</maintainers>
   <copyright>
       LAAS-CNRS/openrobots@laas.fr
       DFKI/robotik@dfki.de
