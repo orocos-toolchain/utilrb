@@ -55,7 +55,6 @@ static VALUE kernel_crash(VALUE klass)
 extern "C" void Init_value_set();
 extern "C" void Init_weakref(VALUE mUtilrb);
 extern "C" void Init_proc();
-extern "C" void Init_utilrb_readline();
 
 extern "C" void Init_utilrb()
 {
@@ -75,6 +74,5 @@ extern "C" void Init_utilrb()
     Init_proc();
 
     Init_value_set();
-    Init_utilrb_readline();
 }
 
