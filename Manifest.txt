@@ -8,7 +8,6 @@ bm/allocation.rb
 bm/speed.rb
 ext/utilrb/extconf.rb
 ext/utilrb/proc.c
-ext/utilrb/readline.c
 ext/utilrb/ruby_allocator.hh
 ext/utilrb/utilrb.cc
 ext/utilrb/value_set.cc

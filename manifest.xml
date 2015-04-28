@@ -16,6 +16,5 @@
   <depend_optional package="hoe-yard" />
   <rosdep name="rake-compiler" />
   <depend_optional package="flexmock" />
-  <rosdep name="libreadline" />
 
 </package>
