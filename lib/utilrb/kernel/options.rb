@@ -1,6 +1,19 @@
 require 'utilrb/hash/to_sym_keys'
 require 'utilrb/hash/slice'
 module Kernel
+    def filter_options_handle_single_entry(known_options, options, key)
+        key = key.to_sym
+        if options.has_key?(key)
+            known_options[key] = options.delete(key)
+            false
+        elsif options.has_key?(key_s = key.to_s)
+            known_options[key] = options.delete(key_s)
+            false
+        else
+            true
+        end
+    end
+
     # Partitions an option hash between known arguments and unknown
     # arguments, with default value support. All option keys are
     # converted to symbols for consistency.
@@ -17,44 +30,33 @@ module Kernel
     #   filter_options(nil, known_options) -> default_options, {}
     #
     def filter_options(options, *user_option_spec)
-        option_spec = Hash.new
+        options = options.dup
+        known_options = Hash.new
         user_option_spec.each do |opt|
             if opt.respond_to?(:to_hash)
-                option_spec.merge!(opt)
+                opt.each do |key, value|
+                    if filter_options_handle_single_entry(known_options, options, key)
+                        if !value.nil?
+                            known_options[key.to_sym] = value
+                        end
+                    end
+                end
             elsif opt.respond_to?(:to_ary)
                 opt.each do |key|
-                    option_spec[key] = nil
+                    filter_options_handle_single_entry(known_options, options, key)
                 end
             else
-                option_spec[opt] = nil
+                filter_options_handle_single_entry(known_options, options, opt)
             end
         end
 
-        unknown_options = Hash.new
-        options = options.dup
-        options.delete_if do |key, value|
-            if !key.respond_to?(:to_sym)
-                unknown_options[key] = value
-                true
-            end
-        end
+        return *[known_options, options]
+    end
 
-        options     = (options.to_hash || Hash.new).to_sym_keys
-	# cannot use #to_sym_keys as option_spec can be an array
-	option_spec = option_spec.inject({}) { |h, (k, v)| h[k.to_sym] = v; h }
-
-	unknown_options.merge!(options.slice(*(options.keys - option_spec.keys)))
-	known_options   = options.slice(*option_spec.keys)
-
-        # Set default values defined in the spec
-        option_spec.each_key do |k| 
-            value = option_spec[k]
-	    if !known_options.has_key?(k) && !value.nil?
-		known_options[k] ||= value
-	    end
-        end
-
-        return *[known_options, unknown_options]
+    # Normalizes all keys in the given option hash to symbol and returns the
+    # modified hash
+    def normalize_options(options)
+        options.to_sym_keys
     end
 
     # Validates an option hash, with default value support. See #filter_options

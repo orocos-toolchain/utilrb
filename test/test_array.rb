@@ -1,7 +1,7 @@
-require 'test_config'
+require 'utilrb/test'
 require 'utilrb/array'
 
-class TC_Array < Test::Unit::TestCase
+class TC_Array < Minitest::Test
     def test_to_s
 	assert_equal("[1, 2]", [1, 2].to_s)
     end

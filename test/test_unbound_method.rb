@@ -1,8 +1,8 @@
-require 'test_config'
+require 'utilrb/test'
 require 'utilrb/unbound_method'
 require 'flexmock'
 
-class TC_UnboundMethod < Test::Unit::TestCase
+class TC_UnboundMethod < Minitest::Test
     def test_call
 	FlexMock.use do |mock|
 	    klass = Class.new do

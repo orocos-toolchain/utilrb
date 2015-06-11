@@ -1,13 +1,14 @@
 #include <ruby.h>
 #include <set>
 #include <algorithm>
+#include "ruby_allocator.hh"
 
 using namespace std;
 
 static VALUE cValueSet;
 static ID id_new;
 
-typedef std::set<VALUE> ValueSet;
+typedef std::set<VALUE, std::less<VALUE>, ruby_allocator<VALUE> > ValueSet;
 static ValueSet& get_wrapped_set(VALUE self)
 {
     ValueSet* object = 0;
@@ -252,7 +253,8 @@ static VALUE value_set_difference_bang(VALUE vself, VALUE vother)
     ValueSet result;
     std::set_difference(self.begin(), self.end(), other.begin(), other.end(), 
 	    std::inserter(result, result.end()));
-    self.swap(result);
+    if (result.size() != self.size())
+        self.swap(result);
     return vself;
 }
 
@@ -335,9 +337,7 @@ static VALUE value_set_clear(VALUE self)
  */
 static VALUE value_set_initialize_copy(VALUE vself, VALUE vother)
 {
-    ValueSet const& other = get_wrapped_set(vother);
-    set<VALUE> new_set(other.begin(), other.end());
-    get_wrapped_set(vself).swap(new_set);
+    get_wrapped_set(vself) = get_wrapped_set(vother);
     return vself;
 }
 

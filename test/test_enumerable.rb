@@ -1,9 +1,9 @@
-require 'test_config'
+require 'utilrb/test'
 
 require 'utilrb/enumerable'
 require 'utilrb/value_set'
 
-class TC_Enumerable < Test::Unit::TestCase
+class TC_Enumerable < Minitest::Test
 
     def test_enum_uniq
         # Test the enum_uniq enumerator

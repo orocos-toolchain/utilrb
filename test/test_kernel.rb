@@ -1,12 +1,10 @@
-require 'test_config'
-require 'flexmock'
+require 'utilrb/test'
+require 'flexmock/test_unit'
 require 'tempfile'
 
 require 'utilrb/kernel'
 
-require 'flexmock/test_unit'
-
-class TC_Kernel < Test::Unit::TestCase
+class TC_Kernel < Minitest::Test
     # Do NOT move this block. Some tests are checking the error lines in the
     # backtraces
     DSL_EXEC_BLOCK = Proc.new do
@@ -19,28 +17,49 @@ class TC_Kernel < Test::Unit::TestCase
             end
         end
         name('test')
-        unknown_method
+        unknown_method()
     end
 
-    def test_validate_options
-        valid_options   = [ :a, :b, :c ]
-        valid_test      = { :a => 1, :c => 2 }
-        invalid_test    = { :k => nil }
-        assert_nothing_raised(ArgumentError) { validate_options(valid_test, valid_options) }
-        assert_raise(ArgumentError) { validate_options(invalid_test, valid_options) }
+    def test_validate_options_passes_options_unmodified_if_they_are_valid_and_there_is_no_additional_defaults
+        options = { :a => 1, :c => 2 }
+        assert_equal options, validate_options(options, :a, :b, :c)
+    end
 
-        check_array = validate_options( valid_test, valid_options )
-        assert_equal( valid_test, check_array )
-        check_empty_array = validate_options( nil, valid_options )
-        assert_equal( {}, check_empty_array )
+    def test_validate_options_accepts_a_list_of_valid_options_as_array
+        options = { :a => 1, :c => 2 }
+        assert_equal options, validate_options(options, [:a, :b, :c])
+    end
 
-	# Check default value settings
-        default_values = { :a => nil, :b => nil, :c => nil, :d => 15, :e => [] }
-        new_options = nil
-        assert_nothing_raised(ArgumentError) { new_options = validate_options(valid_test, default_values) }
-	assert_equal(15, new_options[:d])
-	assert_equal([], new_options[:e])
-        assert( !new_options.has_key?(:b) )
+    def test_validate_options_raises_ArgumentError_if_given_an_unknown_option
+        assert_raises(ArgumentError) { validate_options(Hash[c: 10], :b) }
+    end
+
+    def test_validate_options_does_not_add_options_without_default_to_the_returned_value
+        assert_equal Hash.new, validate_options(Hash.new, :a, :b, :c)
+    end
+
+    def test_validate_options_sets_defaults
+        assert_equal Hash[c: 10], validate_options(Hash.new, c: 10)
+    end
+
+    def test_validate_options_does_not_override_nil_by_the_default_value
+        assert_equal Hash[c: nil], validate_options(Hash[c: nil], c: 10)
+    end
+
+    def test_validate_options_does_take_false_as_default_value
+        assert_equal Hash[c: false], validate_options(Hash.new, c: false)
+    end
+
+    def test_validate_options_does_not_take_nil_as_a_default_value
+        assert_equal Hash.new, validate_options(Hash.new, c: nil)
+    end
+
+    def test_validate_options_can_handle_string_keys
+        assert_equal Hash[a: 10, c: nil], validate_options(Hash['c' => nil], 'a' => 10, :c =>  10)
+    end
+
+    def test_filter_options_filters_keys_that_have_a_nil_value
+        assert_equal [Hash[c: 10], Hash.new], filter_options(Hash[c: 10], c: nil)
     end
 
     def test_arity_of_methods
@@ -50,16 +69,18 @@ class TC_Kernel < Test::Unit::TestCase
 	    def arity_1_more(a, *b); end
 	end.new
 
-	assert_nothing_raised { check_arity(object.method(:arity_1), 1) }
+        # Should not raise
+	check_arity(object.method(:arity_1), 1)
 	assert_raises(ArgumentError) { check_arity(object.method(:arity_1), 0) }
 	assert_raises(ArgumentError) { check_arity(object.method(:arity_1), 2) }
 
-	assert_nothing_raised { check_arity(object.method(:arity_any), 0) }
-	assert_nothing_raised { check_arity(object.method(:arity_any), 2) }
+        # Should not raise
+	check_arity(object.method(:arity_any), 0)
+	check_arity(object.method(:arity_any), 2)
 
-	assert_nothing_raised { check_arity(object.method(:arity_1_more), 1) }
+	check_arity(object.method(:arity_1_more), 1)
 	assert_raises(ArgumentError) { check_arity(object.method(:arity_1_more), 0) }
-	assert_nothing_raised { check_arity(object.method(:arity_1_more), 2) }
+	check_arity(object.method(:arity_1_more), 2)
     end
 
     def test_arity_of_blocks
@@ -152,7 +173,7 @@ class TC_Kernel < Test::Unit::TestCase
                 end
             end
             name('test')
-            unknown_method
+            unknown_method()
             EOD
             io.flush
 
@@ -180,7 +201,7 @@ class TC_Kernel < Test::Unit::TestCase
         end
     end
 
-    if !Utilrb::RUBY_IS_19
+    if Utilrb::RUBY_IS_18
     def test_eval_dsl_file_does_not_allow_class_definition
         obj = Class.new do
             def real_method
@@ -222,7 +243,7 @@ class TC_Kernel < Test::Unit::TestCase
             flunk("did not raise NameError for KnownConstant")
         rescue NameError => e
             assert e.message =~ /KnownConstant/, e.message
-            expected = "test_kernel.rb:14"
+            expected = "test_kernel.rb:12"
             assert e.backtrace.first =~ /#{expected}/, "wrong backtrace when checking constant resolution: #{e.backtrace.join("\n")}, expected #{expected}"
         end
 
@@ -231,7 +252,7 @@ class TC_Kernel < Test::Unit::TestCase
             flunk("did not raise NoMethodError for unknown_method")
         rescue NoMethodError => e
             assert e.message =~ /unknown_method/
-            expected = "test_kernel.rb:22"
+            expected = "test_kernel.rb:20"
             assert e.backtrace.first =~ /#{expected}/, "wrong backtrace when checking method resolution: #{e.backtrace[0]}, expected #{expected}"
         end
 
@@ -280,28 +301,6 @@ class TC_Kernel < Test::Unit::TestCase
             assert(!$LOADED_FEATURES.include?(io.path))
             assert_equal(0, obj.real_method_call_count)
         end
-    end
-
-    Utilrb.require_ext('is_singleton?') do
-	def test_is_singleton
-	    klass = Class.new
-	    singl_klass = (class << klass; self end)
-	    obj = klass.new
-
-	    assert(!klass.is_singleton?)
-	    assert(!obj.is_singleton?)
-	    assert(singl_klass.is_singleton?)
-	end
-    end
-
-    Utilrb.require_ext('test_swap') do
-	def test_swap
-	    obj = Array.new
-	    Kernel.swap!(obj, Hash.new)
-	    assert_instance_of Hash, obj
-
-	    GC.start
-	end
     end
 
     def test_poll

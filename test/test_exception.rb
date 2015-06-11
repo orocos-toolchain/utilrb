@@ -1,8 +1,8 @@
-require 'test_config'
+require 'utilrb/test'
 require 'utilrb/exception'
 require 'flexmock'
 
-class TC_Exception < Test::Unit::TestCase
+class TC_Exception < Minitest::Test
     def test_full_message
 	FlexMock.use do |mock|
 	    error = Exception.new

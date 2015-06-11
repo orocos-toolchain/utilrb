@@ -1,7 +1,5 @@
 #ifdef HAS_RUBY_SOURCE
-extern "C" {
-#include "/usr/include/ruby-1.9.1/ruby-1.9.3-p0/vm_core.h"
-}
+#include <vm_core.h>
 
 static VALUE env_references(VALUE rbenv)
 {
@@ -11,7 +9,8 @@ static VALUE env_references(VALUE rbenv)
     GetEnvPtr(rbenv, env);
     if (env->env)
     {
-        for (int i = 0; i < env->env_size; ++i)
+        int i;
+        for (i = 0; i < env->env_size; ++i)
             rb_ary_push(result, rb_obj_id(env->env[i]));
     }
     return result;
@@ -26,11 +25,13 @@ static VALUE proc_references(VALUE rbproc)
         return env_references(proc->envval);
     return rb_ary_new();
 }
+#elif RUBY_IS_18
+#warning "compiling on Ruby 1.8, Proc#references will not be available"
 #else
-#warning "RUBY_SOURCE_DIR is not set, Proc#references will not be available"
+#warning "Ruby core sources cannot be found, Proc#references will not be available. Install the debugger-ruby_core_source gem to enable"
 #endif
 
-extern "C" void Init_proc()
+void Init_proc()
 {
 #ifdef HAS_RUBY_SOURCE
     rb_define_method(rb_cProc, "references", RUBY_METHOD_FUNC(proc_references), 0);

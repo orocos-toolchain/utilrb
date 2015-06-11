@@ -67,7 +67,7 @@ module Kernel
 
         filtered_backtrace = backtrace[0, backtrace.size - our_frame_pos].
             map do |line|
-                line.gsub! /:in `.*dsl.*'/, ''
+                line = line.gsub(/:in `.*dsl.*'/, '')
                 if line =~ /load_dsl_file.*(method_missing|send)/
                     next
                 end
@@ -150,20 +150,17 @@ module Kernel
     def dsl_exec_common(file, proxied_object, context, full_backtrace, *exceptions, &code)
         load_dsl_filter_backtrace(file, full_backtrace, *exceptions) do
             sandbox = with_module(*context) do
-                Class.new do
+                Class.new(BasicObject) do
                     def self.name; "" end
                     attr_accessor :main_object
                     def initialize(obj); @main_object = obj end
                     def method_missing(*m, &block)
-                        main_object.send(*m, &block)
+                        main_object.__send__(*m, &block)
                     end
                 end
             end
 
-            old_constants, new_constants = nil
-            if !Utilrb::RUBY_IS_191
-                old_constants = Kernel.constants
-            end
+            old_constants, new_constants = Kernel.constants, nil
 
             sandbox = sandbox.new(proxied_object)
             sandbox.with_module(*context) do
@@ -184,7 +181,7 @@ module Kernel
 
             # Check if the user defined new constants by using class K and/or
             # mod Mod
-            if !Utilrb::RUBY_IS_191 && !new_constants
+            if !new_constants
                 new_constants = Kernel.constants
             end
 

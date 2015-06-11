@@ -1,6 +1,6 @@
-require 'test_config'
+require 'utilrb/test'
 
-class TC_Misc < Test::Unit::TestCase
+class TC_Misc < Minitest::Test
     def test_super_idiom
 	base = Class.new do
 	    attr_reader :base
@@ -9,7 +9,8 @@ class TC_Misc < Test::Unit::TestCase
 		@base = true
 	    end
 	end
-	assert_nothing_raised { base.new }
+        # Should not raise
+	base.new
 
 	derived = Class.new(base) do
 	    attr_reader :derived
@@ -19,7 +20,8 @@ class TC_Misc < Test::Unit::TestCase
 	    end
 	end
 	obj = nil
-	assert_nothing_raised { obj = derived.new }
+        # Should not raise
+	obj = derived.new
 	assert( obj.base )
 	assert( obj.derived )
 
@@ -33,7 +35,8 @@ class TC_Misc < Test::Unit::TestCase
 	obj = nil
 	base.class_eval { include mod }
 
-	assert_nothing_raised { obj = derived.new }
+        # Should not raise
+	obj = derived.new
 	assert( obj.base )
 	assert( obj.module )
 	assert( obj.derived )

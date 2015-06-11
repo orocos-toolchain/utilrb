@@ -1,8 +1,8 @@
-require 'test/unit'
+require 'utilrb/test'
 require 'set'
 require 'utilrb/pkgconfig'
 
-class TC_PkgConfig < Test::Unit::TestCase
+class TC_PkgConfig < Minitest::Test
     def setup
 	@old_pkg_config_path = ENV['PKG_CONFIG_PATH']
 	ENV['PKG_CONFIG_PATH'] = File.join(File.expand_path(File.dirname(__FILE__)), 'data')
@@ -14,7 +14,8 @@ class TC_PkgConfig < Test::Unit::TestCase
     PkgConfig = Utilrb::PkgConfig
     def test_find_package
 	assert_raises(PkgConfig::NotFound) { PkgConfig.new('does_not_exist') }
-	assert_nothing_raised { PkgConfig.new('test_pkgconfig') }
+        # Should not raise
+	PkgConfig.new('test_pkgconfig')
     end
 
     def test_load
@@ -80,5 +81,29 @@ class TC_PkgConfig < Test::Unit::TestCase
                 assert(false, "result from pkg-config and the PkgConfig class differ")
             end
         end
+    end
+
+    def test_missing_package
+        Utilrb::PkgConfig.get 'does_not_exist'
+        flunk("Utilrb::PkgConfig.get did not raise on a non existent package")
+    rescue Utilrb::PkgConfig::NotFound => e
+        assert_equal 'does_not_exist', e.name
+        assert(e.message =~ /does_not_exist/)
+    end
+
+    def test_missing_package_version
+        Utilrb::PkgConfig.get 'test_pkgconfig_package_version', '> 1.0'
+        flunk("Utilrb::PkgConfig.get did not raise on a non existent package version")
+    rescue Utilrb::PkgConfig::NotFound => e
+        assert_equal 'test_pkgconfig_package_version', e.name
+        assert(e.message =~ /test_pkgconfig_package_version/, "error message '#{e.message}' does not mention the problematic package")
+    end
+
+    def test_missing_dependency
+        Utilrb::PkgConfig.get 'test_pkgconfig_missing_dependency'
+        flunk("Utilrb::PkgConfig.get did not raise on a missing dependency")
+    rescue Utilrb::PkgConfig::NotFound => e
+        assert e.name == "missing_dependency"
+        assert e.message =~ /missing_dependency/
     end
 end

@@ -1,17 +1,21 @@
-require 'test_config'
+require 'utilrb/test'
 require 'utilrb/logger'
 require 'flexmock/test_unit'
 
-class TC_Logger < Test::Unit::TestCase
+class TC_Logger < Minitest::Test
     module Root
         extend Logger::Root('TC_Logger', Logger::INFO)
 
         module Child
             extend Logger::Hierarchy
         end
+        class Klass
+            extend Logger::Hierarchy
+        end
     end
 
     def teardown
+        Root.reset_own_logger
         Root::Child.reset_own_logger
         super
     end
@@ -33,12 +37,39 @@ class TC_Logger < Test::Unit::TestCase
         assert child.respond_to?(:warn)
     end
 
+    def test_logger_hierarchy_on_anonymous_classes
+        child = Class.new(Root::Klass)
+        assert_same Root.logger, child.logger
+        assert child.respond_to?(:warn)
+    end
+
+    def test_logger_hierarchy_on_instances_of_anonymous_classes
+        child_m = Class.new(Root::Klass) do
+            include Logger::Hierarchy
+        end
+        child = child_m.new
+        assert_same Root.logger, child.logger
+        assert child.respond_to?(:warn)
+    end
+
+    def test_logger_hierarchy_on_classes_that_have_almost_a_class_name
+        child_m = Class.new(Root::Klass) do
+            include Logger::Hierarchy
+            def self.name
+                "A::NonExistent::Constant::Name"
+            end
+        end
+        child = child_m.new
+        assert_same Root.logger, child.logger
+        assert child.respond_to?(:warn)
+    end
+
     def test_logger_hierarch_make_own
         child = Root::Child
         assert_same Root.logger, child.logger
 
         child.make_own_logger('child', Logger::DEBUG)
-        assert_not_same Root.logger, child.logger
+        refute_same Root.logger, child.logger
         assert_equal "child", child.logger.progname
         assert_equal Logger::DEBUG, child.logger.level
         assert_equal "TC_Logger", Root.logger.progname
@@ -47,10 +78,17 @@ class TC_Logger < Test::Unit::TestCase
         assert child.has_own_logger?
     end
 
+    def test_logger_hierarch_make_own_propagates_to_children
+        child = Root::Child
+        assert_same Root.logger, child.logger
+        Root.make_own_logger('root', Logger::DEBUG)
+        assert_same Root.logger, child.logger
+    end
+
     def test_logger_hierarch_reset_own
         child = Root::Child
         child.make_own_logger('child', Logger::DEBUG)
-        assert_not_same Root.logger, child.logger
+        refute_same Root.logger, child.logger
         child.reset_own_logger
         test_logger_hierarchy
     end
@@ -100,5 +138,67 @@ class TC_Logger < Test::Unit::TestCase
         io.puts "msg0"
         io.print "msg1"
         io.puts " msg2"
+    end
+
+
+    module HierarchyTest
+        def self.logger; "root_logger" end
+        class HierarchyTest
+            extend Logger::Hierarchy
+            extend Logger::Forward
+        end
+
+        module A
+            extend Logger::Hierarchy
+            extend Logger::Forward
+
+            class B
+                extend Logger::Hierarchy
+                include Logger::Hierarchy
+            end
+        end
+    end
+
+    module HierarchyTestForSubclass
+        def self.logger; "other_logger" end
+        class HierarchyTest < HierarchyTest::HierarchyTest
+        end
+    end
+
+    module NotALoggingModule
+        class HierarchyTest < HierarchyTest::HierarchyTest
+        end
+        class NoLogger
+        end
+    end
+
+    def test_hierarchy_can_resolve_parent_logger_with_identical_name
+        assert_equal "root_logger", HierarchyTest::HierarchyTest.logger
+    end
+    def test_hierarchy_can_resolve_parent_logger_in_subclasses_where_the_subclass_parent_module_is_not_providing_a_logger
+        assert_equal "root_logger", NotALoggingModule::HierarchyTest.logger
+    end
+    def test_hierarchy_resolves_the_parent_module_first_even_in_subclasses
+        assert_equal "other_logger", HierarchyTestForSubclass::HierarchyTest.logger
+    end
+    def test_hierarchy_raises_if_no_parent_logger_can_be_found
+        assert_raises(Logger::Hierarchy::NoParentLogger) { NotALoggingModule::NoLogger.extend Logger::Hierarchy }
+    end
+
+    module RootModule
+    end
+    def test_hierarchy_raises_if_hierarchy_is_called_on_a_root_module
+        assert_raises(Logger::Hierarchy::NoParentLogger) { RootModule.extend Logger::Hierarchy }
+    end
+
+    def test_instance_resolves_to_class_logger
+        klass = Class.new(HierarchyTest::HierarchyTest)
+        klass.send(:include, Logger::Hierarchy)
+        obj = klass.new
+        assert_equal "root_logger", obj.logger
+    end
+    def test_instance_resolves_to_own_logger_if_set
+        a_logger = HierarchyTest::A.make_own_logger
+        assert_same a_logger, HierarchyTest::A::B.logger
     end
 end

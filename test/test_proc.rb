@@ -1,10 +1,10 @@
-require 'test_config'
+require 'utilrb/test'
 
 require 'utilrb'
 
 Utilrb.require_ext('TC_Proc') do
     if RUBY_VERSION =~ /^1\.8/
-	class TC_Proc < Test::Unit::TestCase
+	class TC_Proc < Minitest::Test
 	    def block_to_proc_helper(&block); block end
 	    def block_to_proc
 		[block_to_proc_helper { blo }, block_to_proc_helper { bla }]
