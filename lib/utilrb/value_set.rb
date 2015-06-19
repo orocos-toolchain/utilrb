@@ -9,7 +9,16 @@ Utilrb.require_ext("ValueSet") do
 	alias :- :difference
 	include Enumerable
 
-	def to_s
+        def substract(other_set)
+            difference!(other_set.to_value_set)
+        end
+
+        def add(value)
+            insert(value)
+            self
+        end
+
+        def to_s
 	    elements = EnumerableToString.to_s_helper(self, '{', '}') do |obj|
 		obj.to_s
 	    end
