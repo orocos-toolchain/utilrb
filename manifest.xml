@@ -15,6 +15,6 @@
   <rosdep name="hoe" />
   <depend_optional package="hoe-yard" />
   <rosdep name="rake-compiler" />
-  <depend_optional package="flexmock" />
+  <test_depend package="flexmock" />
 
 </package>
