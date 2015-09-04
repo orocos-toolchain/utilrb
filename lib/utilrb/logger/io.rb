@@ -8,13 +8,13 @@ class Logger
             @logger, @level = logger, level
             @buffer = ''
         end
-        def puts(msg)
+        def puts(*msg)
             print msg
             logger.send(level, @buffer)
             @buffer = ''
         end
-        def print(msg)
-            @buffer << msg
+        def print(*msg)
+            @buffer << msg.join("")
         end
     end
 
