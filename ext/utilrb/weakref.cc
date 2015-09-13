@@ -1,11 +1,7 @@
 #include <set>
 #include <map>
 #include <ruby.h>
-#ifdef RUBY_IS_18
-#include <intern.h>
-#else
 #include <ruby/intern.h>
-#endif
 
 using std::set;
 using std::map;
