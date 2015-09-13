@@ -506,10 +506,8 @@ module Utilrb
         # @param [boolean] force Trim even if no thread is waiting.
         def trim (force = false)
             @mutex.synchronize do
-                if (force || @waiting > 0) && @spawned - @trim_requests > @min
-                    @trim_requests += 1
-                    @cond.signal
-                end
+                @trim_requests += 1
+                @cond.signal
             end
             self
         end
@@ -571,8 +569,10 @@ module Utilrb
                             end
                             break task unless task.is_a? Array
 
-                            if @trim_requests > 0
-                                @trim_requests -= 1
+                            if @spawned > @min && (auto_trim || @trim_requests > 0)
+                                if @trim_requests > 0
+                                    @trim_requests -= 1
+                                end
                                 break
                             end
                             @waiting += 1
@@ -597,14 +597,12 @@ module Utilrb
                         current_task.finalize # propagate state after it was deleted from the internal lists
                         @callback_on_task_finished.call(current_task) if @callback_on_task_finished
                     end
-                    trim if auto_trim
                 end
 
-                # we do not have to lock here
-                # because spawn_thread must be called from
-                # a synchronized block
-                @spawned -= 1
-                @workers.delete thread
+                @mutex.synchronize do
+                    @spawned -= 1
+                    @workers.delete thread
+                end
             end
             @spawned += 1
             @workers << thread

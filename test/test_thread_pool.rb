@@ -70,15 +70,32 @@ describe Utilrb::ThreadPool do
         it "must reduce its number of threads after the work is done if auto_trim == true." do 
             pool = Utilrb::ThreadPool.new(5,20)
             pool.auto_trim = true
-            0.upto 19 do 
+
+            sync = Mutex.new
+            cond = ConditionVariable.new
+            waiting = 0
+            start = Time.now
+            0.upto 19 do |i|
                 pool.process do 
-                    sleep 0.15
+                    sync.synchronize do
+                        waiting += 1
+                        cond.wait(sync)
+                    end
                 end
             end
-            sleep 0.13
-            assert_equal 0,pool.waiting
-            assert_equal 20,pool.spawned
-            sleep 0.4
+            while waiting != 20 && (Time.now - start) < 5
+                Thread.pass
+            end
+            sync.synchronize do
+                assert_equal 0,pool.waiting
+                assert_equal 20,pool.spawned
+                cond.broadcast
+            end
+
+            start = Time.now
+            while (pool.waiting != 5 || pool.spawned != 5) && (Time.now - start) < 2
+                Thread.pass
+            end
             assert_equal 5,pool.waiting
             assert_equal 5,pool.spawned
             pool.shutdown
