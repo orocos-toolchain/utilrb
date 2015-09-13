@@ -575,7 +575,7 @@ module Utilrb
         end
 
         def reraise_error(error)
-            raise error, error.message, error.backtrace + caller(1)
+            raise error, error.message, (error.backtrace || []) + caller(1)
         end
 
         # Handles all current events and timers. If a code
