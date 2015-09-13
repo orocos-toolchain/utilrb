@@ -261,14 +261,23 @@ module Utilrb
             raw_fields.each do |name, value|
                 if SHELL_VARS.include?(name) 
                     value = Shellwords.shellsplit(value)
-                    value.map! do |v|
-                        expand_variables(v, variables, name)
+                    resolved = Array.new
+                    while !value.empty?
+                        value = value.flat_map do |v|
+                            expanded = expand_variables(v, variables, name)
+                            if expanded == v
+                                resolved << v
+                                nil
+                            else
+                                Shellwords.shellsplit(expanded)
+                            end
+                        end.compact
                     end
+                    fields[name] = resolved
                 else
-                    value = expand_variables(value, variables, name)
+                    fields[name] = expand_variables(value, variables, name)
                 end
 
-                fields[name] = value
             end
 
             # Initialize the main flags
@@ -390,7 +399,7 @@ module Utilrb
         end
 
         def libs_only_other(static = false)
-            @ldflags[static].find_all { |s| s !~ /^-[lL]/ }.join(" ")
+            @ldflags_with_requires[static].find_all { |s| s !~ /^-[lL]/ }.join(" ")
         end
 
 	def method_missing(varname, *args, &proc) # :nodoc:

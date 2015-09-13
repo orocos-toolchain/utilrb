@@ -1,0 +1,10 @@
+prefix=a_prefix
+VAR=-I/path -O3
+
+Name: test_pkgconfig
+Description:
+Version: 4.2
+
+Cflags: ${VAR}
+Libs: 
+

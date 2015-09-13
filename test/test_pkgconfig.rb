@@ -9,6 +9,7 @@ class TC_PkgConfig < Minitest::Test
     end
     def teardown
 	ENV['PKG_CONFIG_PATH'] = @old_pkg_config_path
+        PkgConfig.clear_cache
     end
 
     PkgConfig = Utilrb::PkgConfig
@@ -29,7 +30,7 @@ class TC_PkgConfig < Minitest::Test
 	assert_equal('-O3', pkg.cflags_only_other)
         assert_equal(['a_prefix/include'], pkg.include_dirs)
 
-	assert_equal(%w{-ltest -lother -La_prefix/lib}.to_set, pkg.libs.split.to_set)
+	assert_equal(%w{-ltest -lother -Wopt -La_prefix/lib}.to_set, pkg.libs.split.to_set)
 	assert_equal('-La_prefix/lib', pkg.libs_only_L)
 	assert_equal(%w{-ltest -lother}.to_set, pkg.libs_only_l.split.to_set)
         assert_equal(['a_prefix/lib'], pkg.library_dirs)
@@ -48,6 +49,7 @@ class TC_PkgConfig < Minitest::Test
     end
 
     def test_comparison_with_cpkgconfig
+        failed = false
         PkgConfig.each_package do |name|
             pkg = begin PkgConfig.new(name)
                   rescue PkgConfig::NotFound
@@ -68,18 +70,19 @@ class TC_PkgConfig < Minitest::Test
                 cpkgconfig = Shellwords.shellsplit(pkg.send("pkgconfig_#{method_name}")).to_set
                 default_paths = Utilrb::PkgConfig.default_search_path.map { |p| Regexp.quote(p.gsub(/\/pkgconfig/, '')) }.join("|")
                 pure_ruby.delete_if { |f| f=~/-[IL](#{default_paths}|\/lib)$/ }
+                cpkgconfig.delete_if { |f| f=~/-[IL](#{default_paths}|\/lib)$/ }
                 if pure_ruby != cpkgconfig
                     failed = true
                     puts "#{name} #{action_name}"
                     puts "  pure ruby:  #{pure_ruby.inspect}"
                     puts "  cpkgconfig: #{cpkgconfig.inspect}"
+                    puts "contents:"
+                    puts pkg.file.join("\n")
                 end
             end
-            if failed
-                puts "contents:"
-                puts pkg.file.join("\n")
-                assert(false, "result from pkg-config and the PkgConfig class differ")
-            end
+        end
+        if failed
+            assert(false, "result from pkg-config and the PkgConfig class differ")
         end
     end
 
@@ -100,10 +103,46 @@ class TC_PkgConfig < Minitest::Test
     end
 
     def test_missing_dependency
-        Utilrb::PkgConfig.get 'test_pkgconfig_missing_dependency'
-        flunk("Utilrb::PkgConfig.get did not raise on a missing dependency")
-    rescue Utilrb::PkgConfig::NotFound => e
+        e = assert_raises(Utilrb::PkgConfig::NotFound) do
+            Utilrb::PkgConfig.get 'test_pkgconfig_missing_dependency'
+        end
         assert e.name == "missing_dependency"
         assert e.message =~ /missing_dependency/
+    end
+
+    def test_recursively_resolves_variables_in_shell_fields
+        pkg = Utilrb::PkgConfig.get('test_pkgconfig_var_with_multiple_arguments')
+        assert_equal '-I/path', pkg.cflags_only_I
+        assert_equal '-O3', pkg.cflags_only_other
+    end
+
+    def test_dependencies_require_cflags_only_I
+        pkg = Utilrb::PkgConfig.get('test_pkgconfig_with_require')
+        assert_equal '-Iwith_requires -Ia_prefix/include',
+            pkg.cflags_only_I
+    end
+
+    def test_dependencies_require_cflags_only_other
+        pkg = Utilrb::PkgConfig.get('test_pkgconfig_with_require')
+        assert_equal '-Owith_requires -O3',
+            pkg.cflags_only_other
+    end
+
+    def test_dependencies_require_libs_only_l
+        pkg = Utilrb::PkgConfig.get('test_pkgconfig_with_require')
+        assert_equal '-lwith_requires -ltest -lother',
+            pkg.libs_only_l
+    end
+
+    def test_dependencies_require_libs_only_L
+        pkg = Utilrb::PkgConfig.get('test_pkgconfig_with_require')
+        assert_equal '-Lwith_requires -La_prefix/lib',
+            pkg.libs_only_L
+    end
+
+    def test_dependencies_require_libs_only_other
+        pkg = Utilrb::PkgConfig.get('test_pkgconfig_with_require')
+        assert_equal '-Wwith_requires -Wopt',
+            pkg.libs_only_other
     end
 end
