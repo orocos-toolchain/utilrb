@@ -84,6 +84,24 @@ class TC_Module < Minitest::Test
         assert(!parent.has_ancestor?(child))
     end
 
+    def test_has_ancestor_for_singleton_classes
+        mod       = Module.new
+        parent    = Class.new do
+            include mod
+        end
+        child     = Class.new(parent)
+        n = Module.new
+
+        assert(child.has_ancestor?(parent))
+        assert(child.has_ancestor?(mod))
+        assert(parent.has_ancestor?(mod))
+        assert(!parent.has_ancestor?(child))
+
+        obj_class = child.new.singleton_class
+        obj_class.include(n = Module.new)
+        assert obj_class.has_ancestor?(n)
+    end
+
     def test_dsl_attribute_without_filter
         obj = Class.new do
             dsl_attribute :value
