@@ -1,6 +1,6 @@
 require 'utilrb/test'
 require 'utilrb/unbound_method'
-require 'flexmock'
+require 'flexmock/minitest'
 
 class TC_UnboundMethod < Minitest::Test
     def test_call

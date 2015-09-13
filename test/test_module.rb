@@ -1,6 +1,6 @@
 require 'utilrb/test'
 
-require 'flexmock/test_unit'
+require 'flexmock/minitest'
 require 'set'
 require 'enumerator'
 require 'utilrb/module'

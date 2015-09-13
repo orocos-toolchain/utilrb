@@ -1,5 +1,5 @@
 require 'utilrb/test'
-require 'flexmock/test_unit'
+require 'flexmock/minitest'
 require 'tempfile'
 
 require 'utilrb/kernel'
@@ -199,32 +199,6 @@ class TC_Kernel < Minitest::Test
             methods = Mod::Submod::Klass.instance_methods(false).map(&:to_s)
             assert(methods.include?('my_method'), "the 'class K' statement did not refer to the already defined class")
         end
-    end
-
-    if Utilrb::RUBY_IS_18
-    def test_eval_dsl_file_does_not_allow_class_definition
-        obj = Class.new do
-            def real_method
-                @real_method_called = true
-            end
-        end.new
-
-        Tempfile.open('test_eval_dsl_file') do |io|
-            io.puts <<-EOD
-            class NewClass
-            end
-            EOD
-            io.flush
-
-            begin
-                eval_dsl_file(io.path, obj, [], false)
-                flunk("NewClass has been defined")
-            rescue NameError => e
-                assert e.message =~ /NewClass/, e.message
-                assert e.backtrace.first =~ /#{io.path}:1/, "wrong backtrace when checking constant definition detection: #{e.backtrace[0]}, expected #{io.path}:1"
-            end
-        end
-    end
     end
 
     def test_dsl_exec

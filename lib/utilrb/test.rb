@@ -16,7 +16,6 @@ end
 require 'utilrb'
 require 'minitest/autorun'
 require 'minitest/spec'
-require 'flexmock/test_unit'
 
 if ENV['TEST_ENABLE_PRY'] != '0'
     begin
@@ -40,19 +39,11 @@ module Utilrb
     #   end
     #
     module SelfTest
-        if defined? FlexMock
-            include FlexMock::ArgumentTypes
-            include FlexMock::MockContainer
-        end
-
         def setup
             # Setup code for all the tests
         end
 
         def teardown
-            if defined? FlexMock
-                flexmock_teardown
-            end
             super
             # Teardown code for all the tests
         end
@@ -60,9 +51,6 @@ module Utilrb
 end
 
 module Minitest
-    class Spec
-        include Utilrb::SelfTest
-    end
     class Test
         include Utilrb::SelfTest
     end
