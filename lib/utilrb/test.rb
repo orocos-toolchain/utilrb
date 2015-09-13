@@ -1,9 +1,16 @@
 # simplecov must be loaded FIRST. Only the files required after it gets loaded
 # will be profiled !!!
-if ENV['TEST_ENABLE_COVERAGE'] == '1'
+if ENV['TEST_ENABLE_COVERAGE'] != '0'
     begin
         require 'simplecov'
-        SimpleCov.start
+        require 'coveralls'
+        SimpleCov.formatter = SimpleCov::Formatter::MultiFormatter[
+            SimpleCov::Formatter::HTMLFormatter,
+            Coveralls::SimpleCov::Formatter
+        ]
+        SimpleCov.start do
+            add_filter "/test/"
+        end
     rescue LoadError
         require 'utilrb'
         Utilrb.warn "coverage is disabled because the 'simplecov' gem cannot be loaded"
