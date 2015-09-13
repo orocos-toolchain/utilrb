@@ -492,7 +492,7 @@ module Utilrb
                 end
                 task.queued_at = Time.now
                 @tasks_waiting << task
-                if @waiting == 0 && @spawned < @max
+                if @waiting <= @tasks_waiting.size && @spawned < @max
                     spawn_thread
                 end
                 @cond.signal
