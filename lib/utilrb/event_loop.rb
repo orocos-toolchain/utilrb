@@ -360,7 +360,7 @@ module Utilrb
             raise ArgumentError "no block given" unless block
             if delay && delay > 0
                 timer = Timer.new(self,delay,true,&block)
-                timer.start
+                timer.start(timer.period, false)
             else
                 add_event(Event.new(block))
             end
