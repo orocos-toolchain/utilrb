@@ -12,8 +12,6 @@
   
   <rosdep name="ruby"/>
   <rosdep name="facets" />
-  <rosdep name="hoe" />
-  <depend_optional package="hoe-yard" />
   <rosdep name="rake-compiler" />
   <depend_optional package="flexmock" />
 
