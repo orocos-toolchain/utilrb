@@ -5,22 +5,7 @@ if try_link("int main() { }", "-module")
     $LDFLAGS += " -module"
 end
 
-if RUBY_VERSION < "1.9"
-    $CFLAGS += " -DRUBY_IS_18"
-    puts "not building with core source"
-    create_makefile("utilrb/utilrb")
-else
-    begin
-        require 'debugger/ruby_core_source'
-        hdrs = lambda { try_compile("#include <vm_core.h>") }
-        $CFLAGS += " -DHAS_RUBY_SOURCE"
-        Debugger::RubyCoreSource.create_makefile_with_core(hdrs, "utilrb/utilrb")
-    rescue Exception
-        $CFLAGS.gsub!(/ -DHAS_RUBY_SOURCE/, '')
-        puts "not building with core source"
-        create_makefile("utilrb/utilrb")
-    end
-end
+create_makefile("utilrb/utilrb")
 
 ## WORKAROUND a problem with mkmf.rb
 # It seems that the newest version do define an 'install' target. However, that
