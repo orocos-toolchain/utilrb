@@ -53,7 +53,6 @@ static VALUE kernel_crash(VALUE klass)
 }
 
 extern "C" void Init_value_set();
-extern "C" void Init_weakref(VALUE mUtilrb);
 
 extern "C" void Init_utilrb()
 {
@@ -66,8 +65,6 @@ extern "C" void Init_utilrb()
 
     rb_define_singleton_method(rb_mKernel, "crash!", RUBY_METHOD_FUNC(kernel_crash), 0);
     rb_define_singleton_method(rb_mKernel, "immediate?", RUBY_METHOD_FUNC(kernel_is_immediate), 1);
-
-    Init_weakref(mUtilrb);
 #endif
 
     Init_value_set();
