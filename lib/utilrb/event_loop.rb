@@ -1,5 +1,18 @@
 require 'utilrb/thread_pool'
+require 'utilrb/module/attr_predicate'
+require 'utilrb/logger/root'
 
+class Proc
+    def pretty_print(pp)
+        code = File.readlines(source_location[0])
+        code_line = source_location[1]
+        code_start = [code_line - 5, 0].max
+        code[code_start, 10].each do |line|
+            pp.breakable
+            pp.text line.chomp
+        end
+    end
+end
 
 module Utilrb
     # Simple event loop which supports timers and defers blocking operations to
@@ -34,6 +47,12 @@ module Utilrb
     # 
     # @author Alexander Duda <Alexander.Duda@dfki.de>
     class EventLoop
+        extend Logger::Root("Utilrb::EventLoop", Logger::INFO)
+        include Logger::Hierarchy
+        include Logger::Forward
+
+        attr_predicate :trace?, true
+
         # Timer for the {EventLoop} which supports single shot and periodic activation
         #
         # @example
@@ -94,16 +113,15 @@ module Utilrb
             #   the timer waits until the first period passed.
             # @raise [ArgumentError] if no period is specified
             # @return [Timer]
-            def start(period = @period,instantly = true)
+            def start(period = @period, instantly = true, time = Time.now)
                 cancel
                 @stopped = false
                 @period = period
                 raise ArgumentError,"no period is given" unless @period
-                @last_call = if instantly
-                                 Time.at(0)
-                             else
-                                 Time.now
-                             end
+                @last_call = time
+                if instantly
+                    queue
+                end
                 @event_loop.add_timer self
                 self
             end
@@ -114,11 +132,7 @@ module Utilrb
             # @param [Time] time The time used for checking
             # @return [Boolean}
             def timeout?(time = Time.now)
-                if(time-@last_call).to_f >= @period
-                    true
-                else
-                    false
-                end
+                time - @last_call > @period
             end
 
             # Returns true if the timer is a single shot timer.
@@ -144,7 +158,69 @@ module Utilrb
                 @last_call = time
             end
 
+            # Queues this timer's execution for the next event loop
+            def queue(_time = Time.now)
+                @last_call = Time.at(0)
+            end
+
             alias :stop :cancel
+        end
+
+        # A timer specialized for {EventLoop#async_every}
+        class AsyncTimer < Timer
+            # The thread pool task that actually does this timer's job
+            attr_accessor :task
+
+            def initialize(event_loop,period,task)
+                super(event_loop,period)
+                @completion_blocks = Array.new
+                @task = task
+            end
+
+            # Queues this timer explicitely
+            #
+            # Unlike {Timer#queue}, the async work is scheduled right now. If
+            # we're lucky, it will be available *before* the next event loop
+            def queue(reset_time = Time.now)
+                event_loop.thread_pool << task
+                if reset_time
+                    reset(reset_time)
+                end
+            end
+
+            # Executes this timer explicitely
+            def execute(reset_time = Time.now)
+                event_loop.execute_async_timer(self)
+                if reset_time
+                    reset(reset_time)
+                end
+                if task.exception
+                    raise task.exception
+                else
+                    task.result
+                end
+            end
+
+            def finalize
+                # Allow for the completion blocks to re-add themselves
+                completion_blocks, @completion_blocks = @completion_blocks, Array.new
+                completion_blocks.each do |block|
+                    block.call
+                end
+            end
+
+            # Execute the given block the next time this timer finished its
+            # execution
+            #
+            # The block is executed in the event loop's context
+            def on_completion(&block)
+                @completion_blocks << block
+            end
+
+            # Wait for any pending execution to finish
+            def wait
+                task.wait
+            end
         end
 
         # An event loop event
@@ -156,6 +232,16 @@ module Utilrb
 
             def call
                 @block.call
+            end
+
+
+            def pretty_print(pp)
+                pp.text "Utilrb::EventLoop::Event "
+                pp.nest(2) do
+                    pp.breakable
+                    pp.text @block.to_s
+                    @block.pretty_print(pp)
+                end
             end
 
             # If called the event will be ignored and
@@ -189,7 +275,6 @@ module Utilrb
             @every_cylce_events = Set.new     # stores all events which are added to @events each step
             @on_error = {}                    # stores on error callbacks
             @errors = Queue.new               # stores errors which will be re raised at the end of the step
-            @number_of_events_to_process = 0  # number of events which are processed in the current step
             @thread_pool = ThreadPool.new
             @thread = Thread.current #the event loop thread
             @stop = nil
@@ -250,18 +335,36 @@ module Utilrb
         # @option (see #defer)
         # @return [EventLoop::Timer] The thread pool task.
         def async_every(work,options=Hash.new,*args, &callback)
-            options, async_opt = Kernel.filter_options(options,:period,:start => true)
+            options, async_opt = Kernel.filter_options options,
+                period: nil, start: true, queue: true
+
             period = options[:period]
             raise ArgumentError,"No period given" unless period
-            task = nil
-            every period ,options[:start] do
-                if !task
-                    task = async_with_options(work,async_opt,*args,&callback)
-                elsif task.finished?
+
+            timer = nil # This is set later :(
+            task = async_with_options(work, async_opt.merge(queue: false), *args) do |result, error|
+                if callback.arity == 1 && !error
+                    callback.call(result)
+                else
+                    ret = callback.call(result, error)
+                end
+                timer.finalize
+                ret
+            end
+
+            timer = AsyncTimer.new(self,period,task) do
+                if task.finished?
                     add_task task
                 end
-                task
             end
+
+            if options[:start]
+                # We never set the 'instantly flag'. If queue is true, we simply
+                # psas it to #async_with_options which will add it to the thread
+                # pool right away
+                timer.start(period, options[:queue])
+            end
+            timer
         end
 
         # Integrates a blocking operation call into the EventLoop by
@@ -300,7 +403,12 @@ module Utilrb
         # @param (see ThreadPool::Task#initialize)
         # @return [ThreadPool::Task] The thread pool task.
         def defer(options=Hash.new,*args,&block)
-            options, task_options = Kernel.filter_options(options,{:callback => nil,:known_errors => [],:on_error => nil})
+            options, task_options = Kernel.filter_options options,
+                callback: nil,
+                known_errors: Array.new,
+                on_error:nil,
+                queue: true
+
             callback = options[:callback]
             error_callback = options[:on_error]
             known_errors = Array(options[:known_errors])
@@ -310,6 +418,13 @@ module Utilrb
             if callback
                 task.callback do |result,exception|
                     once do
+                        if trace?
+                            @mutex.synchronize do
+                                info "processing callback(#{result},#{exception})"
+                                log_pp :info, callback
+                            end
+                        end
+
                         if callback.arity == 1
                             callback.call result if !exception
                         else
@@ -320,6 +435,12 @@ module Utilrb
                                             if e.is_a?(Symbol) && e == :ignore_error
                                                 nil
                                             elsif e.is_a? Exception
+                                                # If the new exception has no
+                                                # backtrace, propagate the one
+                                                # that we already have
+                                                if !e.backtrace || e.backtrace.empty?
+                                                    e.set_backtrace(exception.backtrace)
+                                                end
                                                 e
                                             else
                                                 exception
@@ -344,7 +465,7 @@ module Utilrb
                     end
                 end
             end
-            @mutex.synchronize do
+            if options[:queue]
                 @thread_pool << task
             end
             task
@@ -360,7 +481,7 @@ module Utilrb
             raise ArgumentError "no block given" unless block
             if delay && delay > 0
                 timer = Timer.new(self,delay,true,&block)
-                timer.start
+                timer.start(delay,false)
             else
                 add_event(Event.new(block))
             end
@@ -387,17 +508,41 @@ module Utilrb
             !@events.empty? || !@errors.empty?
         end
 
+        # Returns true if the next call to {step} will process something
+        #
+        # @param [Time] time the logical processing time at which timers should
+        #   be evaluated
+        #
+        # @return [Boolean]
+        def has_pending_work?(time = Time.now)
+            events? || @timers.any? { |t| t.timeout?(time) }
+        end
+
         # Adds a timer to the event loop which will execute 
         # the given code block with the given period from the
         # event loop thread.
         #
-        # @param [Float] period The period of the timer in seconds
-        # @parma [Boolean] start Startet the timerright away.
-        # @yield The code block.
-        # @return [Utilrb::EventLoop::Timer]
-        def every(period,start=true,&block)
+        # @param [Numeric] period period of the timer in seconds
+        # @param [Hash] options
+        # @option options [Boolean] start (true) enables the timer right away,
+        #   otherwise, this method is really equivalent to calling Timer.new
+        # @option options [Boolean] queue (true) if true, the timer's block will
+        #   be processed in the next event loop. Otherwise, after the first
+        #   period passed. This option has no effect if start is false.
+        # @yield a code block that should be executed periodically
+        # @return [Timer]
+        def every(period,options = Hash.new,&block)
+            # Backward compatibility
+            if !options.kind_of?(Hash)
+                options = Hash[start: !!options]
+            end
+            options = Kernel.validate_options options,
+                start: true, queue: true
+
             timer = Timer.new(self,period,&block)
-            timer.start if start # adds itself to the event loop
+            if options[:start]
+                timer.start(period,options[:queue])
+            end
             timer
         end
 
@@ -516,11 +661,9 @@ module Utilrb
         def exec(period=0.05,&block)
             @stop = false
             reset_timers
-            while !@stop
-                last_step = Time.now
-                step(last_step,&block)
-                diff = (Time.now-last_step).to_f
-                sleep(period-diff) if diff < period && !@stop
+            periodic_loop(period) do
+                return if @stop
+                step(Time.now,&block)
             end
         end
 
@@ -536,15 +679,46 @@ module Utilrb
         # @param [Float] timeout The timeout in seconds
         # @yieldreturn [Boolean]
         def wait_for(period=0.05,timeout=nil,&block)
-            start = Time.now
-            old_stop = @stop
-            exec period do
-                stop if block.call
-                if timeout && timeout <= (Time.now-start).to_f
-                    raise RuntimeError,"Timeout during wait_for"
+            time = Time.now
+            timeout =
+                if timeout
+                    time + timeout
+                end
+
+            periodic_loop(period, timeout) do
+                if process_all_pending_work(time,
+                        wait_for_threads: true,
+                        exit_condition: block)
+                    return
                 end
             end
-            @stop = old_stop
+        end
+
+        # Generic implementation of a periodic loop
+        #
+        # @param [Numeric] period the period in seconds
+        # @param [Numeric] timeout the timeout in seconds
+        def periodic_loop(period, timeout = nil)
+            if timeout
+                timeout = Time.now + timeout
+            end
+            while true
+                cycle_time = Time.now
+                if timeout && (cycle_time > timeout)
+                    return
+                end
+
+                yield
+
+                # No point in sleeping for the next period ... we're going to
+                # hit the timeout anyway
+                if timeout && (cycle_time + period > timeout)
+                    return
+                end
+
+                diff = Time.now-cycle_time
+                sleep(period-diff) if diff < period && !@stop
+            end
         end
 
         # Steps with the given period until all
@@ -578,51 +752,207 @@ module Utilrb
             raise error, error.message, error.backtrace + caller(1)
         end
 
+        # Executes a timer "as-if" it was scheduled normally
+        def execute_async_timer(timer)
+            # This one is tricky ... I hope I got it right
+            #
+            # The first thing we really need to do if flush the event loop. Any
+            # that has been schedule before now has to be processed to ensure
+            # that we're in the state the caller expects us to be in.  We don't
+            # process every_cycle / timers, as they can't be meaningful w.r.t.
+            # what the timer we want to execute (the order in their case is not
+            # guaranteed)
+            #
+            # Then we can actually execute the timer's asynchronous task
+            #
+            # *Then* we need to execute the timer's completion callbacks. For
+            # now, let's be content with re-flushing the event queue. A better
+            # option would be to be able to process only the callback.
+            #
+            # Note that #sync_task will raise the exception raised by the task's
+            # work block, so no need to flush the exceptions from the event
+            # queue
+
+            process_events(false)
+            thread_pool.sync_task(timer.task)
+            timer.finalize
+            process_events(false)
+        end
+
+        # Execute a single event
+        def process_event(event)
+            if !event.ignore?
+                if trace?
+                    @mutex.synchronize do
+                        info "executing"
+                        log_pp(:info, event)
+                    end
+                end
+                handle_errors{event.call}
+            end
+        end
+
+        # Execute the events registered by {every_cycle}
+        def process_every_cycle_events
+            events = @mutex.synchronize do
+                @every_cylce_events.delete_if(&:ignore?)
+                @every_cylce_events.dup
+            end
+            events.each do |ev|
+                process_event(ev)
+            end
+        end
+
+        # Execute the single-shot events registered with {add_event}
+        #
+        # @param [Boolean] process_new_events if true, new events
+        #   that are added while processing get processed as well. If false,
+        #   only the events that have been queued before the call of this method
+        #   are processed.
+        def process_events(process_new_events)
+            if process_new_events
+                max = @events.size
+            end
+
+            counter = 0
+            while !max || max > counter
+                event = @events.pop(true)
+                process_event(event)
+                counter += 1
+            end
+        rescue ThreadError
+        end
+
+        # Execute the timers
+        def process_timers(time)
+            timers = @mutex.synchronize do
+                timed_out = Array.new
+                @timers.delete_if do |timer|
+                    if !timer.stopped? && timer.timeout?(time)
+                        timed_out << timer
+                        timer.single_shot?
+                    end
+                end
+                timed_out
+            end
+            timers.each do |timer|
+                if trace?
+                    info "executing timer #{timer}"
+                end
+                handle_errors{timer.call(time)}
+            end
+        end
+
+        def with_error_handling
+            reraise_error(@errors.shift) if !@errors.empty?
+            yield
+            reraise_error(@errors.shift) if !@errors.empty?
+        end
+
         # Handles all current events and timers. If a code
         # block is given it will be executed at the end.
         #
         # @param [Time] time The time the step is executed for.
         # @yield The code block
-        def step(time = Time.now,&block)
+        def step(time = Time.now,options=Hash.new,&block)
+            options = Kernel.validate_options options,
+                process_every: true
             validate_thread
-            reraise_error(@errors.shift) if !@errors.empty?
 
-            #copy all work otherwise it would not be allowed to 
-            #call any event loop functions from a timer
-            timers,call = @mutex.synchronize do
-                                    @every_cylce_events.delete_if(&:ignore?)
-                                    @every_cylce_events.each do |event|
-                                        add_event event
-                                    end
-
-                                    # check all timers
-                                    temp_timers = @timers.find_all do |timer|
-                                        timer.timeout?(time)
-                                    end
-                                    # delete single shot timer which elapsed
-                                    @timers -= temp_timers.find_all(&:single_shot?)
-                                    [temp_timers,block]
-                                end
-
-            # handle all current events but not the one which are added during processing.
-            # Step is recursively be called if wait_for is used insight an event code block.
-            # To make sure that all events and timer are processed in the right order
-            # @number_of_events_to_process and a second timeout check is used.
-            @number_of_events_to_process = [@events.size,@number_of_events_to_process].max
-            while @number_of_events_to_process > 0
-                event = @events.pop
-                @number_of_events_to_process -= 1
-                handle_errors{event.call} unless event.ignore?
+            with_error_handling do
+                process_events(false)
+                process_every_cycle_events
+                process_timers(time)
             end
-            timers.each do |timer|
-                next if timer.stopped?
-                handle_errors{timer.call(time)} if timer.timeout?(time)
-            end
-            handle_errors{call.call} if call
-            reraise_error(@errors.shift) if !@errors.empty?
             
             #allow thread pool to take over
             Thread.pass
+        end
+
+        # Wait for all the async work currently queued to finish processing
+        #
+        # This does not call {step}, so if you want the async processing
+        # callbacks to be execxuted you must call step explicitly just after
+        def process_all_async_work
+            thread_pool.process_all_pending_work
+        end
+
+        # Process all events that can be processed until none are left
+        #
+        # @param [Hash] options
+        # @option options [Boolean] wait_for_threads (false) if true, the loop
+        #   will wait for all threads in the thread pool to finish all pending
+        #   work before returning
+        # @option options [#call] exit_condition a block that will be used to
+        #   terminate the processing early. The block should return true if the
+        #   exit condition is reached and false otherwise
+        # @return[Boolean] true if the exit condition was reached and false if
+        #   the call terminated because all pending work has been performed.
+        def process_all_pending_work(time = Time.now, options = Hash.new)
+            validate_thread
+            options = Kernel.validate_options options,
+                wait_for_threads: false,
+                exit_condition: proc { false }
+            exit_condition = options[:exit_condition]
+
+            cycle, subcycle = 0, 0
+
+            # Start pumping by executing a full step
+            with_error_handling do
+                if trace?
+                    info "process_all_pending_work: executing initial cycle #{cycle}.#{subcycle}"
+                end
+                log_nest(2) do
+                    process_events(true)
+                    process_every_cycle_events
+                    process_timers(time)
+                end
+            end
+
+            while true
+                cycle, subcycle = cycle + 1, 0
+                while has_pending_work?(time)
+                    if exit_condition.call
+                        return true
+                    end
+
+                    if trace?
+                        info "process_all_pending_work: executing #{cycle}.#{subcycle}"
+                    end
+
+                    with_error_handling do
+                        log_nest(2) do
+                            process_events(true)
+                            process_timers(time)
+                        end
+                    end
+                    subcycle += 1
+                end
+
+                if exit_condition.call
+                    return true
+                end
+
+                if options[:wait_for_threads]
+                    if trace?
+                        info "process_all_pending_work: waiting for #{thread_pool.backlog + thread_pool.running} tasks to queue more work after #{cycle}.#{subcycle}"
+                    end
+                    thread_pool.wait_for do
+                        # A thread finished and queued some work in the meantime
+                        has_pending_work?(time)
+                    end
+                end
+
+                if exit_condition.call
+                    return true
+                elsif !has_pending_work?(time)
+                    return false
+                end
+            end
+        ensure
+            if trace?
+                info "process_all_pending_work: done"
+            end
         end
 
         # Adds a timer to the event loop
@@ -641,6 +971,12 @@ module Utilrb
         # @param [Boolean] every_step Automatically added for every step
         def add_event(event,every_step = false)
             raise ArgumentError "cannot add event which is ignored." if event.ignore?
+            if trace?
+                @mutex.synchronize do
+                    info "adding #{event}"
+                    log_pp(:info, event)
+                end
+            end
             if every_step
                 @mutex.synchronize do
                     @every_cylce_events << event
@@ -679,7 +1015,7 @@ module Utilrb
         def handle_error(error,save = true)
             call do
                 on_error = @mutex.synchronize do
-                    @on_error.find_all{|key,e| error.is_a? key}.map(&:last).flatten
+                    @on_error.find_all{|key,e| key === error}.map(&:last).flatten
                 end
                 on_error.each do |handler|
                     handler.call error
@@ -872,11 +1208,12 @@ module Utilrb
 
 
                 def self.def_event_loop_delegator(klass,accessor,event_loop, method, options = Hash.new )
-                    options = Kernel.validate_options options, :filter => nil,
-                                                               :alias => method,
-                                                               :sync_key => :accessor,
-                                                               :known_errors => nil,
-                                                               :on_error => nil
+                    options = Kernel.validate_options options,
+                        filter: nil,
+                        alias: method,
+                        sync_key: :accessor,
+                        known_errors: nil,
+                        on_error: nil
 
                     raise ArgumentError, "accessor is nil" unless accessor
                     raise ArgumentError, "event_loop is nil" unless event_loop
@@ -904,15 +1241,15 @@ module Utilrb
                                           else
                                                 accessor.to_s
                                           end}
+                        if !accessor
+                            error ||= DesignatedObjectNotFound.new 'designated object is nil'
+                            raise error
+                        end
+
                         if !block
                             begin
-                                if !accessor
-                                    error ||= DesignatedObjectNotFound.new 'designated object is nil'
-                                    raise error
-                                else
-                                    result = #{sync_key != :nil ? "#{event_loop}.sync(#{sync_key}){accessor.__send__(:#{method}, *args)}" : "accessor.__send__(:#{method}, *args)"}
-                                    #{filter ? "#{filter}(result)" : "result"}
-                                end
+                                result = #{sync_key != :nil ? "#{event_loop}.sync(#{sync_key}){accessor.__send__(:#{method}, *args)}" : "accessor.__send__(:#{method}, *args)"}
+                                #{filter ? "#{filter}(result)" : "result"}
                             rescue Exception => error
                                 #{"#{on_error}(error)" if on_error}
                                 raise error
@@ -927,7 +1264,7 @@ module Utilrb
                                             raise DesignatedObjectNotFound,'designated object is nil'
                                         end
                                     else
-                                        acc.__send__(:#{method}, *callback_args, &block)
+                                        acc.__send__(:#{method}, *callback_args)
                                     end
                                 end
                             callback = #{filter ? "block.to_proc.arity == 2 ? Proc.new { |r,e| block.call(#{filter}(r),e)} : Proc.new {|r| block.call(#{filter}(r))}" : "block"}

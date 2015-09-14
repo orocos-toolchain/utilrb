@@ -68,6 +68,7 @@ class TC_PkgConfig < Minitest::Test
                 cpkgconfig = Shellwords.shellsplit(pkg.send("pkgconfig_#{method_name}")).to_set
                 default_paths = Utilrb::PkgConfig.default_search_path.map { |p| Regexp.quote(p.gsub(/\/pkgconfig/, '')) }.join("|")
                 pure_ruby.delete_if { |f| f=~/-[IL](#{default_paths}|\/lib)$/ }
+                cpkgconfig.delete_if { |f| f=~/-[IL](#{default_paths}|\/lib)$/ }
                 if pure_ruby != cpkgconfig
                     failed = true
                     puts "#{name} #{action_name}"

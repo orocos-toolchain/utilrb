@@ -390,7 +390,7 @@ module Utilrb
         end
 
         def libs_only_other(static = false)
-            @ldflags[static].find_all { |s| s !~ /^-[lL]/ }.join(" ")
+            @ldflags_with_requires[static].find_all { |s| s !~ /^-[lL]/ }.join(" ")
         end
 
 	def method_missing(varname, *args, &proc) # :nodoc:

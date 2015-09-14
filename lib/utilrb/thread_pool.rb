@@ -26,6 +26,9 @@ module Utilrb
         # @author Alexander Duda <Alexander.Duda@dfki.de>
         class Task
             Asked = Class.new(Exception)
+            # Raised by {acquire} if the task is already in use
+            class AlreadyInUse < Exception
+            end
 
             # The sync key is used to speifiy that a given task must not run in
             # paralles with another task having the same sync key. If no key is
@@ -75,6 +78,11 @@ module Utilrb
             # Custom description which can be used
             # to store a human readable object
             attr_accessor :description
+
+            # Checks if the task has been queued
+            #
+            # @return [Boolean]
+            def queued?; !!@queued_at end
 
             # Checks if the task was started
             #
@@ -138,24 +146,23 @@ module Utilrb
                 @mutex = Mutex.new
                 @pool = nil
                 @state_temp = nil
-                @state = nil
-                reset
+                @termination_signal = nil
+                @termination_signals = Set.new
+                acquire(nil)
             end
 
-            # Resets the tasks.
-            # This can be used to requeue a task that is already finished
-            def reset
-                if finished? || !started?
-                    @mutex.synchronize do
+            def acquire(queueing_time = Time.now)
+                @mutex.synchronize do
+                    if finished? || !queued?
                         @result = @default
                         @state = :waiting
                         @exception = nil
                         @started_at = nil
-                        @queued_at = nil
+                        @queued_at = queueing_time
                         @stopped_at = nil
+                    else
+                        raise AlreadyInUse, "cannot reset a task which is queued and not finished"
                     end
-                else
-                    raise RuntimeError,"cannot reset a task which is not finished"
                 end
             end
 
@@ -214,14 +221,73 @@ module Utilrb
                 rescue Exception => e
                     ThreadPool.report_exception("thread_pool: in #{self}, callback #{@callback} failed", e)
                 end
+                notify_termination
             end
 
             # Terminates the task if it is running
+            #
+            # This will forcefully raise an exception in the execution thread,
+            # which is dangerous. Use {terminate} instead unless you know what
+            # you are doing
             def terminate!(exception = Asked)
                 @mutex.synchronize do
                     return unless running?
                     @state = :stopping
                     @thread.raise exception
+                end
+            end
+
+            # Registers a signal to use to notify the caller that the task
+            # finished
+            #
+            # @param [#broadcast] signal the object that will do the signalling
+            #   (usually a {ConditionVariable} object). Set to nil if none is
+            #   needed
+            # @param [Mutex,nil] mutex a lock to acquire while signalling
+            # @yield a context in which the mutex is taken and the signal
+            #   registered
+            #
+            # As an example, see ThreadPool#wait
+            def register_termination_notification(signal, mutex = nil, &block)
+                @termination_signals << [signal, mutex]
+                yield
+            ensure
+                @termination_signals.delete([signal, mutex])
+            end
+
+            # Notifies that the task has finished using the notification objects
+            # registered with {register_termination_notification}
+            #
+            # This must be called in a context where the internal
+            # synchronization mutex is finished
+            def notify_termination
+                signals = @mutex.synchronize do
+                    signals, @termination_signals = @termination_signals, Array.new
+                    signals
+                end
+                signals.each do |signal, mutex|
+                    if mutex
+                        mutex.synchronize { signal.broadcast }
+                    else
+                        signal.broadcast
+                    end
+                end
+            end
+
+            # Wait for this task to finish working
+            #
+            # @param [ConditionVariable,nil] signal the condition variable that
+            #   should be used to notify the caller
+            def wait
+                @mutex.synchronize do
+                    @termination_signal ||= ConditionVariable.new
+                    register_termination_notification(@termination_signal, @mutex) do
+                        return if finished?
+                        while true
+                            @termination_signal.wait(@mutex)
+                            return if finished?
+                        end
+                    end
                 end
             end
 
@@ -253,18 +319,37 @@ module Utilrb
 
         # The minimum number of worker threads.
         #
-        # @return [Fixnum]
+        # @return [Integer]
         attr_reader :min
 
         # The maximum number of worker threads.
         #
-        # @return [Fixnum]
+        # @return [Integer]
         attr_reader :max
 
-        # The real number of worker threads.
+        # The number of worker threads that have been spawned so far
         #
-        # @return [Fixnum]
-        attr_reader :spawned
+        # @return [Integer]
+        # @see waiting_threads
+        def spawned_threads
+            @mutex.synchronize do
+                @workers.size
+            end
+        end
+
+        def spawned
+            spawned_threads
+        end
+
+        # The number of threads that are waiting for work
+        #
+        # @return [Integer]
+        # @see spawned_threads
+        def waiting_threads
+            @mutex.synchronize do
+                @waiting
+            end
+        end
 
         # The number of worker threads waiting for work.
         #
@@ -306,7 +391,6 @@ module Utilrb
             @avg_wait_time = 0          # average time a task has to wait for execution in s [Float]
 
             @workers = []               # thread pool
-            @spawned = 0
             @waiting = 0
             @shutdown = false
             @callback_on_task_finished = nil
@@ -353,28 +437,61 @@ module Utilrb
         # @return [boolean]
         def shutdown?; @shutdown; end
 
+        # Disable all processing
+        def disable_processing
+            @__max, @__min = @max, @min
+            resize(0, 0)
+        end
+
+        # Enable all processing
+        def enable_processing
+            resize(@__max, @__min)
+        end
+
         # Changes the minimum and maximum number of threads
         #
         # @param [Fixnum] min the minimum number of threads
         # @param [Fixnum] max the maximum number of threads
-        def resize (min, max = nil)
+        def resize (min, max = min)
+            if max < min
+                raise ArgumentError, "max number of threads (#{max}) is lower than min (#{min})"
+            end
+
             @mutex.synchronize do
-                @min = min
-                @max = max || min
-                count = [@tasks_waiting.size,@max].min
-                0.upto(count) do 
-                    spawn_thread
+                @min, @max = min, max
+
+                if @workers.size >= @max
+                    too_many = (@workers.size - @max)
+                    if @trim_requests != too_many
+                        @trim_requests = too_many
+                        if too_many > 0
+                            @cond.broadcast
+                        end
+                    end
+                else
+                    threads_needed = [@max, @tasks_waiting.size + @workers.size].min
+                    threads_needed = [@min, threads_needed].max
+                    spawn_needed = [threads_needed - @workers.size, 0].max
+                    spawn_needed.times do
+                        spawn_thread
+                    end
                 end
             end
-            trim true
         end
 
         # Number of tasks waiting for execution
         # 
         # @return [Fixnum] the number of tasks
         def backlog
-           @mutex.synchronize do 
+            @mutex.synchronize do
                 @tasks_waiting.length
+            end
+        end
+
+        # Number of tasks that are currently running
+        def running
+            @mutex.synchronize do
+                @tasks_running.size
             end
         end
 
@@ -383,7 +500,7 @@ module Utilrb
         # @return [Array<Task>] The tasks
         def tasks
             @mutex.synchronize do
-                 @tasks_running.dup + @tasks_waiting.dup
+                @tasks_running.dup + @tasks_waiting.dup
             end
         end
 
@@ -402,7 +519,7 @@ module Utilrb
         # @return [Boolean]
         def process?
             @mutex.synchronize do
-                 waiting != spawned || @tasks_waiting.length > 0
+                 waiting != @workers.size || @tasks_waiting.length > 0
             end
         end
 
@@ -429,13 +546,14 @@ module Utilrb
         # @yield [*args] the code block block 
         # @return [Object] The result of the code block
         def sync(sync_key,*args,&block)
-            raise ArgumentError,"no sync key" unless sync_key
-
-            @mutex.synchronize do
-                while(!@sync_keys.add?(sync_key))
-                    @cond_sync_key.wait @mutex #wait until someone has removed a key
+            if sync_key
+                @mutex.synchronize do
+                    while(!@sync_keys.add?(sync_key))
+                        @cond_sync_key.wait @mutex #wait until someone has removed a key
+                    end
                 end
             end
+
             begin
                 result = block.call(*args)
             ensure
@@ -479,20 +597,31 @@ module Utilrb
             result
         end
 
+        # Execute a task synchronously
+        def sync_task(task)
+            sync(task.sync_key) do
+                task.pre_execute
+                task.execute
+                task.finalize
+            end
+        end
+
         # Processes the given {Task} as soon as the next thread is available
         # 
         # @param [Task] task The task.
         # @return [Task]
         def <<(task)
-            raise "cannot add task #{task} it is still running" if task.thread
-            task.reset if task.finished?
             @mutex.synchronize do
+                task.acquire(Time.now)
+
                 if shutdown? 
                     raise "unable to add work while shutting down"
                 end
                 task.queued_at = Time.now
                 @tasks_waiting << task
-                if @waiting == 0 && @spawned < @max
+
+                tasks_size = (@tasks_waiting.size + @tasks_running.size)
+                while @workers.size < @max && @workers.size < tasks_size
                     spawn_thread
                 end
                 @cond.signal
@@ -500,36 +629,41 @@ module Utilrb
             task
         end
 
-        # Trims the number of threads if threads are waiting for work and 
-        # the number of spawned threads is higher than the minimum number.
-        #
-        # @param [boolean] force Trim even if no thread is waiting.
-        def trim (force = false)
-            @mutex.synchronize do
-                if (force || @waiting > 0) && @spawned - @trim_requests > @min
-                    @trim_requests += 1
-                    @cond.signal
-                end
-            end
-            self
-        end
-
         # Shuts down all threads.
         #
         def shutdown()
-            tasks = nil
             @mutex.synchronize do
                 @shutdown = true
             end
             @cond.broadcast
         end
 
+        # The current list of threads created by the pool
+        #
+        # It is a copy of the actual list, and can only be interpreted as a
+        # "snapshot" of the actual list as the pool might change the list
+        # between the call and the time you evaluate the list.
+        def workers
+            @mutex.synchronize do
+                @workers.dup
+            end
+        end
 
         # Blocks until all threads were terminated.
         # This does not terminate any thread by itself and will block for ever
         # if shutdown was not called.
         def join
-            @workers.first.join until @workers.empty?
+            while true
+                if !@shutdown
+                    raise ArgumentError, "#join called without calling #shutdown"
+                end
+
+                w = @mutex.synchronize do
+                    @workers.first
+                end
+                return if !w
+                w.join
+            end
             self
         end
 
@@ -545,68 +679,186 @@ module Utilrb
             end
         end
 
+        def process_all_pending_work
+            signal = ConditionVariable.new
+            while true
+                @mutex.synchronize do
+                    all_tasks = @tasks_waiting + @tasks_running
+                    return if all_tasks.empty?
+                    all_tasks.first.register_termination_notification(signal, @mutex) do
+                        signal.wait(@mutex)
+                    end
+                end
+            end
+        end
+
+        # Wait for a condition related to the end of a task
+        #
+        # This method waits for a condition to become true, checking each time a
+        # task finishes (i.e. it is assumed that the condition will be met
+        # because of a task's end)
+        #
+        # @return [Boolean] true if the condition was met, false if it was not
+        #   *and* there were no tasks left
+        def wait_for
+            @mutex.synchronize do
+                if yield
+                    return true
+                end
+
+                all_tasks = @tasks_waiting + @tasks_running
+                return false if all_tasks.empty?
+
+                signal = ConditionVariable.new
+                wait_for_setup_notification(signal, @mutex, *all_tasks) do
+                    # Note that the tasks in +all_tasks+ cannot have changed
+                    # state while we were setting this up
+                    while true
+                        signal.wait(@mutex)
+                        if yield
+                            return true
+                        end
+                    end
+                end
+            end
+            false
+        end
+
+        # Wait for one task to finish
+        #
+        # It returns right away if there is no pending work. Otherwise, it waits
+        # for one of the waiting or running tasks to finish and returns then
+        #
+        # @yield the method yields in a context where it is safe to check
+        #   whether what you want from the tasks has happened between the time
+        #   where you checked it last and the time you called {wait_for_one}.
+        #   Note that you should probably not call any method from the event
+        #   loop itself in this context, as most of them are synchronized.
+        #
+        # @return [Boolean] true if there were pending tasks and false otherwise
+        #
+        # @example To properly use this method, you have to make sure that
+        #   whatever you want from pending tasks did not already happen by
+        #   providing a block
+        #
+        #   thread_pool.wait_for_one do
+        #     break if what_I_am_really_waiting_for_happened?
+        #   end
+        # 
+        def wait_for_one
+            all_tasks = @mutex.synchronize do
+                @tasks_waiting + @tasks_running
+            end
+
+            wait_for do
+                all_tasks.any?(&:finished?)
+            end
+        end
+
         private
+
+        # Helper method for {wait_for_one} that sets up the notification
+        def wait_for_setup_notification(signal, mutex, task, *tasks, &block)
+            task.register_termination_notification(signal, mutex) do
+                if tasks.empty?
+                    yield
+                else
+                    wait_for_setup_notification(signal, mutex, *tasks, &block)
+                end
+            end
+        end
 
         #calculates the moving average 
         def moving_average(current_val,new_val)
             return new_val if current_val == 0
             current_val * 0.95 + new_val * 0.05
         end
+
+        def thread_find_one_task
+            task, idx = @tasks_waiting.each_with_index.find do |t, _|
+                !t.sync_key || @sync_keys.add?(t.sync_key)
+            end
+            if task
+                @tasks_waiting.delete_at(idx)
+                @tasks_running << task
+                task
+            end
+        end
+
+        # Waits for work to be available or thread termination
+        #
+        # If work is available, it acquires the task (calling
+        # {Task#pre_execute}) and returns it
+        #
+        # It must be called with the main synchronization mutex taken
+        #
+        # @return [Task,nil] the task to be processed, or nil if the thread
+        #   should be terminated
+        def thread_get_work
+            while !shutdown?
+                if @trim_requests > 0
+                    @trim_requests -= 1
+                    return
+                end
+
+                if task = thread_find_one_task
+                    task.pre_execute(self)
+                    @avg_wait_time = moving_average(@avg_wait_time,
+                                                    Time.now-task.queued_at)
+                    return task
+                end
+
+                # Nothing to do ... check whether the thread should trim itself
+                if auto_trim && @workers.size > @min
+                    return
+                end
+
+                @waiting += 1
+                @cond.wait @mutex
+                @waiting -= 1
+            end
+        end
+
+        def thread_execute_task(task)
+            task.execute
+        rescue Exception => e
+            ThreadPool.report_exception(nil, e)
+        ensure
+            @mutex.synchronize do
+                @tasks_running.delete task
+                @sync_keys.delete(task.sync_key) if task.sync_key
+                @avg_run_time = moving_average(
+                    @avg_run_time,
+                    task.stopped_at-task.started_at)
+            end
+            if task.sync_key
+                @cond_sync_key.signal
+                @cond.signal # maybe another thread is waiting for a sync key
+            end
+            task.finalize # propagate state after it was deleted from the internal lists
+            @callback_on_task_finished.call(task) if @callback_on_task_finished
+        end
+
+        def thread_main_loop
+            while true
+                current_task = @mutex.synchronize do
+                    thread_get_work
+                end
+                return if !current_task
+                thread_execute_task(current_task)
+            end
+        end
         
         # spawns a worker thread
         # must be called from a synchronized block
         def spawn_thread
             thread = Thread.new do
-                while !shutdown? do
-                    current_task = @mutex.synchronize do
-                        while !shutdown?
-                            task = @tasks_waiting.each_with_index do |t,i|
-                                if !t.sync_key || @sync_keys.add?(t.sync_key)
-                                    @tasks_waiting.delete_at(i)
-                                    t.pre_execute(self) # block tasks so that no one is using it at the same time
-                                    @tasks_running << t
-                                    @avg_wait_time = moving_average(@avg_wait_time,(Time.now-t.queued_at))
-                                    break t
-                                end
-                            end
-                            break task unless task.is_a? Array
+                thread_main_loop
 
-                            if @trim_requests > 0
-                                @trim_requests -= 1
-                                break
-                            end
-                            @waiting += 1
-                            @cond.wait @mutex
-                            @waiting -= 1
-                        end or break
-                    end or break
-                    begin
-                        current_task.execute
-                    rescue Exception => e
-                        ThreadPool.report_exception(nil, e)
-                    ensure
-                        @mutex.synchronize do
-                            @tasks_running.delete current_task
-                            @sync_keys.delete(current_task.sync_key) if current_task.sync_key
-                            @avg_run_time = moving_average(@avg_run_time,(current_task.stopped_at-current_task.started_at))
-                        end
-                        if current_task.sync_key
-                            @cond_sync_key.signal
-                            @cond.signal # maybe another thread is waiting for a sync key
-                        end
-                        current_task.finalize # propagate state after it was deleted from the internal lists
-                        @callback_on_task_finished.call(current_task) if @callback_on_task_finished
-                    end
-                    trim if auto_trim
+                @mutex.synchronize do
+                    @workers.delete thread
                 end
-
-                # we do not have to lock here
-                # because spawn_thread must be called from
-                # a synchronized block
-                @spawned -= 1
-                @workers.delete thread
             end
-            @spawned += 1
             @workers << thread
         rescue Exception => e
             ThreadPool.report_exception(nil, e)
