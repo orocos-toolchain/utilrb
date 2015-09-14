@@ -1,5 +1,4 @@
 require 'utilrb/common'
-require 'utilrb/object/singleton_class'
 require 'utilrb/kernel/with_module'
 
 module Kernel
