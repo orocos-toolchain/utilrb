@@ -1,12 +1,8 @@
+require 'utilrb/version'
 
 # Utilrb is yet another Ruby toolkit, in the spirit of facets. It includes all
 # the standard class extensions used by www.rock-robotics.org projects.
 module Utilrb
-    unless defined? Utilrb::VERSION
-	VERSION = "2.0.1"
-        RUBY_IS_18  = (RUBY_VERSION < "1.9.0")
-    end
-
     LIB_DIR = File.expand_path(File.dirname(__FILE__))
 
     unless defined? UTILRB_EXT_MODE

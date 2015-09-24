@@ -10,3 +10,4 @@ tmp/
 .yardoc
 lib/utilrb/utilrb.so
 pkg/
+/vendor/

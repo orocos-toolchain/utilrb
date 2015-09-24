@@ -1,7 +1,6 @@
 require 'facets/module/spacename'
 require 'facets/kernel/constant'
 require 'utilrb/object/attribute'
-require 'utilrb/object/singleton_class'
 require 'utilrb/logger/forward'
 
 class Logger

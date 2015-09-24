@@ -11,9 +11,8 @@
   <license>CeCILL-B (BSD-like)</license>
   
   <rosdep name="ruby"/>
+  <rosdep name="bundler"/>
   <rosdep name="facets" />
-  <rosdep name="hoe" />
-  <depend_optional package="hoe-yard" />
   <rosdep name="rake-compiler" />
   <test_depend package="flexmock" />
 

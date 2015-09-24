@@ -1,68 +1,36 @@
-require 'utilrb/common'
-require 'utilrb/object/singleton_class'
+class Object
+    # call-seq:
+    #   attribute :name => default_value
+    #   attribute(:name) { default_value }
+    #
+    # In the first form, defines a read-write attribute
+    # named 'name' with default_value for default value.
+    # In the second form, the block is called if the attribute
+    # is read before it has been ever written, and its return
+    # value is used as default value.
+    def attribute(attr_def, &init) # :nodoc:
+        if Hash === attr_def
+            name, defval = attr_def.to_a.flatten
+        else
+            name = attr_def
+        end
 
-Utilrb.unless_ext do
-    class Object
-	# call-seq:
-	#   attribute :name => default_value
-	#   attribute(:name) { default_value }
-	#
-	# In the first form, defines a read-write attribute
-	# named 'name' with default_value for default value.
-	# In the second form, the block is called if the attribute
-	# is read before it has been ever written, and its return
-	# value is used as default value.
-	def attribute(attr_def, &init)
-	    if Hash === attr_def
-		name, defval = attr_def.to_a.flatten
-	    else
-		name = attr_def
-	    end
+        class_eval do
+            attr_writer name
+            if !defval && init
+                define_method("#{name}_defval", &init)
+            else
+                define_method("#{name}_defval") { defval }
+            end
+        end
 
-	    class_eval do
-		attr_writer name
-		define_method("#{name}_defval") do
-		    defval || (instance_eval(&init) if init)
-		end
-	    end
-
-	    class_eval <<-EOD, __FILE__, __LINE__+1
-	    def #{name}
-		if defined? @#{name} then @#{name}
-		else @#{name} = #{name}_defval
-		end
-	    end
-	    EOD
-	end
-    end
-end
-
-Utilrb.if_ext do
-    class Object
-	def attribute(attr_def, &init) # :nodoc:
-	    if Hash === attr_def
-		name, defval = attr_def.to_a.flatten
-	    else
-		name = attr_def
-	    end
-
-	    class_eval do
-		attr_writer name
-		if !defval && init
-		    define_method("#{name}_defval", &init)
-		else
-		    define_method("#{name}_defval") { defval }
-		end
-	    end
-
-	    class_eval <<-EOD, __FILE__, __LINE__+1
-	    def #{name}
-		if instance_variable_defined?(:@#{name}) then @#{name}
-		else @#{name} = #{name}_defval
-		end
-	    end
-	    EOD
-	end
+        class_eval <<-EOD, __FILE__, __LINE__+1
+        def #{name}
+            if instance_variable_defined?(:@#{name}) then @#{name}
+            else @#{name} = #{name}_defval
+            end
+        end
+        EOD
     end
 end
 

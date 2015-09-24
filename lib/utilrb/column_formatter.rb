@@ -1,3 +1,6 @@
+puts "WARN: ColumnFormatter is deprecated, use the tty-table gem which provides"
+puts "WARN: more functionality in a much nicer API"
+
 # Displays a set of data into a column-formatted table
 class ColumnFormatter
     MARGIN       = 1

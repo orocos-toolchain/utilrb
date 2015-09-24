@@ -1,6 +1,6 @@
 require 'utilrb/test'
 require 'utilrb/logger'
-require 'flexmock/test_unit'
+require 'flexmock/minitest'
 
 class TC_Logger < Minitest::Test
     module Root
