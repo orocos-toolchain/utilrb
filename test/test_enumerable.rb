@@ -1,7 +1,5 @@
 require 'utilrb/test'
-
 require 'utilrb/enumerable'
-require 'utilrb/value_set'
 
 class TC_Enumerable < Minitest::Test
 
