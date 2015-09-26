@@ -28,19 +28,6 @@ static VALUE enumerable_each_uniq(VALUE self)
     return self;
 }
 
-/* call-seq:
- *  Kernel.is_singleton?(object)
- *
- * Returns true if +self+ is a singleton class 
- */
-static VALUE kernel_is_singleton_p(VALUE self)
-{
-    if (BUILTIN_TYPE(self) == T_CLASS && FL_TEST(self, FL_SINGLETON))
-	return Qtrue;
-    else
-	return Qfalse;
-}
-
 static VALUE kernel_is_immediate(VALUE klass, VALUE object)
 { return IMMEDIATE_P(object) ? Qtrue : Qfalse; }
 #endif
@@ -60,9 +47,6 @@ extern "C" void Init_utilrb()
 
 #ifndef RUBINIUS
     rb_define_method(rb_mEnumerable, "each_uniq", RUBY_METHOD_FUNC(enumerable_each_uniq), 0);
-    if (!rb_respond_to(rb_mEnumerable, rb_intern("singleton_class?")))
-        rb_define_method(rb_cModule, "singleton_class?", RUBY_METHOD_FUNC(kernel_is_singleton_p), 0);
-
     rb_define_singleton_method(rb_mKernel, "crash!", RUBY_METHOD_FUNC(kernel_crash), 0);
     rb_define_singleton_method(rb_mKernel, "immediate?", RUBY_METHOD_FUNC(kernel_is_immediate), 1);
 #endif

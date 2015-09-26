@@ -122,11 +122,12 @@ class TC_Module < Minitest::Test
         assert_equal 20, obj.value
     end
 
-    def test_is_singleton
+    def test_singleton_class_p
         m = Module.new
-        assert !m.is_singleton?
+        assert !m.singleton_class?
         s = Object.new.singleton_class
-        assert s.is_singleton?
+        assert s.singleton_class?
+        assert s.singleton_class?
     end
 end
 
