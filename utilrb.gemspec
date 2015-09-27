@@ -14,8 +14,7 @@ Gem::Specification.new do |s|
     s.licenses = ["BSD"]
 
     s.require_paths = ["lib"]
-    s.extensions = ['ext/utilrb/extconf.rb']
-    s.extra_rdoc_files = ["History.txt", "License.txt", "Manifest.txt", "History.txt"]
+    s.extra_rdoc_files = ["License.txt"]
     s.files         = `git ls-files -z`.split("\x0").reject { |f| f.match(%r{^(test|spec|features)/}) }
 
     s.add_runtime_dependency "facets", ">= 2.4.0"
