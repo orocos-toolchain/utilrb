@@ -11,3 +11,6 @@ tmp/
 lib/utilrb/utilrb.so
 pkg/
 /vendor/
+/.bundle/
+/Gemfile.lock
+
