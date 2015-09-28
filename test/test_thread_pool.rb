@@ -59,14 +59,16 @@ module AsyncWorkHelper
         block.call
     end
 
-    def synchronized_work
-        mutex.synchronize do
-            @active_synchronized_workers_count += 1
-            begin
-                cv.wait(mutex)
-            ensure
-                @active_synchronized_workers_count -= 1
-            end
+    def synchronized_work(already_locked: false)
+        if !already_locked
+            return mutex.synchronize { synchronized_work(already_locked: true) }
+        end
+
+        @active_synchronized_workers_count += 1
+        begin
+            cv.wait(mutex)
+        ensure
+            @active_synchronized_workers_count -= 1
         end
     end
 
@@ -100,9 +102,12 @@ describe Utilrb::ThreadPool do
                 @spawned_synchronized_workers_count += 1
             end
             spawner.call(pool) do
-                synchronized_work
                 mutex.synchronize do
-                    @spawned_synchronized_workers_count -= 1
+                    begin
+                        synchronized_work(already_locked: true)
+                    ensure
+                        @spawned_synchronized_workers_count -= 1
+                    end
                 end
             end
         end
@@ -155,13 +160,14 @@ describe Utilrb::ThreadPool do
         it "must not execute tasks with the same sync key in parallel" do
             key = Object.new
             create_pool 10
-            spawn_synchronized_workers 10 do |pool, &w|
+            spawn_synchronized_workers 1000 do |pool, &w|
                 w = pool.process_with_options(sync_key: key, &w)
                 assert_equal key, w.sync_key
             end
-            10.times do |i|
-                wait_synchronized_workers 1
-                wait_until { assert_equal (10 - i), spawned_synchronized_workers_count }
+            wait_synchronized_workers(1)
+            1000.times do |i|
+                wait_until { assert_equal (1000 - i), spawned_synchronized_workers_count }
+                wait_synchronized_workers(1)
                 release_synchronized_workers
             end
         end
