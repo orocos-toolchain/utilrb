@@ -1,7 +1,11 @@
 require 'utilrb/object/attribute'
 class Logger
-    # [Integer] the current nest size
-    attribute(:nest_size) { 0 }
+    # The current nest size
+    #
+    # @return [Integer]
+    def nest_size
+        @nest_size ||= 0
+    end
 
     # Sets the absolute number of spaces that should be prepended to every
     # message
