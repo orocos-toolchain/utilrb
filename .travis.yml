@@ -4,6 +4,16 @@ rvm:
   - 2.0.0
   - 2.1.6
   - 2.2.2
+  - jruby-9000
+
+before_install:
+    - rvm get head
+    - rvm use jruby-9.0.1.0 --install
+
+matrix:
+    allow_failures:
+        - rvm: jruby-9000
+
 script:
     - bundle exec rake
     - bundle exec rake test
