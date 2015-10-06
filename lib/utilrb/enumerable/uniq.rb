@@ -48,21 +48,19 @@ class Object
     end
 end
 
-Utilrb.unless_ext do
-    module Enumerable
-	# call-seq:
-	#  each_uniq { |obj| ... }
-	# 
-	# Yields all unique values found in +enum+
-	def each_uniq
-	    seen = Set.new
-	    each do |obj|
-		if !seen.include?(obj)
-		    seen << obj
-		    yield(obj)
-		end
-	    end
-	end
+module Enumerable
+    # call-seq:
+    #  each_uniq { |obj| ... }
+    # 
+    # Yields all unique values found in +enum+
+    def each_uniq
+        seen = Set.new
+        each do |obj|
+            if !seen.include?(obj)
+                seen << obj
+                yield(obj)
+            end
+        end
     end
 end
 

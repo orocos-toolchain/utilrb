@@ -11,7 +11,7 @@ class TC_WeakRef < Minitest::Test
     end
 
     def test_initialize_validation
-        ref = WeakRef.new(Object.new)
+        ref = WeakRef.new(obj = Object.new)
         assert_raises(ArgumentError) { Utilrb::WeakRef.new(ref) }
     end
 end

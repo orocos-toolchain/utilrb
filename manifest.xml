@@ -13,7 +13,5 @@
   <rosdep name="ruby"/>
   <rosdep name="bundler"/>
   <rosdep name="facets" />
-  <rosdep name="rake-compiler" />
   <test_depend package="flexmock" />
-
 </package>
