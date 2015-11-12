@@ -15,18 +15,6 @@ class TC_Hash < Minitest::Test
 	assert_equal({ :a => 10, :b => 20, :c => 30 }, { 'a' => 10, 'b' => 20, :c => 30 }.to_sym_keys)
     end
 
-    def test_to_s
-	obj = { 1 => 2, 2 => 3 }
-	assert(obj.to_s =~ /^\{(.*)\}$/)
-	values = $1.split(", ")
-	assert_equal(["1 => 2", "2 => 3"].to_set, values.to_set)
-
-	obj[3] = obj
-	assert(obj.to_s =~ /^\{(.*)\}$/)
-	values = $1.split(", ")
-	assert_equal(["1 => 2", "2 => 3", "3 => ..."].to_set, values.to_set)
-    end
-
     def test_map_key
         base = { 1 => 'a', 2 => 'b' }
         result = base.map_key { |k, v| k += 1 }
