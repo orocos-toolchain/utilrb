@@ -75,8 +75,6 @@ class TC_PkgConfig < Minitest::Test
                     puts "#{name} #{action_name}"
                     puts "  pure ruby:  #{pure_ruby.inspect}"
                     puts "  cpkgconfig: #{cpkgconfig.inspect}"
-                    puts "contents:"
-                    puts pkg.file.join("\n")
                 end
             end
         end
