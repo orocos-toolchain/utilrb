@@ -452,6 +452,8 @@ module Utilrb
         # Yields the package names of available packages. If +regex+ is given,
         # lists only the names that match the regular expression.
         def self.each_package(regex = nil)
+            return enum_for(__method__) if !block_given?
+
             seen = Set.new
             each_pkgconfig_directory do |dir|
                 Dir.glob(File.join(dir, '*.pc')) do |file|
