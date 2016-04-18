@@ -41,15 +41,6 @@ module Utilrb
         VAR_NAME_RX     = /\w+/
         FIELD_NAME_RX   = /[\w\.\-]+/
 
-        class << self
-            attr_reader :loaded_packages
-
-            def clear_cache
-                loaded_packages.clear
-            end
-        end
-        @loaded_packages = Hash.new
-
         def self.load(path, preset_variables)
             pkg_name = File.basename(path, ".pc")
             pkg = Class.instance_method(:new).bind(PkgConfig).call(pkg_name)
@@ -60,17 +51,13 @@ module Utilrb
         # Returns the pkg-config object that matches the given name, and
         # optionally a version string
         def self.get(name, version_spec = nil, preset_variables = Hash.new)
-            if !(candidates = loaded_packages[name])
-                paths = find_all_package_files(name)
-                if paths.empty?
-                    raise NotFound.new(name), "cannot find the pkg-config specification for #{name}"
-                end
+            paths = find_all_package_files(name)
+            if paths.empty?
+                raise NotFound.new(name), "cannot find the pkg-config specification for #{name}"
+            end
 
-                candidates = Array.new
-                paths.each do |p|
-                    candidates << PkgConfig.load(p, preset_variables)
-                end
-                loaded_packages[name] = candidates
+            candidates = paths.map do |p|
+                PkgConfig.load(p, preset_variables)
             end
 
             # Now try to find a matching spec

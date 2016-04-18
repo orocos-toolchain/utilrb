@@ -9,7 +9,6 @@ class TC_PkgConfig < Minitest::Test
     end
     def teardown
 	ENV['PKG_CONFIG_PATH'] = @old_pkg_config_path
-        PkgConfig.clear_cache
     end
 
     PkgConfig = Utilrb::PkgConfig
