@@ -62,8 +62,8 @@ module Utilrb
 
         # Returns the pkg-config object that matches the given name, and
         # optionally a version string
-        def self.get(name, version_spec = nil, preset_variables = Hash.new, minimal: false)
-            paths = find_all_package_files(name)
+        def self.get(name, version_spec = nil, preset_variables = Hash.new, minimal: false, pkg_config_path: self.pkg_config_path)
+            paths = find_all_package_files(name, pkg_config_path: pkg_config_path)
             if paths.empty?
                 raise NotFound.new(name), "cannot find the pkg-config specification for #{name}"
             end
@@ -460,17 +460,22 @@ module Utilrb
 	    end
 	end
 
-        def self.each_pkgconfig_directory(&block)
-            if path = ENV['PKG_CONFIG_PATH']
-                path.split(':').each(&block)
+        def self.pkg_config_path
+            ENV['PKG_CONFIG_PATH']
+        end
+
+        def self.each_pkgconfig_directory(pkg_config_path: self.pkg_config_path, &block)
+            return enum_for(__method__) if !block_given?
+            if pkg_config_path
+                pkg_config_path.split(':').each(&block)
             end
             default_search_path.each(&block)
         end
 
         # Returns true if there is a package with this name
-        def self.find_all_package_files(name)
+        def self.find_all_package_files(name, pkg_config_path: self.pkg_config_path)
             result = []
-            each_pkgconfig_directory do |dir|
+            each_pkgconfig_directory(pkg_config_path: pkg_config_path) do |dir|
                 path = File.join(dir, "#{name}.pc")
                 if File.exist?(path)
                     result << path
@@ -479,9 +484,9 @@ module Utilrb
             result
         end
 
-        def self.available_package_names
+        def self.available_package_names(pkg_config_path: self.pkg_config_path)
             result = []
-            each_pkgconfig_directory do |dir|
+            each_pkgconfig_directory(pkg_config_path: pkg_config_path) do |dir|
                 Dir.glob(File.join(dir, "*.pc")) do |path|
                     result << File.basename(path, ".pc")
                 end
@@ -490,17 +495,17 @@ module Utilrb
         end
 
         # Returns true if there is a package with this name
-        def self.has_package?(name)
-            !find_all_package_files(name).empty?
+        def self.has_package?(name, pkg_config_path: self.pkg_config_path)
+            !find_all_package_files(name, pkg_config_path: pkg_config_path).empty?
         end
 
         # Yields the package names of available packages. If +regex+ is given,
         # lists only the names that match the regular expression.
-        def self.each_package(regex = nil)
+        def self.each_package(regex = nil, pkg_config_path: self.pkg_config_path)
             return enum_for(__method__) if !block_given?
 
             seen = Set.new
-            each_pkgconfig_directory do |dir|
+            each_pkgconfig_directory(pkg_config_path: pkg_config_path) do |dir|
                 Dir.glob(File.join(dir, '*.pc')) do |file|
                     pkg_name = File.basename(file, ".pc")
                     next if seen.include?(pkg_name)
