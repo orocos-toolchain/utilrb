@@ -55,6 +55,11 @@ module Utilrb
             pkg
         end
 
+        # @deprecated {PkgConfig} does not cache the packages anymore, so no
+        #   need to call this method
+        def self.clear_cache
+        end
+
         # Returns the pkg-config object that matches the given name, and
         # optionally a version string
         def self.get(name, version_spec = nil, preset_variables = Hash.new, minimal: false)
