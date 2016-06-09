@@ -466,8 +466,8 @@ module Utilrb
         end
 
 
-        FOUND_PATH_RX = /Scanning directory '(.*\/)((?:lib|lib64|share)\/.*)'$/
-        NONEXISTENT_PATH_RX = /Cannot open directory '.*\/((?:lib|lib64|share)\/.*)' in package search path:.*/
+        FOUND_PATH_RX = /Scanning directory (?:#\d+ )?'(.*\/)((?:lib|lib64|share)\/.*)'$/
+        NONEXISTENT_PATH_RX = /Cannot open directory (?:#\d+ )?'.*\/((?:lib|lib64|share)\/.*)' in package search path:.*/
 
         # Returns the system-wide search path that is embedded in pkg-config
         def self.default_search_path
