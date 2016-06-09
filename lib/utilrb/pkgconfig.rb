@@ -66,10 +66,11 @@ module Utilrb
                     raise NotFound.new(name), "cannot find the pkg-config specification for #{name}"
                 end
 
-                candidates = loaded_packages[name] = Array.new
+                candidates = Array.new
                 paths.each do |p|
                     candidates << PkgConfig.load(p, preset_variables)
                 end
+                loaded_packages[name] = candidates
             end
 
             # Now try to find a matching spec
