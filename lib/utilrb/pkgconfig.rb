@@ -74,7 +74,11 @@ module Utilrb
             end
 
             # Now try to find a matching spec
-            find_matching_version(candidates, version_spec)
+            if version_match = find_matching_version(candidates, version_spec)
+                version_match
+            else
+                raise NotFound, "found #{candidates.size} packages for #{name}, but none match the version specification #{version_spec}"
+            end
         end
 
         # Finds the provided package and optional version and returns its
