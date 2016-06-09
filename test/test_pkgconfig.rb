@@ -19,6 +19,20 @@ class TC_PkgConfig < Minitest::Test
 	PkgConfig.new('test_pkgconfig')
     end
 
+    def test_path_autodetection_regexp
+        # PkgConfig 0.26
+        assert("Scanning directory '/usr/share/pkgconfig'" =~ Utilrb::PkgConfig::FOUND_PATH_RX)
+        assert_equal '/usr/share/pkgconfig', "#{$1}#{$2}"
+        assert("Cannot open directory '/usr/share/pkgconfig' in package search path:" =~ Utilrb::PkgConfig::NONEXISTENT_PATH_RX)
+        assert_equal 'share/pkgconfig', $1
+
+        # PkgConfig 0.29.1
+        assert("Scanning directory #10 '/usr/share/pkgconfig'" =~ Utilrb::PkgConfig::FOUND_PATH_RX)
+        assert_equal '/usr/share/pkgconfig', "#{$1}#{$2}"
+        assert("Cannot open directory #10 '/usr/share/pkgconfig' in package search path:" =~ Utilrb::PkgConfig::NONEXISTENT_PATH_RX)
+        assert_equal 'share/pkgconfig', $1
+    end
+
     def test_load
 	pkg = PkgConfig.new('test_pkgconfig')
 	assert_equal('test_pkgconfig', pkg.name)

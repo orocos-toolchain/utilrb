@@ -66,14 +66,19 @@ module Utilrb
                     raise NotFound.new(name), "cannot find the pkg-config specification for #{name}"
                 end
 
-                candidates = loaded_packages[name] = Array.new
+                candidates = Array.new
                 paths.each do |p|
                     candidates << PkgConfig.load(p, preset_variables)
                 end
+                loaded_packages[name] = candidates
             end
 
             # Now try to find a matching spec
-            find_matching_version(candidates, version_spec)
+            if version_match = find_matching_version(candidates, version_spec)
+                version_match
+            else
+                raise NotFound, "found #{candidates.size} packages for #{name}, but none match the version specification #{version_spec}"
+            end
         end
 
         # Finds the provided package and optional version and returns its
@@ -461,8 +466,8 @@ module Utilrb
         end
 
 
-        FOUND_PATH_RX = /Scanning directory '(.*\/)((?:lib|lib64|share)\/.*)'$/
-        NONEXISTENT_PATH_RX = /Cannot open directory '.*\/((?:lib|lib64|share)\/.*)' in package search path:.*/
+        FOUND_PATH_RX = /Scanning directory (?:#\d+ )?'(.*\/)((?:lib|lib64|share)\/.*)'$/
+        NONEXISTENT_PATH_RX = /Cannot open directory (?:#\d+ )?'.*\/((?:lib|lib64|share)\/.*)' in package search path:.*/
 
         # Returns the system-wide search path that is embedded in pkg-config
         def self.default_search_path
