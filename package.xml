@@ -14,13 +14,10 @@
 
   <build_depend>ruby</build_depend>
   <build_depend>facets</build_depend>
-  <build_depend>hoe</build_depend>
-  <build_depend>rake-compiler</build_depend>
   <build_depend>libreadline-dev</build_depend>
 
   <run_depend>ruby</run_depend>
   <run_depend>facets</run_depend>
-  <run_depend>hoe</run_depend>
   <run_depend>libreadline</run_depend>
 
   <export>
