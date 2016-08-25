@@ -9,7 +9,6 @@ class TC_PkgConfig < Minitest::Test
     end
     def teardown
 	ENV['PKG_CONFIG_PATH'] = @old_pkg_config_path
-        PkgConfig.clear_cache
     end
 
     PkgConfig = Utilrb::PkgConfig
@@ -90,8 +89,6 @@ class TC_PkgConfig < Minitest::Test
                     puts "#{name} #{action_name}"
                     puts "  pure ruby:  #{pure_ruby.inspect}"
                     puts "  cpkgconfig: #{cpkgconfig.inspect}"
-                    puts "contents:"
-                    puts pkg.file.join("\n")
                 end
             end
         end
