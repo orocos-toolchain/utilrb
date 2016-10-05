@@ -1,15 +1,20 @@
 module Kernel
     # Raises if +object+ can accept calls with exactly +arity+ arguments. 
     # object should respond to #arity
-    def check_arity(object, arity)
-        if object.respond_to?(:lambda?) # For ruby 1.9 compatibility on blocks without arguments
-            if !object.lambda? && object.arity == 0
-                return
+    def check_arity(object, arity, strict: nil)
+        if strict.nil?
+            if object.respond_to?(:lambda?)
+                strict = object.lambda?
+            else strict = true
             end
         end
 
-        unless object.arity == arity || (object.arity < 0 && object.arity > - arity - 2)
-            raise ArgumentError, "#{object} does not accept to be called with #{arity} argument(s)", caller(2)
+        if strict
+            if object.arity >= 0 && object.arity != arity
+                raise ArgumentError, "#{object} requests #{object.arity} arguments, but #{arity} was requested"
+            elsif -object.arity-1 > arity
+                raise ArgumentError, "#{object} requests at least #{object.arity} arguments, but #{arity} was requested"
+            end
         end
     end
 end
