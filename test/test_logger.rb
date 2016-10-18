@@ -201,4 +201,17 @@ class TC_Logger < Minitest::Test
         a_logger = HierarchyTest::A.make_own_logger
         assert_same a_logger, HierarchyTest::A::B.logger
     end
+
+    def test_forwards_log_level_to_level
+        obj = Class.new do
+            attr_accessor :logger
+            include Logger::Forward
+        end.new
+        obj.logger = (logger_mock = flexmock)
+        logger_mock.should_receive(:level=).with(10)
+        logger_mock.should_receive(:level).and_return(10)
+        obj.log_level = 10
+        assert_equal 10, obj.log_level
+    end
 end
+
