@@ -15,6 +15,16 @@ class Logger
             EOF
         end
 
+        # The logger level
+        def log_level
+            logger.level
+        end
+
+        # Sets the logger's level
+        def log_level=(level)
+            logger.level = level
+        end
+
         # Forwarded to {Logger#silent}
         def log_silent(&block)
             logger.silent(&block)
