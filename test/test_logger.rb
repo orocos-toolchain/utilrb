@@ -178,6 +178,10 @@ class TC_Logger < Minitest::Test
     def test_hierarchy_can_resolve_parent_logger_in_subclasses_where_the_subclass_parent_module_is_not_providing_a_logger
         assert_equal "root_logger", NotALoggingModule::HierarchyTest.logger
     end
+    def test_hierarchy_resolution_starts_at_superclass_if_enclosing_module_does_not_provide_a_logger
+        flexmock(HierarchyTest::HierarchyTest).should_receive(logger: "specific_class_logger")
+        assert_equal "specific_class_logger", NotALoggingModule::HierarchyTest.logger
+    end
     def test_hierarchy_resolves_the_parent_module_first_even_in_subclasses
         assert_equal "other_logger", HierarchyTestForSubclass::HierarchyTest.logger
     end
