@@ -130,8 +130,13 @@ class Logger
                                 break
                             end
                         end
+
                         if m.respond_to?(:superclass)
                             m = m.superclass
+                            if m.respond_to?(:logger)
+                                parent_module = m
+                                break
+                            end
                         else
                             m = nil; break
                         end
