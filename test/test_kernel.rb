@@ -1,5 +1,5 @@
 require 'utilrb/test'
-require 'flexmock/test_unit'
+require 'flexmock/minitest'
 require 'tempfile'
 
 require 'utilrb/kernel'
@@ -60,63 +60,6 @@ class TC_Kernel < Minitest::Test
 
     def test_filter_options_filters_keys_that_have_a_nil_value
         assert_equal [Hash[c: 10], Hash.new], filter_options(Hash[c: 10], c: nil)
-    end
-
-    def test_arity_of_methods
-	object = Class.new do
-	    def arity_1(a); end
-	    def arity_any(*a); end
-	    def arity_1_more(a, *b); end
-	end.new
-
-        # Should not raise
-	check_arity(object.method(:arity_1), 1)
-	assert_raises(ArgumentError) { check_arity(object.method(:arity_1), 0) }
-	assert_raises(ArgumentError) { check_arity(object.method(:arity_1), 2) }
-
-        # Should not raise
-	check_arity(object.method(:arity_any), 0)
-	check_arity(object.method(:arity_any), 2)
-
-	check_arity(object.method(:arity_1_more), 1)
-	assert_raises(ArgumentError) { check_arity(object.method(:arity_1_more), 0) }
-	check_arity(object.method(:arity_1_more), 2)
-    end
-
-    def test_arity_of_blocks
-        check_arity(Proc.new { bla }, 0)
-        check_arity(Proc.new { bla }, 1)
-        check_arity(Proc.new { bla }, 2)
-
-        assert_raises(ArgumentError) { check_arity(Proc.new { |arg| bla }, 0) }
-        check_arity(Proc.new { |arg| bla }, 1)
-        assert_raises(ArgumentError) { check_arity(Proc.new { |arg| bla }, 2) }
-
-        assert_raises(ArgumentError) { check_arity(Proc.new { |arg, *args| bla }, 0) }
-        check_arity(Proc.new { |arg, *args| bla }, 1)
-        check_arity(Proc.new { |arg, *args| bla }, 2)
-
-        check_arity(Proc.new { |*args| bla }, 0)
-        check_arity(Proc.new { |*args| bla }, 1)
-        check_arity(Proc.new { |*args| bla }, 2)
-    end
-
-    def test_arity_of_lambdas
-        check_arity(lambda { bla }, 0)
-        assert_raises(ArgumentError) { check_arity(lambda { bla }, 1) }
-        assert_raises(ArgumentError) { check_arity(lambda { bla }, 2) }
-
-        assert_raises(ArgumentError) { check_arity(lambda { |arg| bla }, 0) }
-        check_arity(lambda { |arg| bla }, 1)
-        assert_raises(ArgumentError) { check_arity(lambda { |arg| bla }, 2) }
-
-        assert_raises(ArgumentError) { check_arity(lambda { |arg, *args| bla }, 0) }
-        check_arity(lambda { |arg, *args| bla }, 1)
-        check_arity(lambda { |arg, *args| bla }, 2)
-
-        check_arity(lambda { |*args| bla }, 0)
-        check_arity(lambda { |*args| bla }, 1)
-        check_arity(lambda { |*args| bla }, 2)
     end
 
     def test_with_module
@@ -199,32 +142,6 @@ class TC_Kernel < Minitest::Test
             methods = Mod::Submod::Klass.instance_methods(false).map(&:to_s)
             assert(methods.include?('my_method'), "the 'class K' statement did not refer to the already defined class")
         end
-    end
-
-    if Utilrb::RUBY_IS_18
-    def test_eval_dsl_file_does_not_allow_class_definition
-        obj = Class.new do
-            def real_method
-                @real_method_called = true
-            end
-        end.new
-
-        Tempfile.open('test_eval_dsl_file') do |io|
-            io.puts <<-EOD
-            class NewClass
-            end
-            EOD
-            io.flush
-
-            begin
-                eval_dsl_file(io.path, obj, [], false)
-                flunk("NewClass has been defined")
-            rescue NameError => e
-                assert e.message =~ /NewClass/, e.message
-                assert e.backtrace.first =~ /#{io.path}:1/, "wrong backtrace when checking constant definition detection: #{e.backtrace[0]}, expected #{io.path}:1"
-            end
-        end
-    end
     end
 
     def test_dsl_exec
@@ -332,4 +249,104 @@ class TC_Kernel < Minitest::Test
         end
     end
 end
+
+describe "Kernel extensions" do
+    describe "#check_arity" do
+        def assert_arity_check(obj, *args, strict: nil)
+            test_obj = nil
+            if strict
+                Class.new(Object) do
+                    test_obj = method(:test, &obj)
+                end
+            else
+                test_obj = obj
+            end
+
+            begin
+                check_arity(obj, args.size, strict: strict)
+            rescue ArgumentError
+                begin
+                    test_obj.call(*args)
+                    flunk("#check_arity(_, #{args.size}) raised but #call passed")
+                rescue ArgumentError
+                    return false
+                end
+            end
+
+            begin test_obj.call(*args)
+            rescue ArgumentError => e
+                flunk("#check_arity(_, #{args.size}) passed but #call failed with #{e.message}")
+            end
+            true
+        end
+
+        def assert_arity_check_succeeds(obj, *args, strict: nil)
+            assert assert_arity_check(obj, *args, strict: strict), "arity check was expected to pass, but failed"
+        end
+
+        def assert_arity_check_fails(obj, *args, strict: nil)
+            refute assert_arity_check(obj, *args, strict: strict), "arity check was expected to fail, but succeeded"
+        end
+
+        describe "of methods" do
+            attr_reader :object
+            before do
+                @object = Class.new do
+                    def arity_1(a); end
+                    def arity_any(*a); end
+                    def arity_1_more(a, *b); end
+                end.new
+            end
+
+            it "passes if the method accepts the exact number of arguments" do
+                assert_arity_check_succeeds(object.method(:arity_1), 1)
+            end
+
+            it "passes if the method accepts the requested number of arguments through a splat" do
+                assert_arity_check_succeeds(object.method(:arity_any), 1)
+                assert_arity_check_succeeds(object.method(:arity_1_more), 1)
+            end
+
+            it "raises if the method requires more arguments than requested" do
+                assert_arity_check_fails(object.method(:arity_1_more))
+            end
+
+            it "raises if the method cannot accept as many arguments as requested" do
+                assert_arity_check_fails(object.method(:arity_1), 1, 2)
+            end
+        end
+
+        describe "of procs" do
+            it "accepts more arguments than declared by the proc" do
+                assert_arity_check_succeeds(proc { }, 1, 2)
+                assert_arity_check_succeeds(proc { |a| }, 1, 2)
+            end
+
+            it "passes if the proc requires more arguments than requested" do
+                assert_arity_check_succeeds(proc { |a, b| }, 1)
+            end
+
+            it "is evaluated using strict (method) rules if the strict argument is given as true" do
+                assert_arity_check_fails(proc { |a| }, 1, 2, strict: true)
+            end
+        end
+
+        describe "of lambdas" do
+            it "does not accept more arguments than declared by the lambda" do
+                assert_arity_check_fails(lambda { }, 1, 2)
+                assert_arity_check_fails(lambda { |a| }, 1, 2)
+            end
+
+            it "passes if given less arguments than expected by the lambda" do
+                assert_arity_check_fails(lambda { |a, b| }, 1)
+            end
+
+            it "is evaluated using strict (method) rules if the strict argument is given as true" do
+                assert_arity_check_fails(lambda { |a| }, 1, 2, strict: true)
+            end
+        end
+    end
+end
+
+
 

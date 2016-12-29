@@ -41,15 +41,6 @@ module Utilrb
         VAR_NAME_RX     = /\w+/
         FIELD_NAME_RX   = /[\w\.\-]+/
 
-        class << self
-            attr_reader :loaded_packages
-
-            def clear_cache
-                loaded_packages.clear
-            end
-        end
-        @loaded_packages = Hash.new
-
         def self.load(path, preset_variables)
             pkg_name = File.basename(path, ".pc")
             pkg = Class.instance_method(:new).bind(PkgConfig).call(pkg_name)
@@ -57,23 +48,41 @@ module Utilrb
             pkg
         end
 
+        def self.load_minimal(path, preset_variables)
+            pkg_name = File.basename(path, ".pc")
+            pkg = Class.instance_method(:new).bind(PkgConfig).call(pkg_name)
+            pkg.load_minimal(path, preset_variables)
+            pkg
+        end
+
+        # @deprecated {PkgConfig} does not cache the packages anymore, so no
+        #   need to call this method
+        def self.clear_cache
+        end
+
         # Returns the pkg-config object that matches the given name, and
         # optionally a version string
-        def self.get(name, version_spec = nil, preset_variables = Hash.new)
-            if !(candidates = loaded_packages[name])
-                paths = find_all_package_files(name)
-                if paths.empty?
-                    raise NotFound.new(name), "cannot find the pkg-config specification for #{name}"
-                end
+        def self.get(name, version_spec = nil, preset_variables = Hash.new, minimal: false, pkg_config_path: self.pkg_config_path)
+            paths = find_all_package_files(name, pkg_config_path: pkg_config_path)
+            if paths.empty?
+                raise NotFound.new(name), "cannot find the pkg-config specification for #{name}"
+            end
 
-                candidates = loaded_packages[name] = Array.new
-                paths.each do |p|
-                    candidates << PkgConfig.load(p, preset_variables)
-                end
+            candidates = paths.map do |p|
+                PkgConfig.load_minimal(p, preset_variables)
             end
 
             # Now try to find a matching spec
-            find_matching_version(candidates, version_spec)
+            if match = find_matching_version(candidates, version_spec)
+                match
+            else
+                raise NotFound, "found #{candidates.size} packages for #{name}, but none match the version specification #{version_spec}"
+            end
+
+            if !minimal
+                match.load_fields
+            end
+            match
         end
 
         # Finds the provided package and optional version and returns its
@@ -135,7 +144,6 @@ module Utilrb
         end
 
 
-        attr_reader :file
         attr_reader :path
 	
 	# The module name
@@ -145,6 +153,8 @@ module Utilrb
         attr_reader :raw_version
         # The module version, as an array of integers
         attr_reader :version
+
+        attr_reader :raw_fields
 
         # Information extracted from the file
         attr_reader :variables
@@ -164,7 +174,7 @@ module Utilrb
         # +current+ is a string that describes what we are expanding. It is used
         # to detect recursion in expansion of variables, and to give meaningful
         # errors to the user
-        def expand_variables(value, variables, current)
+        def perform_substitution(value, variables, current)
             value = value.gsub(/\$\{(\w+)\}/) do |rx|
                 expand_name = $1
                 if expand_name == current
@@ -206,16 +216,13 @@ module Utilrb
 
         SHELL_VARS = %w{Cflags Libs Libs.private}
 
-        # Loads the information contained in +path+
-        def load(path, preset_variables = Hash.new)
-            @path = path
-            @file = File.readlines(path).map(&:strip)
-
-            raw_variables = preset_variables.dup
-            raw_fields    = Hash.new
-
+        # Parse a pkg-config field and extracts the raw definition of variables
+        # and fields
+        #
+        # @return [(Hash,Hash)] the set of variables and the set of fields
+        def parse(path)
             running_line = nil
-            @file = file.map do |line|
+            file = File.readlines(path).map do |line|
                 line = line.gsub(/\s*#.*$/, '')
                 line = line.strip
                 next if line.empty?
@@ -235,6 +242,7 @@ module Utilrb
             end.compact
 
 
+            raw_variables, raw_fields = Hash.new, Hash.new
             file.each do |line|
                 case line
                 when /^(#{VAR_NAME_RX})\s*=(.*)/
@@ -245,35 +253,78 @@ module Utilrb
                     raise NotImplementedError, "#{path}: cannot parse pkg-config line #{line.inspect}"
                 end
             end
+            return raw_variables, raw_fields
+        end
+        
+        def expand_variables(raw_variables)
+            raw_variables = raw_variables.dup
 
+            variables = Hash.new
             # Resolve the variables
             while variables.size != raw_variables.size
                 raw_variables.each do |name, value|
-                    value = expand_variables(value, raw_variables, name)
+                    value = perform_substitution(value, raw_variables, name)
                     raw_variables[name] = value
                     if value !~ /\$\{#{VAR_NAME_RX}\}/
                         variables[name] = value
                     end
                 end
             end
-
-            # Shell-split the fields, and expand the variables in them
-            raw_fields.each do |name, value|
-                if SHELL_VARS.include?(name) 
-                    value = Shellwords.shellsplit(value)
-                    value.map! do |v|
-                        expand_variables(v, variables, name)
-                    end
-                else
-                    value = expand_variables(value, variables, name)
+            variables
+        end
+        
+        def expand_field(name, field)
+            if SHELL_VARS.include?(name) 
+                value = Shellwords.shellsplit(field)
+                resolved = Array.new
+                while !value.empty?
+                    value = value.flat_map do |v|
+                        expanded = perform_substitution(v, variables, name)
+                        if expanded == v
+                            resolved << v
+                            nil
+                        else
+                            Shellwords.shellsplit(expanded)
+                        end
+                    end.compact
                 end
-
-                fields[name] = value
+                resolved
+            else
+                perform_substitution(field, variables, name)
             end
+        end
+
+        def load_variables(path, preset_variables = Hash.new)
+            raw_variables, raw_fields = parse(path)
+            raw_variables = preset_variables.merge(raw_variables)
+            expand_variables(raw_variables)
+        end
+        
+        def load_minimal(path, preset_variables = Hash.new)
+            raw_variables, raw_fields = parse(path)
+            raw_variables = preset_variables.merge(raw_variables)
+
+            @variables = expand_variables(raw_variables)
+            if raw_fields['Version']
+                @raw_version = expand_field('Version', raw_fields['Version'])
+            else
+                @raw_version = ''
+            end
+            @version = raw_version.split('.').map { |v| Integer(v) if v =~ /^\d+$/ }.compact
+
+            # To be used in the call to #load
+            @raw_fields = raw_fields
+            @path = path
+        end
+
+        def load_fields
+            fields = Hash.new
+            @raw_fields.each do |name, value|
+                fields[name] = expand_field(name, value)
+            end
+            @fields = fields
 
             # Initialize the main flags
-            @raw_version = (fields['Version'] || '')
-            @version = raw_version.split('.').map { |v| Integer(v) if v =~ /^\d+$/ }.compact
             @description = (fields['Description'] || '')
 
             # Get the requires/conflicts
@@ -310,6 +361,14 @@ module Utilrb
             @requires_private.each do |pkg|
                 @ldflags_with_requires[true].concat(pkg.raw_ldflags_with_requires[true])
             end
+        end
+
+        # Loads the information contained in +path+
+        def load(path, preset_variables = Hash.new)
+            if !@raw_fields
+                load_minimal(path, preset_variables)
+            end
+            load_fields
         end
 
 	def self.define_pkgconfig_action(action) # :nodoc:
@@ -390,7 +449,7 @@ module Utilrb
         end
 
         def libs_only_other(static = false)
-            @ldflags[static].find_all { |s| s !~ /^-[lL]/ }.join(" ")
+            @ldflags_with_requires[static].find_all { |s| s !~ /^-[lL]/ }.join(" ")
         end
 
 	def method_missing(varname, *args, &proc) # :nodoc:
@@ -401,17 +460,22 @@ module Utilrb
 	    end
 	end
 
-        def self.each_pkgconfig_directory(&block)
-            if path = ENV['PKG_CONFIG_PATH']
-                path.split(':').each(&block)
+        def self.pkg_config_path
+            ENV['PKG_CONFIG_PATH']
+        end
+
+        def self.each_pkgconfig_directory(pkg_config_path: self.pkg_config_path, &block)
+            return enum_for(__method__) if !block_given?
+            if pkg_config_path
+                pkg_config_path.split(':').each(&block)
             end
             default_search_path.each(&block)
         end
 
         # Returns true if there is a package with this name
-        def self.find_all_package_files(name)
+        def self.find_all_package_files(name, pkg_config_path: self.pkg_config_path)
             result = []
-            each_pkgconfig_directory do |dir|
+            each_pkgconfig_directory(pkg_config_path: pkg_config_path) do |dir|
                 path = File.join(dir, "#{name}.pc")
                 if File.exist?(path)
                     result << path
@@ -420,9 +484,9 @@ module Utilrb
             result
         end
 
-        def self.available_package_names
+        def self.available_package_names(pkg_config_path: self.pkg_config_path)
             result = []
-            each_pkgconfig_directory do |dir|
+            each_pkgconfig_directory(pkg_config_path: pkg_config_path) do |dir|
                 Dir.glob(File.join(dir, "*.pc")) do |path|
                     result << File.basename(path, ".pc")
                 end
@@ -431,15 +495,17 @@ module Utilrb
         end
 
         # Returns true if there is a package with this name
-        def self.has_package?(name)
-            !find_all_package_files(name).empty?
+        def self.has_package?(name, pkg_config_path: self.pkg_config_path)
+            !find_all_package_files(name, pkg_config_path: pkg_config_path).empty?
         end
 
         # Yields the package names of available packages. If +regex+ is given,
         # lists only the names that match the regular expression.
-        def self.each_package(regex = nil)
+        def self.each_package(regex = nil, pkg_config_path: self.pkg_config_path)
+            return enum_for(__method__) if !block_given?
+
             seen = Set.new
-            each_pkgconfig_directory do |dir|
+            each_pkgconfig_directory(pkg_config_path: pkg_config_path) do |dir|
                 Dir.glob(File.join(dir, '*.pc')) do |file|
                     pkg_name = File.basename(file, ".pc")
                     next if seen.include?(pkg_name)
@@ -452,8 +518,8 @@ module Utilrb
         end
 
 
-        FOUND_PATH_RX = /Scanning directory '(.*\/)((?:lib|lib64|share)\/.*)'$/
-        NONEXISTENT_PATH_RX = /Cannot open directory '.*\/((?:lib|lib64|share)\/.*)' in package search path:.*/
+        FOUND_PATH_RX = /Scanning directory (?:#\d+ )?'(.*\/)((?:lib|lib64|share)\/.*)'$/
+        NONEXISTENT_PATH_RX = /Cannot open directory (?:#\d+ )?'.*\/((?:lib|lib64|share)\/.*)' in package search path:.*/
 
         # Returns the system-wide search path that is embedded in pkg-config
         def self.default_search_path

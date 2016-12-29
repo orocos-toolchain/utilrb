@@ -241,10 +241,10 @@ module Utilrb
             # @return[Float]
             def time_elapsed(time = Time.now)
                 #no need to synchronize here
-                if running?
-                    (time-@started_at).to_f
-                elsif finished?
+                if @stopped_at
                     (@stopped_at-@started_at).to_f
+                elsif @started_at
+                    (time-@started_at).to_f
                 else
                     0
                 end
@@ -361,8 +361,8 @@ module Utilrb
             @mutex.synchronize do
                 @min = min
                 @max = max || min
-                count = [@tasks_waiting.size,@max].min
-                0.upto(count) do 
+                count = [@tasks_waiting.size,@max - @spawned].min
+                count.times do
                     spawn_thread
                 end
             end
@@ -373,7 +373,7 @@ module Utilrb
         # 
         # @return [Fixnum] the number of tasks
         def backlog
-           @mutex.synchronize do 
+            @mutex.synchronize do 
                 @tasks_waiting.length
             end
         end
@@ -492,7 +492,7 @@ module Utilrb
                 end
                 task.queued_at = Time.now
                 @tasks_waiting << task
-                if @waiting == 0 && @spawned < @max
+                if @waiting <= @tasks_waiting.size && @spawned < @max
                     spawn_thread
                 end
                 @cond.signal
@@ -506,22 +506,20 @@ module Utilrb
         # @param [boolean] force Trim even if no thread is waiting.
         def trim (force = false)
             @mutex.synchronize do
-                if (force || @waiting > 0) && @spawned - @trim_requests > @min
-                    @trim_requests += 1
-                    @cond.signal
-                end
+                @trim_requests += 1
+                @cond.signal
             end
             self
         end
 
         # Shuts down all threads.
         #
-        def shutdown()
+        def shutdown
             tasks = nil
             @mutex.synchronize do
                 @shutdown = true
+                @cond.broadcast
             end
-            @cond.broadcast
         end
 
 
@@ -529,7 +527,13 @@ module Utilrb
         # This does not terminate any thread by itself and will block for ever
         # if shutdown was not called.
         def join
-            @workers.first.join until @workers.empty?
+            while true
+                if w = @mutex.synchronize { @workers.first }
+                    w.join
+                else
+                    break
+                end
+            end
             self
         end
 
@@ -571,8 +575,10 @@ module Utilrb
                             end
                             break task unless task.is_a? Array
 
-                            if @trim_requests > 0
-                                @trim_requests -= 1
+                            if @spawned > @min && (auto_trim || @trim_requests > 0)
+                                if @trim_requests > 0
+                                    @trim_requests -= 1
+                                end
                                 break
                             end
                             @waiting += 1
@@ -587,24 +593,22 @@ module Utilrb
                     ensure
                         @mutex.synchronize do
                             @tasks_running.delete current_task
-                            @sync_keys.delete(current_task.sync_key) if current_task.sync_key
+                            if current_task.sync_key
+                                @sync_keys.delete(current_task.sync_key)
+                                @cond_sync_key.signal
+                                @cond.signal # maybe another thread is waiting for a sync key
+                            end
                             @avg_run_time = moving_average(@avg_run_time,(current_task.stopped_at-current_task.started_at))
-                        end
-                        if current_task.sync_key
-                            @cond_sync_key.signal
-                            @cond.signal # maybe another thread is waiting for a sync key
                         end
                         current_task.finalize # propagate state after it was deleted from the internal lists
                         @callback_on_task_finished.call(current_task) if @callback_on_task_finished
                     end
-                    trim if auto_trim
                 end
 
-                # we do not have to lock here
-                # because spawn_thread must be called from
-                # a synchronized block
-                @spawned -= 1
-                @workers.delete thread
+                @mutex.synchronize do
+                    @spawned -= 1
+                    @workers.delete thread
+                end
             end
             @spawned += 1
             @workers << thread

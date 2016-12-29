@@ -1,6 +1,6 @@
 require 'utilrb/test'
 require 'utilrb/exception'
-require 'flexmock'
+require 'flexmock/minitest'
 
 class TC_Exception < Minitest::Test
     def test_full_message

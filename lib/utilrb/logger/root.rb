@@ -1,18 +1,18 @@
 require 'utilrb/logger/hierarchy'
-class Logger
-    HAS_COLOR =
-        begin
-            require 'highline'
-            @console = HighLine.new
-        rescue LoadError
-        end
 
+class Logger
     LEVEL_TO_COLOR =
-        { 'DEBUG' => [],
-          'INFO' => [],
-          'WARN' => [:magenta],
-          'ERROR' => [:red],
-          'FATAL' => [:red, :bold] }
+        begin
+            require 'pastel'
+            colorizer = Pastel.new
+            { 'DEBUG' => ->(t) { t },
+              'INFO' =>  ->(t) { t },
+              'WARN' =>  colorizer.magenta.detach,
+              'ERROR' => colorizer.red.detach,
+              'FATAL' => colorizer.red.bold.detach }
+        rescue LoadError
+            Hash.new
+        end
 
     # Defines a logger on a module, allowing to use that module as a root in a
     # hierarchy (i.e. having submodules use the Logger::Hierarchy support)
@@ -56,9 +56,9 @@ class Logger
         console = @console
         formatter =
             if block then lambda(&block)
-            elsif HAS_COLOR
+            elsif !LEVEL_TO_COLOR.empty?
                 lambda do |severity, time, name, msg|
-                    console.color("#{name}[#{severity}]: #{msg}\n", *LEVEL_TO_COLOR[severity])
+                    LEVEL_TO_COLOR[severity].call("#{name}[#{severity}]: #{msg}\n")
                 end
             else lambda { |severity, time, name, msg| "#{name}[#{severity}]: #{msg}\n" }
             end

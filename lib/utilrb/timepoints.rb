@@ -15,8 +15,15 @@ module Utilrb
         end
 
         def format_timepoints
+            start_points = Hash.new
             result = []
             @timepoints.inject(@timepoints.first.first) do |last_t, (t, name)|
+                if name.last == 'start'
+                    start_points[name[0..-2]] = t
+                elsif name.last == 'done'
+                    total = t - start_points.delete(name[0..-2])
+                    name = name + ["total=%.3f" % total]
+                end
                 result << name + [t - last_t]
                 t
             end

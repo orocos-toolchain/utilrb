@@ -138,42 +138,48 @@ describe Utilrb::EventLoop do
     describe "when executed" do
         it "must call the timers at the right point in time." do
             event_loop = Utilrb::EventLoop.new
-            val1 = nil
-            val2 = nil
-            val3 = nil
+            vals = []
             event_loop.every 0.1 do 
-                val1 = 123
+                vals << 123
             end
             event_loop.every 0.2 do 
-                val2 = 345
+                vals << 345
             end
-            event_loop.once 0.3 do 
-                val3 = 444
+            event_loop.every 0.3 do 
+                vals << 444
             end
 
             time = Time.now
-            while Time.now - time < 0.101
-                event_loop.step
-            end
+            flexmock(Time).should_receive(:now).and_return { time }
             event_loop.steps
-            assert_equal 123,val1
-            assert_equal nil,val2
-            assert_equal nil,val3
-            val1 = nil
+            # Timers are called once at add time
+            assert_equal [123,345,444],vals
 
-            time = Time.now
-            while Time.now - time < 0.101
-                event_loop.step
-            end
-            assert_equal 123,val1
-            assert_equal 345,val2
-            assert_equal nil,val3
+            vals.clear
+            time += 0.101; event_loop.steps
+            assert_equal [123],vals
+            time += 0.101; event_loop.steps
+            assert_equal [123,123,345],vals
+            time += 0.101; event_loop.steps
+            assert_equal [123,123,345,123,444],vals
+            event_loop.clear
+        end
 
+        it "calls a delayed once timer only once" do
+            event_loop = Utilrb::EventLoop.new
+            vals = Array.new
             time = Time.now
-            while Time.now - time < 0.101
-                event_loop.step
+            flexmock(Time).should_receive(:now).and_return { time }
+            event_loop.once 0.1 do 
+                vals << 123
             end
-            assert_equal 444,val3
+
+            event_loop.steps
+            assert_equal [], vals
+            time += 0.101; event_loop.steps
+            assert_equal [123], vals
+            time += 0.101; event_loop.steps
+            assert_equal [123],vals
             event_loop.clear
         end
 

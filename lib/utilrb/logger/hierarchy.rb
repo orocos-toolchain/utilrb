@@ -1,7 +1,6 @@
 require 'facets/module/spacename'
 require 'facets/kernel/constant'
 require 'utilrb/object/attribute'
-require 'utilrb/object/singleton_class'
 require 'utilrb/logger/forward'
 
 class Logger
@@ -131,8 +130,13 @@ class Logger
                                 break
                             end
                         end
+
                         if m.respond_to?(:superclass)
                             m = m.superclass
+                            if m.respond_to?(:logger)
+                                parent_module = m
+                                break
+                            end
                         else
                             m = nil; break
                         end

@@ -1,6 +1,6 @@
 require 'utilrb/test'
 
-require 'flexmock/test_unit'
+require 'flexmock/minitest'
 require 'set'
 require 'enumerator'
 require 'utilrb/module'
@@ -84,6 +84,24 @@ class TC_Module < Minitest::Test
         assert(!parent.has_ancestor?(child))
     end
 
+    def test_has_ancestor_for_singleton_classes
+        mod       = Module.new
+        parent    = Class.new do
+            include mod
+        end
+        child     = Class.new(parent)
+        n = Module.new
+
+        assert(child.has_ancestor?(parent))
+        assert(child.has_ancestor?(mod))
+        assert(parent.has_ancestor?(mod))
+        assert(!parent.has_ancestor?(child))
+
+        obj_class = child.new.singleton_class
+        obj_class.include(n = Module.new)
+        assert obj_class.has_ancestor?(n)
+    end
+
     def test_dsl_attribute_without_filter
         obj = Class.new do
             dsl_attribute :value
@@ -104,30 +122,14 @@ class TC_Module < Minitest::Test
         assert_equal 20, obj.value
     end
 
-    def test_define_inherited_enumerable_usable_on_extended_modules
-        obj = Array.new
-        defmod = Module.new do
-            define_inherited_enumerable(:object, :objects) { obj }
-        end
-        mod = Module.new { extend defmod }
-        assert_same obj, mod.objects
-    end
-
-    def test_define_inherited_enumerable_usable_through_inclusion
-        obj = Array.new
-        defmod = Module.new do
-            define_inherited_enumerable(:object, :objects) { obj }
-        end
-        intermediate = Module.new { include defmod }
-        mod = Module.new { extend intermediate }
-        assert_same obj, mod.objects
-    end
-
-    def test_is_singleton
+    def test_singleton_class_p
         m = Module.new
-        assert !m.is_singleton?
+        assert !m.singleton_class?
+        k = Class.new
+        assert !k.singleton_class?
         s = Object.new.singleton_class
-        assert s.is_singleton?
+        assert s.singleton_class?
+        assert s.singleton_class?
     end
 end
 

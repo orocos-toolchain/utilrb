@@ -1,6 +1,6 @@
 require 'utilrb/test'
 require 'utilrb/logger'
-require 'flexmock/test_unit'
+require 'flexmock/minitest'
 
 class TC_Logger < Minitest::Test
     module Root
@@ -178,6 +178,10 @@ class TC_Logger < Minitest::Test
     def test_hierarchy_can_resolve_parent_logger_in_subclasses_where_the_subclass_parent_module_is_not_providing_a_logger
         assert_equal "root_logger", NotALoggingModule::HierarchyTest.logger
     end
+    def test_hierarchy_resolution_starts_at_superclass_if_enclosing_module_does_not_provide_a_logger
+        flexmock(HierarchyTest::HierarchyTest).should_receive(logger: "specific_class_logger")
+        assert_equal "specific_class_logger", NotALoggingModule::HierarchyTest.logger
+    end
     def test_hierarchy_resolves_the_parent_module_first_even_in_subclasses
         assert_equal "other_logger", HierarchyTestForSubclass::HierarchyTest.logger
     end
@@ -201,4 +205,17 @@ class TC_Logger < Minitest::Test
         a_logger = HierarchyTest::A.make_own_logger
         assert_same a_logger, HierarchyTest::A::B.logger
     end
+
+    def test_forwards_log_level_to_level
+        obj = Class.new do
+            attr_accessor :logger
+            include Logger::Forward
+        end.new
+        obj.logger = (logger_mock = flexmock)
+        logger_mock.should_receive(:level=).with(10)
+        logger_mock.should_receive(:level).and_return(10)
+        obj.log_level = 10
+        assert_equal 10, obj.log_level
+    end
 end
+
