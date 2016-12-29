@@ -2,9 +2,31 @@
 
 export RUBYOPT=-rubygems
 
-export RUBYLIB=@CMAKE_INSTALL_PREFIX@/@RUBY_EXTENSIONS_INSTALL_DIR@:@CMAKE_INSTALL_PREFIX@/@RUBY_LIBRARY_INSTALL_DIR@
+for path in "@CMAKE_INSTALL_PREFIX@/@RUBY_LIBRARY_INSTALL_DIR@" "@CMAKE_INSTALL_PREFIX@/@RUBY_EXTENSIONS_INSTALL_DIR@"; do
+  if [ ! -d "$path" ]; then
+    continue
+  fi
 
-if [ `uname -s` = Darwin ]; then
-    export RUBYLIB=$RUBYLIB:@RUBY_ARCH_DIR@:@RUBY_RUBY_LIB_DIR@
-fi
+  if [ -z "$RUBYLIB" ]; then
+    RUBYLIB="$path"
+  elif ! echo "$RUBYLIB" | grep -q "$path"; then
+    RUBYLIB="$path:$RUBYLIB"
+  fi
+  export RUBYLIB
 
+  if [ `uname -s` != Darwin ]; then
+    if [ -z "$LD_LIBRARY_PATH" ]; then
+      LD_LIBRARY_PATH="$path"
+    elif ! echo "$LD_LIBRARY_PATH" | grep -q "$path"; then
+      LD_LIBRARY_PATH="$path:$LD_LIBRARY_PATH"
+    fi
+    export LD_LIBRARY_PATH
+  else
+    if [ -z "$DYLD_LIBRARY_PATH" ]; then
+      DYLD_LIBRARY_PATH="$path"
+    elif ! echo "$DYLD_LIBRARY_PATH" | grep -q "$path"; then
+      DYLD_LIBRARY_PATH="$path:$DYLD_LIBRARY_PATH"
+    fi
+    export DYLD_LIBRARY_PATH
+  fi
+done
