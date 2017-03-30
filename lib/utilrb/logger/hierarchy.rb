@@ -2,6 +2,7 @@ require 'facets/module/spacename'
 require 'facets/kernel/constant'
 require 'utilrb/object/attribute'
 require 'utilrb/logger/forward'
+require 'weakref'
 
 class Logger
     module HierarchyElement
@@ -23,13 +24,30 @@ class Logger
             self.logger = new_logger
         end
 
+        def register_log_child(child)
+            log_children << WeakRef.new(child)
+        end
+
+        def each_log_child
+            return enum_for(__method__) if !block_given?
+
+            log_children.delete_if do |ref|
+                begin
+                    yield(ref.__getobj__)
+                    false
+                rescue WeakRef::RefError
+                    true
+                end
+            end
+        end
+
         # Allows to change the logger object at this level of the hierarchy
         #
         # This is usually not used directly: a new logger can be created with
         # Hierarchy#make_own_logger and removed with Hierarchy#reset_own_logger
         def logger=(new_logger)
             @logger = new_logger
-            log_children.each do |child|
+            each_log_child do |child|
                 child.reset_default_logger
             end
         end
@@ -38,14 +56,14 @@ class Logger
         # logging methods will now access the parent's module logger.
         def reset_own_logger
             @logger = nil
-            log_children.each do |child|
+            each_log_child do |child|
                 child.reset_default_logger
             end
         end
 
         def reset_default_logger
             @__utilrb_hierarchy__default_logger = nil
-            log_children.each do |child|
+            each_log_child do |child|
                 child.reset_default_logger
             end
         end
@@ -145,8 +163,8 @@ class Logger
                     if !m
                         raise NoParentLogger, "cannot find a logger for #{self}"
                     end
-                    if parent_module.respond_to? :log_children
-                        parent_module.log_children << self
+                    if parent_module.respond_to? :register_log_child
+                        parent_module.register_log_child(self)
                     end
                     parent_module.logger
                 else
