@@ -160,6 +160,11 @@ module Utilrb
         attr_reader :variables
         attr_reader :fields
 
+        # The list of packages that are Require:'d by this package
+        #
+        # @return [Array<PkgConfig>]
+        attr_reader :requires
+
 	# Create a PkgConfig object for the package +name+
 	# Raises PkgConfig::NotFound if the module does not exist
 	def initialize(name)
