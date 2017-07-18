@@ -156,4 +156,10 @@ class TC_PkgConfig < Minitest::Test
         assert_equal '-Wwith_requires -Wopt',
             pkg.libs_only_other
     end
+
+    def test_requires
+        pkg = Utilrb::PkgConfig.get('test_pkgconfig_with_require')
+        assert_equal ['test_pkgconfig'],
+            pkg.requires.map(&:name)
+    end
 end
