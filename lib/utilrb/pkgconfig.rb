@@ -407,7 +407,7 @@ module Utilrb
         # Returns the list of include directories listed in the Cflags: section
         # of the pkgconfig file
         def include_dirs
-            result = Shellwords.shellsplit(cflags_only_I).map { |v| v[2..-1] }
+            result = raw_cflags_only_I.map { |v| v[2..-1] }
             if result.any?(&:empty?)
                 raise Invalid.new(name), "empty include directory (-I without argument) found in pkg-config package #{name}"
             end
@@ -417,7 +417,7 @@ module Utilrb
         # Returns the list of library directories listed in the Libs: section
         # of the pkgconfig file
         def library_dirs
-            result = Shellwords.shellsplit(libs_only_L).map { |v| v[2..-1] }
+            result = raw_libs_only_L.map { |v| v[2..-1] }
             if result.any?(&:empty?)
                 raise Invalid.new(name), "empty link directory (-L without argument) found in pkg-config package #{name}"
             end
@@ -432,17 +432,26 @@ module Utilrb
             @cflags
         end
 
+        def raw_cflags_only_I
+            @cflags.grep(/^-I/)
+        end
+
+        def raw_cflags_only_other
+            @cflags.find_all { |s| s !~ /^-I/ }
+        end
+
         def cflags
-            @cflags.join(" ")
+            raw_cflags.join(" ")
         end
 
         def cflags_only_I
-            @cflags.grep(/^-I/).join(" ")
+            raw_cflags_only_I.join(" ")
         end
 
         def cflags_only_other
-            @cflags.find_all { |s| s !~ /^-I/ }.join(" ")
+            raw_cflags_only_other.join(" ")
         end
+
 
         def raw_ldflags
             @ldflags
@@ -452,20 +461,38 @@ module Utilrb
             @ldflags_with_requires
         end
 
+
+        def raw_libs(static = false)
+            @ldflags_with_requires[static]
+        end
+
+        def raw_libs_only_L(static = false)
+            @ldflags_with_requires[static].grep(/^-L/)
+        end
+
+        def raw_libs_only_l(static = false)
+            @ldflags_with_requires[static].grep(/^-l/)
+        end
+
+        def raw_libs_only_other(static = false)
+            @ldflags_with_requires[static].find_all { |s| s !~ /^-[lL]/ }
+        end
+
+
         def libs(static = false)
-            @ldflags_with_requires[static].join(" ")
+            raw_libs(static).join(" ")
         end
 
         def libs_only_L(static = false)
-            @ldflags_with_requires[static].grep(/^-L/).join(" ")
+            raw_libs_only_L(static).join(" ")
         end
 
         def libs_only_l(static = false)
-            @ldflags_with_requires[static].grep(/^-l/).join(" ")
+            raw_libs_only_l(static).join(" ")
         end
 
         def libs_only_other(static = false)
-            @ldflags_with_requires[static].find_all { |s| s !~ /^-[lL]/ }.join(" ")
+            raw_libs_only_other(static).join(" ")
         end
 
 	def method_missing(varname, *args, &proc) # :nodoc:
