@@ -221,6 +221,16 @@ module Utilrb
 
         SHELL_VARS = %w{Cflags Libs Libs.private}
 
+        # @api private
+        #
+        # Normalize a field name to be lowercase with only the first letter
+        # capitalized
+        def normalize_field_name(name)
+            name = name.downcase
+            name[0, 1] = name[0, 1].upcase
+            name
+        end
+
         # Parse a pkg-config field and extracts the raw definition of variables
         # and fields
         #
@@ -253,7 +263,8 @@ module Utilrb
                 when /^(#{VAR_NAME_RX})\s*=(.*)/
                     raw_variables[$1] = $2.strip
                 when /^(#{FIELD_NAME_RX}):\s*(.*)/
-                    raw_fields[$1] = $2.strip
+                    field_name = normalize_field_name($1)
+                    raw_fields[field_name] = $2.strip
                 else
                     raise NotImplementedError, "#{path}: cannot parse pkg-config line #{line.inspect}"
                 end
