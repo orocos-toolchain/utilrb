@@ -62,7 +62,6 @@ class TC_PkgConfig < Minitest::Test
     end
 
     def test_comparison_with_cpkgconfig
-        failed = false
         PkgConfig.each_package do |name|
             pkg = begin PkgConfig.new(name)
                   rescue PkgConfig::NotFound
@@ -91,9 +90,7 @@ class TC_PkgConfig < Minitest::Test
                     puts "  cpkgconfig: #{cpkgconfig.inspect}"
                 end
             end
-        end
-        if failed
-            assert(false, "result from pkg-config and the PkgConfig class differ")
+            assert(!failed, "result from pkg-config and the PkgConfig class differ")
         end
     end
 
