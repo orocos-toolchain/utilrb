@@ -62,7 +62,6 @@ class TC_PkgConfig < Minitest::Test
     end
 
     def test_comparison_with_cpkgconfig
-        failed = false
         PkgConfig.each_package do |name|
             pkg = begin PkgConfig.new(name)
                   rescue PkgConfig::NotFound
@@ -79,21 +78,26 @@ class TC_PkgConfig < Minitest::Test
             PkgConfig::ACTIONS.each do |action_name|
                 method_name = action_name.gsub(/-/, '_')
 
-                pure_ruby  = Shellwords.shellsplit(pkg.send(method_name)).to_set
+                pure_ruby_raw    = pkg.send("raw_#{method_name}").to_set
+                pure_ruby_joined = Shellwords.shellsplit(pkg.send(method_name)).to_set
                 cpkgconfig = Shellwords.shellsplit(pkg.send("pkgconfig_#{method_name}")).to_set
                 default_paths = Utilrb::PkgConfig.default_search_path.map { |p| Regexp.quote(p.gsub(/\/pkgconfig/, '')) }.join("|")
-                pure_ruby.delete_if { |f| f=~/-[IL](#{default_paths}|\/lib)$/ }
+                pure_ruby_raw.delete_if { |f| f=~/-[IL](#{default_paths}|\/lib)$/ }
+                pure_ruby_joined.delete_if { |f| f=~/-[IL](#{default_paths}|\/lib)$/ }
                 cpkgconfig.delete_if { |f| f=~/-[IL](#{default_paths}|\/lib)$/ }
-                if pure_ruby != cpkgconfig
+                if pure_ruby_raw != cpkgconfig
+                    failed = true
+                    puts "#{name} raw_#{action_name}"
+                    puts "  pure ruby:  #{pure_ruby_raw.inspect}"
+                    puts "  cpkgconfig: #{cpkgconfig.inspect}"
+                elsif pure_ruby_joined != cpkgconfig
                     failed = true
                     puts "#{name} #{action_name}"
-                    puts "  pure ruby:  #{pure_ruby.inspect}"
+                    puts "  pure ruby:  #{pure_ruby_joined.inspect}"
                     puts "  cpkgconfig: #{cpkgconfig.inspect}"
                 end
             end
-        end
-        if failed
-            assert(false, "result from pkg-config and the PkgConfig class differ")
+            assert(!failed, "result from pkg-config and the PkgConfig class differ")
         end
     end
 
@@ -155,5 +159,11 @@ class TC_PkgConfig < Minitest::Test
         pkg = Utilrb::PkgConfig.get('test_pkgconfig_with_require')
         assert_equal '-Wwith_requires -Wopt',
             pkg.libs_only_other
+    end
+
+    def test_requires
+        pkg = Utilrb::PkgConfig.get('test_pkgconfig_with_require')
+        assert_equal ['test_pkgconfig'],
+            pkg.requires.map(&:name)
     end
 end
