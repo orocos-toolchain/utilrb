@@ -2,30 +2,30 @@
 
 export RUBYOPT=-rubygems
 
-for path in "@CMAKE_INSTALL_PREFIX@/@RUBY_LIBRARY_INSTALL_DIR@" "@CMAKE_INSTALL_PREFIX@/@RUBY_EXTENSIONS_INSTALL_DIR@"; do
-  if [ ! -d "$path" ]; then
+for file_path in "@CMAKE_INSTALL_PREFIX@/@RUBY_LIBRARY_INSTALL_DIR@" "@CMAKE_INSTALL_PREFIX@/@RUBY_EXTENSIONS_INSTALL_DIR@"; do
+  if [ ! -d "$file_path" ]; then
     continue
   fi
 
   if [ -z "$RUBYLIB" ]; then
-    RUBYLIB="$path"
-  elif ! echo "$RUBYLIB" | grep -q "$path"; then
-    RUBYLIB="$path:$RUBYLIB"
+    RUBYLIB="$file_path"
+  elif ! echo "$RUBYLIB" | grep -q "$file_path"; then
+    RUBYLIB="$file_path:$RUBYLIB"
   fi
   export RUBYLIB
 
   if [ `uname -s` != Darwin ]; then
     if [ -z "$LD_LIBRARY_PATH" ]; then
-      LD_LIBRARY_PATH="$path"
-    elif ! echo "$LD_LIBRARY_PATH" | grep -q "$path"; then
-      LD_LIBRARY_PATH="$path:$LD_LIBRARY_PATH"
+      LD_LIBRARY_PATH="$file_path"
+    elif ! echo "$LD_LIBRARY_PATH" | grep -q "$file_path"; then
+      LD_LIBRARY_PATH="$file_path:$LD_LIBRARY_PATH"
     fi
     export LD_LIBRARY_PATH
   else
     if [ -z "$DYLD_LIBRARY_PATH" ]; then
-      DYLD_LIBRARY_PATH="$path"
-    elif ! echo "$DYLD_LIBRARY_PATH" | grep -q "$path"; then
-      DYLD_LIBRARY_PATH="$path:$DYLD_LIBRARY_PATH"
+      DYLD_LIBRARY_PATH="$file_path"
+    elif ! echo "$DYLD_LIBRARY_PATH" | grep -q "$file_path"; then
+      DYLD_LIBRARY_PATH="$file_path:$DYLD_LIBRARY_PATH"
     fi
     export DYLD_LIBRARY_PATH
   fi
