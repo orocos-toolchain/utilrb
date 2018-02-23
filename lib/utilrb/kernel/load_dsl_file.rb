@@ -116,13 +116,13 @@ module Kernel
     # The caller of this method should call it at the end of its definition
     # file, or the translation method may not be robust at all
     def eval_dsl_file(file, proxied_object, context, full_backtrace, *exceptions, &block)
+        file = File.expand_path(file)
         if !File.readable?(file)
             raise ArgumentError, "#{file} does not exist"
         end
 
-        loaded_file = file.gsub(/^#{Regexp.quote(Dir.pwd)}\//, '')
         file_content = File.read(file)
-        eval_dsl_file_content(loaded_file, file_content, proxied_object, context, full_backtrace, *exceptions, &block)
+        eval_dsl_file_content(file, file_content, proxied_object, context, full_backtrace, *exceptions, &block)
     end
 
     # Same than eval_dsl_file, but will not load the same file twice
