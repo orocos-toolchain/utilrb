@@ -28,6 +28,16 @@ class Logger
             log_children << WeakRef.new(child)
         end
 
+        def deregister_log_child(child)
+            log_children.delete_if do |ref|
+                begin
+                    ref.__getobj__ == child
+                rescue WeakRef::RefError
+                    true
+                end
+            end
+        end
+
         def each_log_child
             return enum_for(__method__) if !block_given?
 
@@ -41,36 +51,47 @@ class Logger
             end
         end
 
+        # @api private
+        #
+        # Resets the default logger of this context's children
+        #
+        # This is called whenever the context children is reset, since the
+        # cached default logger is now invalid
+        def reset_children_default_logger
+            children = log_children
+            @log_children = Array.new
+            children.each do |ref|
+                begin
+                    ref.__getobj__.reset_default_logger
+                rescue WeakRef::RefError
+                end
+            end
+        end
+
         # Allows to change the logger object at this level of the hierarchy
         #
         # This is usually not used directly: a new logger can be created with
         # Hierarchy#make_own_logger and removed with Hierarchy#reset_own_logger
         def logger=(new_logger)
             @logger = new_logger
-            each_log_child do |child|
-                child.reset_default_logger
-            end
+            reset_children_default_logger
         end
 
         # Removes a logger defined at this level of the module hierarchy. The
         # logging methods will now access the parent's module logger.
         def reset_own_logger
-            @logger = nil
-            each_log_child do |child|
-                child.reset_default_logger
-            end
+            self.logger = nil
         end
 
         def reset_default_logger
             @__utilrb_hierarchy__default_logger = nil
-            each_log_child do |child|
-                child.reset_default_logger
-            end
+            @parent_module.deregister_log_child(self) if @parent_module
+            reset_children_default_logger
         end
 
         def logger
             if defined?(@logger) && @logger
-                return @logger 
+                return @logger
             elsif defined?(@__utilrb_hierarchy__default_logger) && @__utilrb_hierarchy__default_logger
                 return @__utilrb_hierarchy__default_logger
             end
@@ -84,7 +105,7 @@ class Logger
     # attribute.
     #
     # This module is usually used in conjunction with the Logger::Root method:
-    # 
+    #
     #   module First
     #     extend Logger.Root("First", :INFO)
     #
@@ -164,6 +185,7 @@ class Logger
                         raise NoParentLogger, "cannot find a logger for #{self}"
                     end
                     if parent_module.respond_to? :register_log_child
+                        @parent_module = parent_module
                         parent_module.register_log_child(self)
                     end
                     parent_module.logger
@@ -173,5 +195,3 @@ class Logger
         end
     end
 end
-
-
