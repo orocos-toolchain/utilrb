@@ -55,6 +55,13 @@ class TC_Object < Minitest::Test
 	assert_same(obj1.block, obj2.block)
     end
 
+    def test_attribute_default_value_does_not_change_a_frozen_object
+        obj = Class.new do
+            attribute(:test) { 10 }
+        end.new.freeze
+        assert_equal 10, obj.test
+    end
+
     def test_attr_predicate
 	klass = Class.new do
 	    attr_predicate :working
