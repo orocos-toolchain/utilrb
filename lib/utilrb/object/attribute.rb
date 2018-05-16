@@ -27,6 +27,8 @@ class Object
         class_eval <<-EOD, __FILE__, __LINE__+1
         def #{name}
             if instance_variable_defined?(:@#{name}) then @#{name}
+            elsif frozen?
+                #{name}_defval
             else @#{name} = #{name}_defval
             end
         end
@@ -40,4 +42,3 @@ class Object
 	singleton_class.class_eval { attribute(attr_def, &init) }
     end
 end
-
