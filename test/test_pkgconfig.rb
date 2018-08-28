@@ -166,4 +166,14 @@ class TC_PkgConfig < Minitest::Test
         assert_equal ['test_pkgconfig'],
             pkg.requires.map(&:name)
     end
+
+    def test_recursive_requires
+        pkg = Utilrb::PkgConfig.get('test_pkgconfig_recursive_require_loop_a')
+        assert_equal ['test_pkgconfig_recursive_require_loop_b', 'test_pkgconfig_recursive_require_loop_c'],
+            pkg.requires.map(&:name)
+
+        pkg = Utilrb::PkgConfig.get('test_pkgconfig_recursive_require_loop_b')
+        assert_equal ['test_pkgconfig_recursive_require_loop_a', 'test_pkgconfig_recursive_require_loop_d'],
+            pkg.requires.map(&:name)        
+    end
 end

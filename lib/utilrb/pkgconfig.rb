@@ -62,7 +62,7 @@ module Utilrb
 
         # Returns the pkg-config object that matches the given name, and
         # optionally a version string
-        def self.get(name, version_spec = nil, preset_variables = Hash.new, minimal: false, pkg_config_path: self.pkg_config_path)
+        def self.get(name, version_spec = nil, preset_variables = Hash.new, minimal: false, pkg_config_path: self.pkg_config_path, memo: Hash.new )
             paths = find_all_package_files(name, pkg_config_path: pkg_config_path)
             if paths.empty?
                 raise NotFound.new(name), "cannot find the pkg-config specification for #{name}"
@@ -80,7 +80,7 @@ module Utilrb
             end
 
             if !minimal
-                match.load_fields
+                match.load_fields(memo)
             end
             match
         end
@@ -127,7 +127,7 @@ module Utilrb
             end
         end
 
-        # Exception raised when a request pkg-config file is not found
+    # Exception raised when a request pkg-config file is not found
 	class NotFound < RuntimeError
             # The name of the pkg-config package
 	    attr_reader :name
@@ -135,35 +135,36 @@ module Utilrb
 	    def initialize(name); @name = name end
 	end
 
-        # Exception raised when invalid data is found in a pkg-config file
-        class Invalid < RuntimeError
-            # The name of the pkg-config package
+    # Exception raised when invalid data is found in a pkg-config file
+    class Invalid < RuntimeError
+        # The name of the pkg-config package
 	    attr_reader :name
 
 	    def initialize(name); @name = name end
-        end
+    end
 
-
-        attr_reader :path
+    attr_reader :path
 	
 	# The module name
 	attr_reader :name
-        attr_reader :description
-        # The module version as a string
-        attr_reader :raw_version
-        # The module version, as an array of integers
-        attr_reader :version
+    attr_reader :description
+    
+    # The module version as a string
+    attr_reader :raw_version
+    
+    # The module version, as an array of integers
+    attr_reader :version
 
-        attr_reader :raw_fields
+    attr_reader :raw_fields
 
-        # Information extracted from the file
-        attr_reader :variables
-        attr_reader :fields
+    # Information extracted from the file
+    attr_reader :variables
+    attr_reader :fields
 
-        # The list of packages that are Require:'d by this package
-        #
-        # @return [Array<PkgConfig>]
-        attr_reader :requires
+    # The list of packages that are Require:'d by this package
+    #
+    # @return [Array<PkgConfig>]
+    attr_reader :requires
 
 	# Create a PkgConfig object for the package +name+
 	# Raises PkgConfig::NotFound if the module does not exist
@@ -192,7 +193,7 @@ module Utilrb
             value
         end
 
-        def self.parse_dependencies(string)
+        def self.parse_dependencies(string, memo:Hash.new)
             if string =~ /,/
                 packages = string.split(',')
             else
@@ -207,16 +208,33 @@ module Utilrb
                     end
                 end
             end
+            
+            if memo.empty?
+                depth = 1
+            else
+                depth = memo.values.max + 1
+            end
+
+            packages.map do |dep|
+                dep = dep.strip
+                if !memo.key?(dep)
+                    memo[dep] = depth
+                end
+            end
 
             result = packages.map do |dep|
                 dep = dep.strip
+                if memo[dep] < depth
+                    next
+                end
+
                 if dep =~ /^(#{PACKAGE_NAME_RX})\s*([=<>]+.*)/
-                    PkgConfig.get($1, $2.strip)
+                    PkgConfig.get($1, $2.strip, memo: memo)
                 else
-                    PkgConfig.get(dep)
+                    PkgConfig.get(dep, memo: memo)
                 end
             end
-            result
+            result.compact
         end
 
         SHELL_VARS = %w{Cflags Libs Libs.private}
@@ -255,7 +273,6 @@ module Utilrb
                     value
                 end
             end.compact
-
 
             raw_variables, raw_fields = Hash.new, Hash.new
             file.each do |line|
@@ -333,7 +350,7 @@ module Utilrb
             @path = path
         end
 
-        def load_fields
+        def load_fields(memo)
             fields = Hash.new
             @raw_fields.each do |name, value|
                 fields[name] = expand_field(name, value)
@@ -344,9 +361,9 @@ module Utilrb
             @description = (fields['Description'] || '')
 
             # Get the requires/conflicts
-            @requires  = PkgConfig.parse_dependencies(fields['Requires'] || '')
-            @requires_private  = PkgConfig.parse_dependencies(fields['Requires.private'] || '')
-            @conflicts = PkgConfig.parse_dependencies(fields['Conflicts'] || '')
+            @requires  = PkgConfig.parse_dependencies(fields['Requires'] || '', memo: memo)
+            @requires_private  = PkgConfig.parse_dependencies(fields['Requires.private'] || '', memo: memo)
+            @conflicts = PkgConfig.parse_dependencies(fields['Conflicts'] || '', memo: memo)
 
             # And finally resolve the compilation flags
             @cflags = fields['Cflags'] || []
