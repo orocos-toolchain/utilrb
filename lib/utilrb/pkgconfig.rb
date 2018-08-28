@@ -74,7 +74,11 @@ module Utilrb
 
             # Now try to find a matching spec
             if match = find_matching_version(candidates, version_spec)
-                match
+                if version_spec.eql? match
+                    return
+                else
+                    match
+                end
             else
                 raise NotFound, "found #{candidates.size} packages for #{name}, but none match the version specification #{version_spec}"
             end
@@ -111,6 +115,10 @@ module Utilrb
                     elsif op == "<=" then [-1, 0]
                     elsif op == ">=" then [1, 0]
                     end
+
+                if requested_version.nil?
+                    return version_spec
+                end
 
                 requested_version = requested_version.split('.').map { |v| Integer(v) }
 
