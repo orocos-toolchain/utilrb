@@ -75,7 +75,7 @@ module Utilrb
             # Now try to find a matching spec
             if match = find_matching_version(candidates, version_spec)
                 if version_spec.eql? match
-                    return
+                    return nil
                 else
                     match
                 end
