@@ -74,17 +74,13 @@ module Utilrb
 
             # Now try to find a matching spec
             if match = find_matching_version(candidates, version_spec)
-                if version_spec.eql? match
-                    return nil
-                else
-                    match
-                end
+                memo[name] = match
             else
                 raise NotFound, "found #{candidates.size} packages for #{name}, but none match the version specification #{version_spec}"
             end
 
             if !minimal
-                match.load_fields(memo)
+                match.load_fields(memo: memo)
             end
             match
         end
@@ -115,10 +111,6 @@ module Utilrb
                     elsif op == "<=" then [-1, 0]
                     elsif op == ">=" then [1, 0]
                     end
-
-                if requested_version.nil?
-                    return version_spec
-                end
 
                 requested_version = requested_version.split('.').map { |v| Integer(v) }
 
@@ -201,46 +193,25 @@ module Utilrb
             value
         end
 
-        def self.parse_dependencies(string, memo:Hash.new)
-            if string =~ /,/
-                packages = string.split(',')
-            else
-                packages = []
-                words = string.split(' ')
-                while !words.empty?
-                    w = words.shift
-                    if w =~ /[<>=]/
-                        packages[-1] += " #{w} #{words.shift}"
+        def self.parse_dependencies(string, memo: Hash.new)
+            string = string.gsub(',', ' ')
+            packages = []
+            words = string.split(' ')
+            while !words.empty?
+                w = words.shift
+                if w =~ /[<>=]/
+                    version = words.shift
+                    if  version =~ /[\d\.]+/
+                        packages[-1] = [packages[-1], "#{w} #{version}"]
                     else
-                        packages << w
+                        packages << version    
                     end
-                end
-            end
-            
-            if memo.empty?
-                depth = 1
-            else
-                depth = memo.values.max + 1
-            end
-
-            packages.map do |dep|
-                dep = dep.strip
-                if !memo.key?(dep)
-                    memo[dep] = depth
-                end
-            end
-
-            result = packages.map do |dep|
-                dep = dep.strip
-                if memo[dep] < depth
-                    next
-                end
-
-                if dep =~ /^(#{PACKAGE_NAME_RX})\s*([=<>]+.*)/
-                    PkgConfig.get($1, $2.strip, memo: memo)
                 else
-                    PkgConfig.get(dep, memo: memo)
+                    packages << w
                 end
+            end
+            result = packages.map do |dep|
+                memo[dep] ||= PkgConfig.get(*dep, memo: memo)
             end
             result.compact
         end
@@ -358,7 +329,7 @@ module Utilrb
             @path = path
         end
 
-        def load_fields(memo)
+        def load_fields(memo: Hash.new)
             fields = Hash.new
             @raw_fields.each do |name, value|
                 fields[name] = expand_field(name, value)
@@ -376,10 +347,10 @@ module Utilrb
             # And finally resolve the compilation flags
             @cflags = fields['Cflags'] || []
             @requires.each do |pkg|
-                @cflags.concat(pkg.raw_cflags)
+                @cflags.concat(pkg.raw_cflags) unless pkg.raw_cflags.nil?
             end
             @requires_private.each do |pkg|
-                @cflags.concat(pkg.raw_cflags)
+                @cflags.concat(pkg.raw_cflags) unless pkg.raw_cflags.nil?
             end
             @cflags.uniq!
             @cflags.delete('-I/usr/include')
@@ -395,12 +366,12 @@ module Utilrb
                 true => @ldflags[true].dup,
                 false => @ldflags[false].dup
             }
-            @requires.each do |pkg|
-                @ldflags_with_requires[true].concat(pkg.raw_ldflags_with_requires[true])
-                @ldflags_with_requires[false].concat(pkg.raw_ldflags_with_requires[false])
+            @requires.each do |pkg| 
+                @ldflags_with_requires[true].concat(pkg.raw_ldflags_with_requires[true]) unless pkg.raw_ldflags_with_requires.nil?
+                @ldflags_with_requires[false].concat(pkg.raw_ldflags_with_requires[false]) unless pkg.raw_ldflags_with_requires.nil?
             end
             @requires_private.each do |pkg|
-                @ldflags_with_requires[true].concat(pkg.raw_ldflags_with_requires[true])
+                @ldflags_with_requires[true].concat(pkg.raw_ldflags_with_requires[true]) unless pkg.raw_ldflags_with_requires.nil?
             end
         end
 

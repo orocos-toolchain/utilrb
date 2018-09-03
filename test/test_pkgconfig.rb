@@ -58,7 +58,7 @@ class TC_PkgConfig < Minitest::Test
 	assert_equal('', pkg.libs)
 	assert_equal('', pkg.libs_only_L)
 	assert_equal('', pkg.libs_only_l)
-        assert_equal([], pkg.library_dirs)
+    assert_equal([], pkg.library_dirs)
     end
 
     def test_comparison_with_cpkgconfig
@@ -168,12 +168,22 @@ class TC_PkgConfig < Minitest::Test
     end
 
     def test_recursive_requires
-        pkg = Utilrb::PkgConfig.get('test_pkgconfig_recursive_require_loop_a')
+        pkg = Utilrb::PkgConfig.parse_dependencies('test_pkgconfig_recursive_require_loop_a')[0]
+        
         assert_equal ['test_pkgconfig_recursive_require_loop_b', 'test_pkgconfig_recursive_require_loop_c'],
             pkg.requires.map(&:name)
 
-        pkg = Utilrb::PkgConfig.get('test_pkgconfig_recursive_require_loop_b')
-        assert_equal ['test_pkgconfig_recursive_require_loop_a', 'test_pkgconfig_recursive_require_loop_d'],
-            pkg.requires.map(&:name)        
+        assert_equal ['test_pkgconfig_recursive_require_loop_a', 'test_pkgconfig_recursive_require_loop_b', 'test_pkgconfig_recursive_require_loop_d'],
+            pkg.requires[0].requires.map(&:name)
+
+
+        pkg = Utilrb::PkgConfig.parse_dependencies('test_pkgconfig_recursive_require_loop_b')[0]
+        assert_equal ['test_pkgconfig_recursive_require_loop_a', 'test_pkgconfig_recursive_require_loop_b', 'test_pkgconfig_recursive_require_loop_d'],
+            pkg.requires.map(&:name)
+            
+        assert_equal ['test_pkgconfig_recursive_require_loop_b', 'test_pkgconfig_recursive_require_loop_c'],
+            pkg.requires[0].requires.map(&:name)
+    
+    end
     end
 end
