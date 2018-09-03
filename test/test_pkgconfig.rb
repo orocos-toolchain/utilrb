@@ -185,5 +185,10 @@ class TC_PkgConfig < Minitest::Test
             pkg.requires[0].requires.map(&:name)
     
     end
+
+    def test_version_not_number
+        pkg = Utilrb::PkgConfig.parse_dependencies('test_pkgconfig_version_not_number')[0]
+        assert_equal ['test_pkgconfig_recursive_require_loop_c', 'test_pkgconfig_recursive_require_loop_d'],
+            pkg.requires_private.map(&:name)
     end
 end
