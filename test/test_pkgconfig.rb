@@ -61,8 +61,17 @@ class TC_PkgConfig < Minitest::Test
     assert_equal([], pkg.library_dirs)
     end
 
+    IGNORE_COMPARISON_WITH_CPKGCONFIG = [
+        # CPkgConfig silently ignores a B package when a
+        # requirement has A >= B. We add it instead.
+        "test_pkgconfig_version_not_number_and_number",
+        "ignition-fuel_tools1",
+        "gazebo"
+    ]
+
     def test_comparison_with_cpkgconfig
         PkgConfig.each_package do |name|
+            next if IGNORE_COMPARISON_WITH_CPKGCONFIG.include?(name)
             pkg = begin PkgConfig.new(name)
                   rescue PkgConfig::NotFound
                       `pkg-config --cflags #{name}`
