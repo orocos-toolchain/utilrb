@@ -182,17 +182,35 @@ class TC_PkgConfig < Minitest::Test
         assert_equal ['test_pkgconfig_recursive_require_loop_b', 'test_pkgconfig_recursive_require_loop_c'],
             pkg.requires.map(&:name)
 
-        assert_equal ['test_pkgconfig_recursive_require_loop_a', 'test_pkgconfig_recursive_require_loop_b', 'test_pkgconfig_recursive_require_loop_d'],
-            pkg.requires[0].requires.map(&:name)
-
 
         pkg = Utilrb::PkgConfig.parse_dependencies('test_pkgconfig_recursive_require_loop_b')[0]
         assert_equal ['test_pkgconfig_recursive_require_loop_a', 'test_pkgconfig_recursive_require_loop_b', 'test_pkgconfig_recursive_require_loop_d'],
             pkg.requires.map(&:name)
-            
+    end
+
+    def test_recursive_requires_full_list
+        # A requires [B, C]
+        # B requires [A, B, D]
+
+        # When parsing A
+        pkgA = Utilrb::PkgConfig.parse_dependencies('test_pkgconfig_recursive_require_loop_a')[0]
         assert_equal ['test_pkgconfig_recursive_require_loop_b', 'test_pkgconfig_recursive_require_loop_c'],
-            pkg.requires[0].requires.map(&:name)
-    
+            pkgA.requires.map(&:name)
+
+        # B is the first requirement and it should require all dependencies [A, B, D]
+        pkgB = pkgA.requires[0]
+        assert_equal ['test_pkgconfig_recursive_require_loop_a', 'test_pkgconfig_recursive_require_loop_b', 'test_pkgconfig_recursive_require_loop_d'],
+            pkgB.requires.map(&:name)
+
+        # When parsing B
+        pkgB = Utilrb::PkgConfig.parse_dependencies('test_pkgconfig_recursive_require_loop_b')[0]
+        assert_equal ['test_pkgconfig_recursive_require_loop_a', 'test_pkgconfig_recursive_require_loop_b', 'test_pkgconfig_recursive_require_loop_d'],
+            pkgB.requires.map(&:name)
+        
+        # A is the first requirement and it should require all dependencies [B, C]
+        pkgA = pkgB.requires[0] 
+        assert_equal ['test_pkgconfig_recursive_require_loop_b', 'test_pkgconfig_recursive_require_loop_c'],
+            pkgA.requires.map(&:name)
     end
 
     def test_version_not_number
