@@ -439,7 +439,11 @@ module Utilrb
 
 	ACTIONS = %w{cflags cflags-only-I cflags-only-other 
 		    libs libs-only-L libs-only-l libs-only-other}
-	ACTIONS.each { |action| define_pkgconfig_action(action) }
+    ACTIONS.each { |action| define_pkgconfig_action(action) }
+    
+        def conflicts
+            @conflicts
+        end
 
         def raw_cflags
             @cflags
