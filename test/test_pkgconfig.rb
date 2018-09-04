@@ -66,7 +66,11 @@ class TC_PkgConfig < Minitest::Test
         # requirement has A >= B. We add it instead.
         "test_pkgconfig_version_not_number_and_number",
         "ignition-fuel_tools1",
-        "gazebo"
+        "gazebo",
+        "test_pkgconfig_recursive_conflict_loop_a",
+        "test_pkgconfig_recursive_conflict_loop_b",
+        "test_pkgconfig_recursive_require_loop_a",
+        "test_pkgconfig_recursive_require_loop_b"
     ]
 
     def test_comparison_with_cpkgconfig
@@ -176,41 +180,45 @@ class TC_PkgConfig < Minitest::Test
             pkg.requires.map(&:name)
     end
 
-    def test_recursive_requires
-        pkg = Utilrb::PkgConfig.parse_dependencies('test_pkgconfig_recursive_require_loop_a')[0]
-        
-        assert_equal ['test_pkgconfig_recursive_require_loop_b', 'test_pkgconfig_recursive_require_loop_c'],
-            pkg.requires.map(&:name)
+    def test_recursive_conflicts
+        pkg = Utilrb::PkgConfig.parse_dependencies('test_pkgconfig_recursive_conflict_loop_a')[0]
+        assert_equal ['test_pkgconfig_recursive_conflict_loop_b', 'test_pkgconfig_recursive_conflict_loop_c'],
+            pkg.conflicts.map(&:name)
 
-
-        pkg = Utilrb::PkgConfig.parse_dependencies('test_pkgconfig_recursive_require_loop_b')[0]
-        assert_equal ['test_pkgconfig_recursive_require_loop_a', 'test_pkgconfig_recursive_require_loop_b', 'test_pkgconfig_recursive_require_loop_d'],
-            pkg.requires.map(&:name)
+        pkg = Utilrb::PkgConfig.parse_dependencies('test_pkgconfig_recursive_conflict_loop_b')[0]
+        assert_equal ['test_pkgconfig_recursive_conflict_loop_a', 'test_pkgconfig_recursive_conflict_loop_b', 'test_pkgconfig_recursive_conflict_loop_d'],
+            pkg.conflicts.map(&:name)
     end
 
-    def test_recursive_requires_full_list
-        # A requires [B, C]
-        # B requires [A, B, D]
+    def test_recursive_requires
+        e = assert_raises(Utilrb::PkgConfig::DependencyLoop) do
+            Utilrb::PkgConfig.parse_dependencies 'test_pkgconfig_recursive_require_loop_a'
+        end
+    end
+
+    def test_recursive_conflict_full_list
+        # A conflicts [B, C]
+        # B conflicts [A, B, D]
 
         # When parsing A
-        pkgA = Utilrb::PkgConfig.parse_dependencies('test_pkgconfig_recursive_require_loop_a')[0]
-        assert_equal ['test_pkgconfig_recursive_require_loop_b', 'test_pkgconfig_recursive_require_loop_c'],
-            pkgA.requires.map(&:name)
+        pkgA = Utilrb::PkgConfig.parse_dependencies('test_pkgconfig_recursive_conflict_loop_a')[0]
+        assert_equal ['test_pkgconfig_recursive_conflict_loop_b', 'test_pkgconfig_recursive_conflict_loop_c'],
+            pkgA.conflicts.map(&:name)
 
-        # B is the first requirement and it should require all dependencies [A, B, D]
-        pkgB = pkgA.requires[0]
-        assert_equal ['test_pkgconfig_recursive_require_loop_a', 'test_pkgconfig_recursive_require_loop_b', 'test_pkgconfig_recursive_require_loop_d'],
-            pkgB.requires.map(&:name)
+        # B is the first conflict and it should conflict with [A, B, D]
+        pkgB = pkgA.conflicts[0]
+        assert_equal ['test_pkgconfig_recursive_conflict_loop_a', 'test_pkgconfig_recursive_conflict_loop_b', 'test_pkgconfig_recursive_conflict_loop_d'],
+            pkgB.conflicts.map(&:name)
 
         # When parsing B
-        pkgB = Utilrb::PkgConfig.parse_dependencies('test_pkgconfig_recursive_require_loop_b')[0]
-        assert_equal ['test_pkgconfig_recursive_require_loop_a', 'test_pkgconfig_recursive_require_loop_b', 'test_pkgconfig_recursive_require_loop_d'],
-            pkgB.requires.map(&:name)
+        pkgB = Utilrb::PkgConfig.parse_dependencies('test_pkgconfig_recursive_conflict_loop_b')[0]
+        assert_equal ['test_pkgconfig_recursive_conflict_loop_a', 'test_pkgconfig_recursive_conflict_loop_b', 'test_pkgconfig_recursive_conflict_loop_d'],
+            pkgB.conflicts.map(&:name)
         
-        # A is the first requirement and it should require all dependencies [B, C]
-        pkgA = pkgB.requires[0] 
-        assert_equal ['test_pkgconfig_recursive_require_loop_b', 'test_pkgconfig_recursive_require_loop_c'],
-            pkgA.requires.map(&:name)
+        # A is the first conflict and it should conflict with [B, C]
+        pkgA = pkgB.conflicts[0] 
+        assert_equal ['test_pkgconfig_recursive_conflict_loop_b', 'test_pkgconfig_recursive_conflict_loop_c'],
+            pkgA.conflicts.map(&:name)
     end
 
     def test_malformed_version_not_number
@@ -224,4 +232,18 @@ class TC_PkgConfig < Minitest::Test
         assert_equal ['test_pkgconfig_recursive_require_loop_c', 'test_pkgconfig_recursive_require_loop_d'],
             pkg.requires.map(&:name)  
     end
+
+    def test_recursive_noloop_require
+        # A requires [B, C]
+        # B requires [C] this is not a loop, but C is required two times
+        pkgA = Utilrb::PkgConfig.parse_dependencies('test_pkgconfig_recursive_noloop_require_a')[0]
+        assert_equal ['test_pkgconfig_recursive_noloop_require_b', 'test_pkgconfig_recursive_noloop_require_c'],
+            pkgA.requires.map(&:name)
+
+        # B is the first conflict and it should conflict with [A, B, D]
+        pkgB = pkgA.requires[0]
+        assert_equal ['test_pkgconfig_recursive_noloop_require_c'],
+            pkgB.requires.map(&:name)
+    end
+
 end
