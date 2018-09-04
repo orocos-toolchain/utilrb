@@ -62,7 +62,9 @@ module Utilrb
 
         # Returns the pkg-config object that matches the given name, and
         # optionally a version string
-        def self.get(name, version_spec = nil, preset_variables = Hash.new, minimal: false, pkg_config_path: self.pkg_config_path, memo: Hash.new )
+        def self.get(name, version_spec = nil, preset_variables = Hash.new,
+            minimal: false, pkg_config_path: self.pkg_config_path, memo: Hash.new)
+
             paths = find_all_package_files(name, pkg_config_path: pkg_config_path)
             if paths.empty?
                 raise NotFound.new(name), "cannot find the pkg-config specification for #{name}"
@@ -76,7 +78,8 @@ module Utilrb
             if match = find_matching_version(candidates, version_spec)
                 memo[[name, version_spec]] = [false, match]
             else
-                raise NotFound, "found #{candidates.size} packages for #{name}, but none match the version specification #{version_spec}"
+                raise NotFound, "found #{candidates.size} packages for #{name},"\
+                    " but none match the version specification #{version_spec}"
             end
 
             match.load_fields(memo: memo) unless minimal
