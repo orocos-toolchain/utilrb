@@ -62,7 +62,9 @@ module Utilrb
 
         # Returns the pkg-config object that matches the given name, and
         # optionally a version string
-        def self.get(name, version_spec = nil, preset_variables = Hash.new, minimal: false, pkg_config_path: self.pkg_config_path)
+        def self.get(name, version_spec = nil, preset_variables = Hash.new,
+            minimal: false, pkg_config_path: self.pkg_config_path, memo: Hash.new)
+
             paths = find_all_package_files(name, pkg_config_path: pkg_config_path)
             if paths.empty?
                 raise NotFound.new(name), "cannot find the pkg-config specification for #{name}"
@@ -74,14 +76,15 @@ module Utilrb
 
             # Now try to find a matching spec
             if match = find_matching_version(candidates, version_spec)
-                match
+                memo[[name, version_spec]] = [false, match]
             else
-                raise NotFound, "found #{candidates.size} packages for #{name}, but none match the version specification #{version_spec}"
+                raise NotFound, "found #{candidates.size} packages for #{name},"\
+                    " but none match the version specification #{version_spec}"
             end
 
-            if !minimal
-                match.load_fields
-            end
+            match.load_fields(memo: memo) unless minimal
+
+            memo[[name, version_spec]] = [true, match]
             match
         end
 
@@ -127,7 +130,7 @@ module Utilrb
             end
         end
 
-        # Exception raised when a request pkg-config file is not found
+    # Exception raised when a request pkg-config file is not found
 	class NotFound < RuntimeError
             # The name of the pkg-config package
 	    attr_reader :name
@@ -135,35 +138,36 @@ module Utilrb
 	    def initialize(name); @name = name end
 	end
 
-        # Exception raised when invalid data is found in a pkg-config file
-        class Invalid < RuntimeError
-            # The name of the pkg-config package
+    # Exception raised when invalid data is found in a pkg-config file
+    class Invalid < RuntimeError
+        # The name of the pkg-config package
 	    attr_reader :name
 
 	    def initialize(name); @name = name end
-        end
+    end
 
-
-        attr_reader :path
+    attr_reader :path
 	
 	# The module name
 	attr_reader :name
-        attr_reader :description
-        # The module version as a string
-        attr_reader :raw_version
-        # The module version, as an array of integers
-        attr_reader :version
+    attr_reader :description
+    
+    # The module version as a string
+    attr_reader :raw_version
+    
+    # The module version, as an array of integers
+    attr_reader :version
 
-        attr_reader :raw_fields
+    attr_reader :raw_fields
 
-        # Information extracted from the file
-        attr_reader :variables
-        attr_reader :fields
+    # Information extracted from the file
+    attr_reader :variables
+    attr_reader :fields
 
-        # The list of packages that are Require:'d by this package
-        #
-        # @return [Array<PkgConfig>]
-        attr_reader :requires
+    # The list of packages that are Require:'d by this package
+    #
+    # @return [Array<PkgConfig>]
+    attr_reader :requires
 
 	# Create a PkgConfig object for the package +name+
 	# Raises PkgConfig::NotFound if the module does not exist
@@ -192,31 +196,38 @@ module Utilrb
             value
         end
 
-        def self.parse_dependencies(string)
-            if string =~ /,/
-                packages = string.split(',')
-            else
-                packages = []
-                words = string.split(' ')
-                while !words.empty?
-                    w = words.shift
-                    if w =~ /[<>=]/
-                        packages[-1] += " #{w} #{words.shift}"
-                    else
-                        packages << w
-                    end
-                end
-            end
+        class DependencyLoop < RuntimeError; end
 
-            result = packages.map do |dep|
-                dep = dep.strip
-                if dep =~ /^(#{PACKAGE_NAME_RX})\s*([=<>]+.*)/
-                    PkgConfig.get($1, $2.strip)
+        def self.parse_dependencies(string, allow_loops: false, memo: Hash.new)
+            string = string.gsub(',', ' ')
+            packages = []
+            words = string.split(' ')
+            while !words.empty?
+                w = words.shift
+                if w =~ /[<>=]/
+                    version = words.shift
+                    if  version =~ /[\d\.]+/
+                        packages[-1][1] = "#{w} #{version}"
+                    else
+                        packages << [version, nil]
+                    end
                 else
-                    PkgConfig.get(dep)
+                    packages << [w, nil]
                 end
             end
-            result
+            result = packages.map do |dep|
+                finished, pkg = memo[dep]
+                if pkg
+                    if allow_loops || finished
+                        pkg
+                    else
+                        raise DependencyLoop, "found a dependency loop"
+                    end
+                else
+                    PkgConfig.get(*dep, memo: memo)
+                end
+            end
+            result.compact
         end
 
         SHELL_VARS = %w{Cflags Libs Libs.private}
@@ -255,7 +266,6 @@ module Utilrb
                     value
                 end
             end.compact
-
 
             raw_variables, raw_fields = Hash.new, Hash.new
             file.each do |line|
@@ -333,7 +343,7 @@ module Utilrb
             @path = path
         end
 
-        def load_fields
+        def load_fields(memo: Hash.new)
             fields = Hash.new
             @raw_fields.each do |name, value|
                 fields[name] = expand_field(name, value)
@@ -344,9 +354,12 @@ module Utilrb
             @description = (fields['Description'] || '')
 
             # Get the requires/conflicts
-            @requires  = PkgConfig.parse_dependencies(fields['Requires'] || '')
-            @requires_private  = PkgConfig.parse_dependencies(fields['Requires.private'] || '')
-            @conflicts = PkgConfig.parse_dependencies(fields['Conflicts'] || '')
+            @requires  = PkgConfig.parse_dependencies(
+                fields['Requires'] || '', allow_loops: false, memo: memo)
+            @requires_private  = PkgConfig.parse_dependencies(
+                fields['Requires.private'] || '', allow_loops: false, memo: memo)
+            @conflicts = PkgConfig.parse_dependencies(
+                fields['Conflicts'] || '', allow_loops: true, memo: memo)
 
             # And finally resolve the compilation flags
             @cflags = fields['Cflags'] || []
@@ -370,7 +383,7 @@ module Utilrb
                 true => @ldflags[true].dup,
                 false => @ldflags[false].dup
             }
-            @requires.each do |pkg|
+            @requires.each do |pkg| 
                 @ldflags_with_requires[true].concat(pkg.raw_ldflags_with_requires[true])
                 @ldflags_with_requires[false].concat(pkg.raw_ldflags_with_requires[false])
             end
@@ -426,7 +439,11 @@ module Utilrb
 
 	ACTIONS = %w{cflags cflags-only-I cflags-only-other 
 		    libs libs-only-L libs-only-l libs-only-other}
-	ACTIONS.each { |action| define_pkgconfig_action(action) }
+    ACTIONS.each { |action| define_pkgconfig_action(action) }
+    
+        def conflicts
+            @conflicts
+        end
 
         def raw_cflags
             @cflags
