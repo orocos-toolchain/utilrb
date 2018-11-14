@@ -14,8 +14,10 @@ class TC_Logger < Minitest::Test
         end
     end
 
-    def teardown
+    def setup
         Root.reset_own_logger
+        HierarchyTest.reset_own_logger
+        HierarchyTest.logger = "root_logger"
         Root::Child.reset_own_logger
         super
     end
@@ -142,7 +144,8 @@ class TC_Logger < Minitest::Test
 
 
     module HierarchyTest
-        def self.logger; "root_logger" end
+        extend Logger.Root('test', Logger::INFO)
+        self.logger = 'root_logger'
         class HierarchyTest
             extend Logger::Hierarchy
             extend Logger::Forward
@@ -195,6 +198,16 @@ class TC_Logger < Minitest::Test
         assert_raises(Logger::Hierarchy::NoParentLogger) { RootModule.extend Logger::Hierarchy }
     end
 
+    def test_hierarchy_reset_default_logger_deregisters_the_logger_from_its_parent
+        HierarchyTest::HierarchyTest.logger
+        HierarchyTest::HierarchyTest.reset_default_logger
+        assert_equal [], HierarchyTest.each_log_child.to_a
+    end
+    def test_hierarchy_reset_default_logger_resets_the_list_of_children
+        HierarchyTest.reset_default_logger
+        assert_equal [], HierarchyTest.each_log_child.to_a
+    end
+
     def test_instance_resolves_to_class_logger
         klass = Class.new(HierarchyTest::HierarchyTest)
         klass.send(:include, Logger::Hierarchy)
@@ -218,4 +231,3 @@ class TC_Logger < Minitest::Test
         assert_equal 10, obj.log_level
     end
 end
-

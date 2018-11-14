@@ -1,0 +1,9 @@
+prefix=a_prefix
+
+Name: test_pkgconfig_recursive_require_loop_b
+Description:
+Version: 4.2
+
+Requires: test_pkgconfig_recursive_require_loop_b test_pkgconfig_recursive_require_loop_d
+Cflags: -Owith_requires -Iwith_requires
+Libs: -lwith_requires -Lwith_requires -Wwith_requires

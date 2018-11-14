@@ -1,0 +1,9 @@
+prefix=a_prefix
+
+Name: test_pkgconfig_recursive_conflict_loop_d
+Description:
+Version: 4.2
+
+Requires: 
+Cflags: -Owith_requires -Iwith_requires
+Libs: -lwith_requires -Lwith_requires -Wwith_requires
