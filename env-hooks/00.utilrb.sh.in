@@ -1,6 +1,7 @@
 #!/bin/sh
 
-export RUBYOPT=-rubygems
+# Ruby 1.9 and newer ships with RubyGems built-in. Uncomment for older Ruby versions.
+#export RUBYOPT=-rrubygems
 
 for file_path in "@CMAKE_INSTALL_PREFIX@/@RUBY_LIBRARY_INSTALL_DIR@" "@CMAKE_INSTALL_PREFIX@/@RUBY_EXTENSIONS_INSTALL_DIR@"; do
   if [ ! -d "$file_path" ]; then
