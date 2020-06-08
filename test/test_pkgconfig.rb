@@ -95,10 +95,6 @@ class TC_PkgConfig < Minitest::Test
                 pure_ruby_raw    = pkg.send("raw_#{method_name}").to_set
                 pure_ruby_joined = Shellwords.shellsplit(pkg.send(method_name)).to_set
                 cpkgconfig = Shellwords.shellsplit(pkg.send("pkgconfig_#{method_name}")).to_set
-                default_paths = Utilrb::PkgConfig.default_search_path.map { |p| Regexp.quote(p.gsub(/\/pkgconfig/, '')) }.join("|")
-                pure_ruby_raw.delete_if { |f| f=~/-[IL](#{default_paths}|\/lib)$/ }
-                pure_ruby_joined.delete_if { |f| f=~/-[IL](#{default_paths}|\/lib)$/ }
-                cpkgconfig.delete_if { |f| f=~/-[IL](#{default_paths}|\/lib)$/ }
                 if pure_ruby_raw != cpkgconfig
                     failed = true
                     puts "#{name} raw_#{action_name}"

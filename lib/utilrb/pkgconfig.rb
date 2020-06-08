@@ -1,5 +1,5 @@
-require 'set'
-require 'shellwords'
+require "set"
+require "shellwords"
 
 module Utilrb
     # Access to information from pkg-config(1)
@@ -362,22 +362,28 @@ module Utilrb
                 fields['Conflicts'] || '', allow_loops: true, memo: memo)
 
             # And finally resolve the compilation flags
-            @cflags = fields['Cflags'] || []
+            cflags = fields['Cflags'] || []
+            cflags.uniq!
+            cflags -= self.class.default_search_path_I
             @requires.each do |pkg|
-                @cflags.concat(pkg.raw_cflags)
+                cflags.concat(pkg.raw_cflags)
             end
             @requires_private.each do |pkg|
-                @cflags.concat(pkg.raw_cflags)
+                cflags.concat(pkg.raw_cflags)
             end
-            @cflags.uniq!
-            @cflags.delete('-I/usr/include')
-            @ldflags = Hash.new
-            @ldflags[false] = fields['Libs'] || []
-            @ldflags[false].delete('-L/usr/lib')
-            @ldflags[false].uniq!
-            @ldflags[true] = @ldflags[false] + (fields['Libs.private'] || [])
-            @ldflags[true].delete('-L/usr/lib')
-            @ldflags[true].uniq!
+            @cflags = cflags
+
+            ldflags_public = fields['Libs'] || []
+            ldflags_public.uniq!
+            ldflags_private = ldflags_public + (fields['Libs.private'] || [])
+            ldflags_private.uniq!
+
+            ldflags_public -= self.class.default_search_path_L
+            ldflags_private -= self.class.default_search_path_L
+            @ldflags = {
+                false => ldflags_public,
+                true => ldflags_private
+            }
 
             @ldflags_with_requires = {
                 true => @ldflags[true].dup,
@@ -424,6 +430,7 @@ module Utilrb
             if result.any?(&:empty?)
                 raise Invalid.new(name), "empty include directory (-I without argument) found in pkg-config package #{name}"
             end
+
             result
         end
 
@@ -434,12 +441,13 @@ module Utilrb
             if result.any?(&:empty?)
                 raise Invalid.new(name), "empty link directory (-L without argument) found in pkg-config package #{name}"
             end
+
             result
         end
 
 	ACTIONS = %w{cflags cflags-only-I cflags-only-other 
 		    libs libs-only-L libs-only-l libs-only-other}
-    ACTIONS.each { |action| define_pkgconfig_action(action) }
+        ACTIONS.each { |action| define_pkgconfig_action(action) }
     
         def conflicts
             @conflicts
@@ -585,12 +593,51 @@ module Utilrb
         def self.default_search_path
             if !@default_search_path
                 output = `LANG=C PKG_CONFIG_PATH= pkg-config --debug 2>&1`.split("\n")
-                @default_search_path = output.grep(FOUND_PATH_RX).
-                    map { |l| l.gsub(FOUND_PATH_RX, '\1\2') }
+                @default_search_path =
+                    output.grep(FOUND_PATH_RX)
+                    .map { |l| l.gsub(FOUND_PATH_RX, '\1\2') }
             end
             return @default_search_path
         end
         @default_search_path = nil
+
+        def self.arch_dir
+            return if @arch_dir == false
+
+            unless @arch_dir
+                suffix_with_arch =
+                    default_search_suffixes
+                    .find { |p| %r{^lib/[^/]+/pkgconfig} =~ p }
+
+                @arch_dir =
+                    if suffix_with_arch
+                        suffix_with_arch.split("/")[1]
+                    else
+                        false
+                    end
+            end
+
+            @arch_dir
+        end
+
+        def self.default_search_path_L
+            unless @default_search_path_L
+                arch_dir = self.arch_dir
+                @default_search_path_L =
+                    ["-L/usr/lib", "-L/lib"]
+                    .flat_map { |p| [p, "#{p}/#{arch_dir}"] }
+            end
+
+            @default_search_path_L
+        end
+
+        def self.default_search_path_I
+            unless @default_search_path_I
+                @default_search_path_I = ["-I/usr/include"]
+            end
+
+            @default_search_path_I
+        end
 
         # Returns the system-wide standard suffixes that should be appended to
         # new prefixes to find pkg-config files
