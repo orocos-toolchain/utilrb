@@ -5,7 +5,8 @@ require 'utilrb/pkgconfig'
 class TC_PkgConfig < Minitest::Test
     def setup
 	@old_pkg_config_path = ENV['PKG_CONFIG_PATH']
-	ENV['PKG_CONFIG_PATH'] = File.join(File.expand_path(File.dirname(__FILE__)), 'data')
+        @pcdir = File.join(File.expand_path(File.dirname(__FILE__)), 'data')
+	ENV['PKG_CONFIG_PATH'] = @pcdir
     end
     def teardown
 	ENV['PKG_CONFIG_PATH'] = @old_pkg_config_path
@@ -246,4 +247,8 @@ class TC_PkgConfig < Minitest::Test
             pkgB.requires.map(&:name)
     end
 
+    def test_pcfiledir
+        pkg = Utilrb::PkgConfig.get('test_pcfiledir')
+        assert_equal "-I#{@pcdir}/../../include", pkg.cflags_only_I
+    end
 end

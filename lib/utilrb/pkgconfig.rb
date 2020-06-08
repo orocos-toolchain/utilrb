@@ -323,14 +323,14 @@ module Utilrb
         def load_variables(path, preset_variables = Hash.new)
             raw_variables, raw_fields = parse(path)
             raw_variables = preset_variables.merge(raw_variables)
-            expand_variables(raw_variables)
+            expand_variables(raw_variables.merge("pcfiledir" => File.dirname(path)))
         end
         
         def load_minimal(path, preset_variables = Hash.new)
             raw_variables, raw_fields = parse(path)
             raw_variables = preset_variables.merge(raw_variables)
 
-            @variables = expand_variables(raw_variables)
+            @variables = expand_variables(raw_variables.merge("pcfiledir" => File.dirname(path)))
             if raw_fields['Version']
                 @raw_version = expand_field('Version', raw_fields['Version'])
             else
