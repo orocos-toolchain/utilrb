@@ -65,6 +65,7 @@ class TC_PkgConfig < Minitest::Test
     IGNORE_COMPARISON_WITH_CPKGCONFIG = [
         # CPkgConfig silently ignores a B package when a
         # requirement has A >= B. We add it instead.
+        "test_pkgconfig_version_not_number",
         "test_pkgconfig_version_not_number_and_number",
         "ignition-fuel_tools1",
         "gazebo",
