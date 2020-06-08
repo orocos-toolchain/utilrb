@@ -320,17 +320,28 @@ module Utilrb
             end
         end
 
+        def builtin_variables(path)
+            {
+                "pcfiledir" => File.dirname(path),
+                "pc_sysrootdir" => sysrootdir
+            }
+        end
+
         def load_variables(path, preset_variables = Hash.new)
             raw_variables, raw_fields = parse(path)
             raw_variables = preset_variables.merge(raw_variables)
-            expand_variables(raw_variables.merge("pcfiledir" => File.dirname(path)))
+            expand_variables(
+                raw_variables.merge(builtin_variables(path))
+            )
         end
         
         def load_minimal(path, preset_variables = Hash.new)
             raw_variables, raw_fields = parse(path)
             raw_variables = preset_variables.merge(raw_variables)
 
-            @variables = expand_variables(raw_variables.merge("pcfiledir" => File.dirname(path)))
+            @variables = expand_variables(
+                raw_variables.merge(builtin_variables(path))
+            )
             if raw_fields['Version']
                 @raw_version = expand_field('Version', raw_fields['Version'])
             else
@@ -365,6 +376,7 @@ module Utilrb
             cflags = fields['Cflags'] || []
             cflags.uniq!
             cflags -= self.class.default_search_path_I
+            cflags = apply_sysrootdir(cflags, "-I")
             @requires.each do |pkg|
                 cflags.concat(pkg.raw_cflags)
             end
@@ -379,7 +391,9 @@ module Utilrb
             ldflags_private.uniq!
 
             ldflags_public -= self.class.default_search_path_L
+            ldflags_public = apply_sysrootdir(ldflags_public, "-L")
             ldflags_private -= self.class.default_search_path_L
+            ldflags_private = apply_sysrootdir(ldflags_private, "-L")
             @ldflags = {
                 false => ldflags_public,
                 true => ldflags_private
@@ -443,6 +457,27 @@ module Utilrb
             end
 
             result
+        end
+
+        # A "new root" that should be prepended to -L and -I flags
+        def sysrootdir
+            ENV["PKG_CONFIG_SYSROOT_DIR"] || "/"
+        end
+
+        # @api private
+        #
+        # Apply {#sysrootdir} to all the given paths flags (-I or -L)
+        def apply_sysrootdir(entries, flag_name)
+            sysrootdir = self.sysrootdir
+            return entries if sysrootdir == "/"
+
+            entries.map do |v|
+                if v.start_with?(flag_name)
+                    "#{flag_name}#{sysrootdir}#{v[2..-1]}"
+                else
+                    v
+                end
+            end
         end
 
 	ACTIONS = %w{cflags cflags-only-I cflags-only-other 

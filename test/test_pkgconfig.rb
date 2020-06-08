@@ -111,6 +111,14 @@ class TC_PkgConfig < Minitest::Test
         end
     end
 
+    def test_comparison_with_cpkgconfig_with_a_different_sysrootdir
+        save = ENV["PKG_CONFIG_SYSROOT_DIR"]
+        ENV["PKG_CONFIG_SYSROOT_DIR"] = "/some/path/"
+        test_comparison_with_cpkgconfig
+    ensure
+        ENV["PKG_CONFIG_SYSROOT_DIR"] = save
+    end
+
     def test_missing_package
         Utilrb::PkgConfig.get 'does_not_exist'
         flunk("Utilrb::PkgConfig.get did not raise on a non existent package")
@@ -246,5 +254,19 @@ class TC_PkgConfig < Minitest::Test
     def test_pcfiledir
         pkg = Utilrb::PkgConfig.get('test_pcfiledir')
         assert_equal "-I#{@pcdir}/../../include", pkg.cflags_only_I
+    end
+
+    def test_it_expands_pc_sysrootdir_to_root_by_default
+        pkg = Utilrb::PkgConfig.get('test_pc_sysrootdir')
+        assert_equal "/", pkg.variables["somevar"]
+    end
+
+    def test_it_expands_pc_sysrootdir_to_the_PKG_CONFIG_SYSROOT_DIR_environment_variable_if_set
+        save = ENV["PKG_CONFIG_SYSROOT_DIR"]
+        ENV["PKG_CONFIG_SYSROOT_DIR"] = "/some/path"
+        pkg = Utilrb::PkgConfig.get('test_pc_sysrootdir')
+        assert_equal "/some/path", pkg.variables["somevar"]
+    ensure
+        ENV["PKG_CONFIG_SYSROOT_DIR"] = save
     end
 end
