@@ -1,0 +1,4 @@
+Name: test_pcfiledir
+Version: 0.1
+Description: test file for the built-in pcfiledir variable
+Cflags: -I${pcfiledir}/../../include

@@ -1,0 +1,5 @@
+Name: test_pc_sysrootdir
+Version: 0.1
+Description: test file for the built-in pc_sysrootdir variable
+
+somevar=${pc_sysrootdir}
