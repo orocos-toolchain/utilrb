@@ -122,6 +122,33 @@ class TC_Module < Minitest::Test
         assert_equal 20, obj.value
     end
 
+    def test_dsl_attribute_passes_keyword_arguments_along
+        obj = Class.new { dsl_attribute(:value) { |**kw| kw } }.new
+        obj.value some: 10, keywords: 42
+        assert_equal({ some: 10, keywords: 42 }, obj.value)
+    end
+
+    def test_dsl_attribute_raises_if_too_few_arguments_are_given
+        obj = Class.new { dsl_attribute(:value) { |a, b| } }.new
+        assert_raises(ArgumentError) do
+            obj.value 10
+        end
+    end
+
+    def test_dsl_attribute_raises_if_arguments_are_given_to_a_kw_only_filter
+        obj = Class.new { dsl_attribute(:value) { |**kw| } }.new
+        assert_raises(ArgumentError) do
+            obj.value 10
+        end
+    end
+
+    def test_dsl_attribute_raises_if_too_many_arguments_are_given
+        obj = Class.new { dsl_attribute(:value) { |v| } }.new
+        assert_raises(ArgumentError) do
+            obj.value 10, 20
+        end
+    end
+
     def test_singleton_class_p
         m = Module.new
         assert !m.singleton_class?
