@@ -96,8 +96,8 @@ module Utilrb
         # ...
         # @return [PkgConfig] the pkg-config description
         # @raise [NotFound] if the package is not found
-        def self.new(name, version_spec = nil, options = Hash.new)
-            get(name, version_spec, options)
+        def self.new(name, version_spec = nil, **options)
+            get(name, version_spec, **options)
         end
 
         # Returns the first package in +candidates+ that match the given version
