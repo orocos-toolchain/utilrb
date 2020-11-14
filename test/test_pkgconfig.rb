@@ -5,7 +5,8 @@ require 'utilrb/pkgconfig'
 class TC_PkgConfig < Minitest::Test
     def setup
 	@old_pkg_config_path = ENV['PKG_CONFIG_PATH']
-	ENV['PKG_CONFIG_PATH'] = File.join(File.expand_path(File.dirname(__FILE__)), 'data')
+        @pcdir = File.join(File.expand_path(File.dirname(__FILE__)), 'data')
+	ENV['PKG_CONFIG_PATH'] = @pcdir
     end
     def teardown
 	ENV['PKG_CONFIG_PATH'] = @old_pkg_config_path
@@ -64,6 +65,7 @@ class TC_PkgConfig < Minitest::Test
     IGNORE_COMPARISON_WITH_CPKGCONFIG = [
         # CPkgConfig silently ignores a B package when a
         # requirement has A >= B. We add it instead.
+        "test_pkgconfig_version_not_number",
         "test_pkgconfig_version_not_number_and_number",
         "ignition-fuel_tools1",
         "gazebo",
@@ -94,10 +96,6 @@ class TC_PkgConfig < Minitest::Test
                 pure_ruby_raw    = pkg.send("raw_#{method_name}").to_set
                 pure_ruby_joined = Shellwords.shellsplit(pkg.send(method_name)).to_set
                 cpkgconfig = Shellwords.shellsplit(pkg.send("pkgconfig_#{method_name}")).to_set
-                default_paths = Utilrb::PkgConfig.default_search_path.map { |p| Regexp.quote(p.gsub(/\/pkgconfig/, '')) }.join("|")
-                pure_ruby_raw.delete_if { |f| f=~/-[IL](#{default_paths}|\/lib)$/ }
-                pure_ruby_joined.delete_if { |f| f=~/-[IL](#{default_paths}|\/lib)$/ }
-                cpkgconfig.delete_if { |f| f=~/-[IL](#{default_paths}|\/lib)$/ }
                 if pure_ruby_raw != cpkgconfig
                     failed = true
                     puts "#{name} raw_#{action_name}"
@@ -112,6 +110,14 @@ class TC_PkgConfig < Minitest::Test
             end
             assert(!failed, "result from pkg-config and the PkgConfig class differ")
         end
+    end
+
+    def test_comparison_with_cpkgconfig_with_a_different_sysrootdir
+        save = ENV["PKG_CONFIG_SYSROOT_DIR"]
+        ENV["PKG_CONFIG_SYSROOT_DIR"] = "/some/path/"
+        test_comparison_with_cpkgconfig
+    ensure
+        ENV["PKG_CONFIG_SYSROOT_DIR"] = save
     end
 
     def test_missing_package
@@ -246,4 +252,22 @@ class TC_PkgConfig < Minitest::Test
             pkgB.requires.map(&:name)
     end
 
+    def test_pcfiledir
+        pkg = Utilrb::PkgConfig.get('test_pcfiledir')
+        assert_equal "-I#{@pcdir}/../../include", pkg.cflags_only_I
+    end
+
+    def test_it_expands_pc_sysrootdir_to_root_by_default
+        pkg = Utilrb::PkgConfig.get('test_pc_sysrootdir')
+        assert_equal "/", pkg.variables["somevar"]
+    end
+
+    def test_it_expands_pc_sysrootdir_to_the_PKG_CONFIG_SYSROOT_DIR_environment_variable_if_set
+        save = ENV["PKG_CONFIG_SYSROOT_DIR"]
+        ENV["PKG_CONFIG_SYSROOT_DIR"] = "/some/path"
+        pkg = Utilrb::PkgConfig.get('test_pc_sysrootdir')
+        assert_equal "/some/path", pkg.variables["somevar"]
+    ensure
+        ENV["PKG_CONFIG_SYSROOT_DIR"] = save
+    end
 end
