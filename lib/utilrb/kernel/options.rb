@@ -60,11 +60,11 @@ module Kernel
     end
 
     # Validates an option hash, with default value support. See #filter_options
-    # 
-    # In the first form, +option_hash+ should contain keys which are also 
+    #
+    # In the first form, +option_hash+ should contain keys which are also
     # in known_hash. The non-nil values of +known_hash+ are used as default
     # values. In the second form, +known_array+ is an array of option
-    # keys. +option_hash+ keys shall be in +known_array+. +nil+ is treated 
+    # keys. +option_hash+ keys shall be in +known_array+. +nil+ is treated
     # as an empty option hash, all keys are converted into symbols.
     #
     def validate_options(options, *known_options)

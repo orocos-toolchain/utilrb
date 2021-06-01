@@ -4,7 +4,7 @@ require 'utilrb/thread_pool'
 module Utilrb
     # Simple event loop which supports timers and defers blocking operations to
     # a thread pool those results are queued and being processed by the event
-    # loop thread at the end of each step. 
+    # loop thread at the end of each step.
     #
     # All events must be code blocks which will be executed at the end of each step.
     # There is no support for filtering or event propagations.
@@ -13,17 +13,17 @@ module Utilrb
     # can be used.
     #
     # @example Example for using the EventLoop
-    #   event_loop = EventLoop.new 
-    #   event_loop.once do 
+    #   event_loop = EventLoop.new
+    #   event_loop.once do
     #     puts "called once"
     #   end
     #
-    #   event_loop.every(1.0) do 
+    #   event_loop.every(1.0) do
     #     puts "called every second"
     #   end
     #
     #   callback = Proc.new |result|
-    #     puts result 
+    #     puts result
     #   end
     #   event_loop.defer callback do
     #     sleep 2
@@ -31,14 +31,14 @@ module Utilrb
     #   end
     #
     #   event_loop.exec
-    # 
+    #
     # @author Alexander Duda <Alexander.Duda@dfki.de>
     class EventLoop
         # Timer for the {EventLoop} which supports single shot and periodic activation
         #
         # @example
         #       loop = EventLoop.new
-        #       timer = EventLoop.every(0.1) do 
+        #       timer = EventLoop.every(0.1) do
         #                  puts 123
         #               end
         #       loop.exec
@@ -52,15 +52,15 @@ module Utilrb
             # A timer
             #
             # @param [EventLoop] event_loop the {EventLoop} the timer belongs to
-            # @param[Float] period The period of the timer in seconds.
-            # @param[Boolean] single_shot if true the timer will fire only once
-            # @param[#call] block The code block which will be executed each time the timer fires
+            # @param [Float] period The period of the timer in seconds.
+            # @param [Boolean] single_shot if true the timer will fire only once
+            # @param [#call] block The code block which will be executed each time the timer fires
             # @see EventLoop#once
             def initialize(event_loop,period=0,single_shot=false,&block)
                 @block = block
                 @event_loop = event_loop
                 @last_call = Time.now
-                @period = period
+                @period = Float(period)
                 @single_shot = single_shot
                 @stopped = true
                 @doc = Kernel.caller.find do |s|
@@ -75,7 +75,7 @@ module Utilrb
             end
 
             def stopped?
-                @stopped 
+                @stopped
             end
 
             # Returns true if the timer is currently running.
@@ -128,7 +128,7 @@ module Utilrb
                 @single_shot == true
             end
 
-            # Executes the code block tight to the timer and 
+            # Executes the code block tight to the timer and
             # saves a time stamp.
             #
             # @param [Time] time The time stamp
@@ -163,7 +163,7 @@ module Utilrb
             def ignore!
                 @ignore = true
             end
-             
+
             def ignore?
                 @ignore
             end
@@ -242,7 +242,7 @@ module Utilrb
         # queue the call if the task blocks for ever and it will never simultaneously
         # defer the call to more than one worker thread.
         #
-        # @param [Hash] options The options 
+        # @param [Hash] options The options
         # @option options [Float] :period The period
         # @option options [Boolean] :start Starts the timer right away (default = true)
         # @param [#call] work The proc which will be deferred
@@ -286,12 +286,12 @@ module Utilrb
         #               else
         #                  puts r
         #               end
-        #            end 
+        #            end
         # defer({:callback => callback}) do
         #    raise
         # end
         #
-        # @param [Hash] options The options 
+        # @param [Hash] options The options
         # @option (see ThreadPool::Task#initialize)
         # @option options [Proc] :callback The callback
         # @option options [class] :known_errors Known erros which will be rescued
@@ -344,9 +344,7 @@ module Utilrb
                     end
                 end
             end
-            @mutex.synchronize do
-                @thread_pool << task
-            end
+            add_task task
             task
         end
 
@@ -358,6 +356,7 @@ module Utilrb
         # @return [Utilrb::EventLoop::Timer,Event]
         def once(delay=nil,&block)
             raise ArgumentError "no block given" unless block
+
             if delay && delay > 0
                 timer = Timer.new(self,delay,true,&block)
                 timer.start(timer.period, false)
@@ -368,7 +367,7 @@ module Utilrb
 
         # Calls the give block in the event loop thread. If the current thread
         # is the event loop thread it will execute it right a way and returns
-        # the result of the code block call. Otherwise, it returns an handler to 
+        # the result of the code block call. Otherwise, it returns an handler to
         # the Event which was queued.
         #
         #@return [Event,Object]
@@ -387,7 +386,7 @@ module Utilrb
             !@events.empty? || !@errors.empty?
         end
 
-        # Adds a timer to the event loop which will execute 
+        # Adds a timer to the event loop which will execute
         # the given code block with the given period from the
         # event loop thread.
         #
@@ -422,7 +421,7 @@ module Utilrb
         end
 
         # Errors caught during event loop callbacks are forwarded to
-        # registered code blocks. The code blocks are called from 
+        # registered code blocks. The code blocks are called from
         # the event loop thread.
         #
         # @param @error_classes The error classes the block should be called for
@@ -442,7 +441,7 @@ module Utilrb
             raise "current thread is not the event loop thread" if !thread?
         end
 
-        # Returns true if the current thread is the 
+        # Returns true if the current thread is the
         # event loop thread.
         #
         # @return [Boolean]
@@ -487,7 +486,7 @@ module Utilrb
 
         # Cancels the given timer if it is running otherwise
         # it does nothing.
-        # 
+        #
         # @param [Timer] timer The timer
         def cancel_timer(timer)
             @mutex.synchronize do
@@ -495,12 +494,12 @@ module Utilrb
             end
         end
 
-        # Resets all timers to fire not before their hole 
+        # Resets all timers to fire not before their hole
         # period is passed counting from the given point in time.
         #
         # @param [Time] time The time
         def reset_timers(time = Time.now)
-            @mutex.synchronize do 
+            @mutex.synchronize do
                 @timers.each do |timer|
                     timer.reset time
                 end
@@ -529,10 +528,12 @@ module Utilrb
             @stop = true
         end
 
-        # Steps with the given period until the given 
+        class WaitForTimeout < RuntimeError; end
+
+        # Steps with the given period until the given
         # block returns true.
         #
-        # @param [Float] period The period 
+        # @param [Float] period The period
         # @param [Float] timeout The timeout in seconds
         # @yieldreturn [Boolean]
         def wait_for(period=0.05,timeout=nil,&block)
@@ -541,7 +542,7 @@ module Utilrb
             exec period do
                 stop if block.call
                 if timeout && timeout <= (Time.now-start).to_f
-                    raise RuntimeError,"Timeout during wait_for"
+                    raise WaitForTimeout,"timed out during wait_for"
                 end
             end
             @stop = old_stop
@@ -587,7 +588,7 @@ module Utilrb
             validate_thread
             reraise_error(@errors.shift) if !@errors.empty?
 
-            #copy all work otherwise it would not be allowed to 
+            #copy all work otherwise it would not be allowed to
             #call any event loop functions from a timer
             timers,call = @mutex.synchronize do
                                     @every_cylce_events.delete_if(&:ignore?)
@@ -620,7 +621,7 @@ module Utilrb
             end
             handle_errors{call.call} if call
             reraise_error(@errors.shift) if !@errors.empty?
-            
+
             #allow thread pool to take over
             Thread.pass
         end
@@ -655,7 +656,9 @@ module Utilrb
         #
         # @param [ThreadPool::Task] task The task.
         def add_task(task)
-            thread_pool << task
+            @mutex.synchronize do
+                @thread_pool << task
+            end
         end
 
         # Clears all timers, events and errors
@@ -670,29 +673,28 @@ module Utilrb
             end
         end
 
-        # Clears all errors which occurred during the last step and are not marked as known 
+        # Clears all errors which occurred during the last step and are not marked as known
         # If the errors were not cleared they are re raised the next time step is called.
         def clear_errors
             @errors.clear
         end
 
-        def handle_error(error,save = true)
+        def handle_error(error, save = true)
+            @errors << error if save
+
             call do
-                on_error = @mutex.synchronize do
-                    @on_error.find_all{|key,e| error.is_a? key}.map(&:last).flatten
-                end
+                on_error = @on_error.find_all{|key,e| error.is_a? key}.map(&:last).flatten
                 on_error.each do |handler|
                     handler.call error
                 end
-                @errors << error if save == true
             end
         end
 
     private
         # Calls the given block and rescues all errors which can be handled
-        # by the added error handler. If an error cannot be handled it is 
+        # by the added error handler. If an error cannot be handled it is
         # stored and re raised after all events and timers are processed. If
-        # more than one error occurred which cannot be handled they are stored 
+        # more than one error occurred which cannot be handled they are stored
         # until the next step is called and re raised until all errors are processed.
         #
         # @info This method must be called from the event loop thread, otherwise
@@ -741,7 +743,7 @@ module Utilrb
             # accessor.method(*args) but called from a thread pool.  Thereby the code
             # block is used as callback called from the main thread after the
             # call returned. If an error occurred it will be:
-            #  * given to the callback as second argument 
+            #  * given to the callback as second argument
             #  * forwarded to the error handlers of the event loop
             #  * raised at the beginning of the next step if not marked as known error
             #
@@ -759,17 +761,17 @@ module Utilrb
             #    end
             #
             #    ali do |result,exception|
-            #       if exception 
+            #       if exception
             #           :ignore_error
             #       else
             #          puts result
             #       end
             #    end
             #
-            # If the callback accepts only one argument 
+            # If the callback accepts only one argument
             # the callback will not be called in an event of an error but
             # the error will still be forwarded to the error handlers.
-            #    
+            #
             # If the result shall be filtered before returned a filter method can
             # be specified which is called from the event loop thread just before
             # the result is returned.
@@ -816,7 +818,7 @@ module Utilrb
             # @param [Symbol] method The method called on the designated object.
             # @param [Hash] options The options
             # @option options [Symbol] :alias The alias of the method
-            # @option options [Symbol] :sync_key The sync key 
+            # @option options [Symbol] :sync_key The sync key
             # @option options [Symbol] :filter The filter method
             # @option options [Symbol] :on_error Method which is called if an error occured
             # @option options [class] :known_errors Known errors which will be rescued but still be forwarded.
@@ -845,12 +847,12 @@ module Utilrb
 
                 def options(options = Hash.new,&block)
                     @stack << @stack.last.merge(options)
-                        block.call
+                    block.call
                     @stack.pop
                 end
 
                 def thread_safe(&block)
-                    options :sync_key => nil do 
+                    options :sync_key => nil do
                         block.call
                     end
                 end
@@ -949,7 +951,7 @@ module Utilrb
                     end
                 end
 
-                # Defines multiple method as delegator instance methods 
+                # Defines multiple method as delegator instance methods
                 # @see #def_event_loop_delegator
                 def self.def_event_loop_delegators(klass,accessor,event_loop, *methods)
                     methods.flatten!

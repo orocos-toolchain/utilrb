@@ -9,8 +9,8 @@ module Utilrb
     #
     # @example Using a thread pool of 10 threads
     #   pool = ThreadPool.new(10)
-    #   0.upto(9) do 
-    #      pool.process do 
+    #   0.upto(9) do
+    #      pool.process do
     #        sleep 1
     #        puts "done"
     #      end
@@ -40,7 +40,7 @@ module Utilrb
             attr_reader :pool
 
             # State of the task
-            # 
+            #
             # @return [:waiting,:running,:stopping,:finished,:terminated,:exception] the state
             attr_reader :state
 
@@ -54,7 +54,7 @@ module Utilrb
             # return [Thread] the thread
             attr_reader :thread
 
-            # The time the task was queued 
+            # The time the task was queued
             #
             # return [Time] the time
             attr_accessor :queued_at
@@ -115,15 +115,15 @@ module Utilrb
             def exception?; @state == :exception; end
 
             # A new task which can be added to the work queue of a {ThreadPool}.
-            # If a sync key is given no task having the same key will be 
+            # If a sync key is given no task having the same key will be
             # executed in parallel which is useful for instance member calls
             # which are not thread safe.
             #
             # @param [Hash] options The options of the task.
             # @option options [Object] :sync_key The sync key
             # @option options [Proc] :callback The callback
-            # @option options [Object] :default Default value returned when an error ocurred which was handled. 
-            # @param [Array] args The arguments for the code block 
+            # @option options [Object] :default Default value returned when an error ocurred which was handled.
+            # @param [Array] args The arguments for the code block
             # @param [#call] block The code block
             def initialize (options = Hash.new,*args, &block)
                 unless block
@@ -162,7 +162,7 @@ module Utilrb
             # returns true if the task has a default return vale
             # @return [Boolean]
             def default?
-                 @mutex.synchronize do 
+                 @mutex.synchronize do
                      @default != nil
                  end
             end
@@ -170,7 +170,7 @@ module Utilrb
             #sets all internal state to running
             #call execute after that.
             def pre_execute(pool=nil)
-                @mutex.synchronize do 
+                @mutex.synchronize do
                     #store current thread to be able to terminate
                     #the thread
                     @pool = pool
@@ -182,7 +182,7 @@ module Utilrb
 
             # Executes the task.
             # Should be called from a worker thread after pre_execute was called.
-            # After execute returned and the task was deleted 
+            # After execute returned and the task was deleted
             # from any internal list finalize must be called
             # to propagate the task state.
             def execute()
@@ -200,7 +200,7 @@ module Utilrb
                         end
                 @stopped_at = Time.now
             end
-            
+
             # propagates the tasks state
             # should be called after execute
             def finalize
@@ -225,7 +225,7 @@ module Utilrb
                 end
             end
 
-            # Called from the worker thread when the work is done 
+            # Called from the worker thread when the work is done
             #
             # @yield [Object,Exception] The callback
             def callback(&block)
@@ -249,6 +249,10 @@ module Utilrb
                     0
                 end
             end
+
+            def to_s
+                "#<Utilrb::ThreadPool::Task #{@state} #{@block}>"
+            end
         end
 
         # The minimum number of worker threads.
@@ -270,12 +274,12 @@ module Utilrb
         #
         # @return [Fixnum]
         attr_reader :waiting
-        
+
         # The average execution time of a (running) task.
         #
         # @return [Float]
         attr_reader :avg_run_time
-        
+
         # The average waiting time of a task before being executed.
         #
         # @return [Float]
@@ -300,7 +304,7 @@ module Utilrb
 
             @tasks_waiting = []         # tasks waiting for execution
             @tasks_running = []         # tasks which are currently running
-            
+
             # Statistics
             @avg_run_time = 0           # average run time of a task in s [Float]
             @avg_wait_time = 0          # average time a task has to wait for execution in s [Float]
@@ -370,10 +374,10 @@ module Utilrb
         end
 
         # Number of tasks waiting for execution
-        # 
+        #
         # @return [Fixnum] the number of tasks
         def backlog
-            @mutex.synchronize do 
+            @mutex.synchronize do
                 @tasks_waiting.length
             end
         end
@@ -396,7 +400,7 @@ module Utilrb
             process_with_options(nil,*args,&block)
         end
 
-        # Returns true if a worker thread is currently processing a task 
+        # Returns true if a worker thread is currently processing a task
         # and no work is queued
         #
         # @return [Boolean]
@@ -426,7 +430,7 @@ module Utilrb
         # safe.
         #
         # @param [Object] sync_key The sync key
-        # @yield [*args] the code block block 
+        # @yield [*args] the code block block
         # @return [Object] The result of the code block
         def sync(sync_key,*args,&block)
             raise ArgumentError,"no sync key" unless sync_key
@@ -454,7 +458,7 @@ module Utilrb
         #
         # @param [Object] sync_key The sync key
         # @param [Float] timeout The timeout
-        # @yield [*args] the code block block 
+        # @yield [*args] the code block block
         # @return [Object] The result of the code block
         def sync_timeout(sync_key,timeout,*args,&block)
             raise ArgumentError,"no sync key" unless sync_key
@@ -480,14 +484,14 @@ module Utilrb
         end
 
         # Processes the given {Task} as soon as the next thread is available
-        # 
+        #
         # @param [Task] task The task.
         # @return [Task]
         def <<(task)
             raise "cannot add task #{task} it is still running" if task.thread
             task.reset if task.finished?
             @mutex.synchronize do
-                if shutdown? 
+                if shutdown?
                     raise "unable to add work while shutting down"
                 end
                 task.queued_at = Time.now
@@ -500,7 +504,7 @@ module Utilrb
             task
         end
 
-        # Trims the number of threads if threads are waiting for work and 
+        # Trims the number of threads if threads are waiting for work and
         # the number of spawned threads is higher than the minimum number.
         #
         # @param [boolean] force Trim even if no thread is waiting.
@@ -551,12 +555,12 @@ module Utilrb
 
         private
 
-        #calculates the moving average 
+        #calculates the moving average
         def moving_average(current_val,new_val)
             return new_val if current_val == 0
             current_val * 0.95 + new_val * 0.05
         end
-        
+
         # spawns a worker thread
         # must be called from a synchronized block
         def spawn_thread
