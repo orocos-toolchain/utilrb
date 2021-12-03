@@ -1,5 +1,6 @@
 require 'utilrb/kernel/options'
 
+unless Exception.method_defined?(:full_message)
 class Exception
     # Returns the full exception message, with backtrace, like the one we get from
     # the Ruby interpreter when the program is aborted (well, almost like that)
@@ -53,4 +54,4 @@ class Exception
 	msg
     end
 end
-
+end

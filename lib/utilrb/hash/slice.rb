@@ -1,6 +1,3 @@
-class Hash
-    def slice(*keys)
-	keys.inject({}) { |h, k| h[k] = self[k] if has_key?(k); h }
-    end
-end
+STDERR.puts "[DEPRECATED] utilrb/hash/slice is deprecated, use backports' backports/2.5.0/hash/slice instead or the built-in method in Ruby >= 2.5"
+require 'backports/2.5.0/hash/slice'
 

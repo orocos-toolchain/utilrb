@@ -13,5 +13,6 @@
   <rosdep name="ruby"/>
   <rosdep name="bundler"/>
   <rosdep name="facets" />
+  <depend name="ruby-backports" />
   <test_depend package="flexmock" />
 </package>
