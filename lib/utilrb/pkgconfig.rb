@@ -621,19 +621,18 @@ module Utilrb
         end
 
 
-        FOUND_PATH_RX = /Scanning directory (?:#\d+ )?'(.*\/)((?:lib|lib64|share)\/.*)'$/
-        NONEXISTENT_PATH_RX = /Cannot open directory (?:#\d+ )?'.*\/((?:lib|lib64|share)\/.*)' in package search path:.*/
+        PKGCONFIG_PATH_RX = %r{.*/((?:lib|lib64|share)/.*)}.freeze
 
         # Returns the system-wide search path that is embedded in pkg-config
         def self.default_search_path
-            if !@default_search_path
-                output = `LANG=C PKG_CONFIG_PATH= pkg-config --debug 2>&1`.split("\n")
-                @default_search_path =
-                    output.grep(FOUND_PATH_RX)
-                    .map { |l| l.gsub(FOUND_PATH_RX, '\1\2') }
-            end
-            return @default_search_path
+            @default_search_path ||=
+                `LANG=C #{pkgconfig_tool_path} --variable pc_path pkg-config`
+                    .strip
+                    .split(":")
+                    .grep(PKGCONFIG_PATH_RX)
+                    .to_set
         end
+
         @default_search_path = nil
 
         def self.arch_dir
@@ -677,17 +676,13 @@ module Utilrb
         # Returns the system-wide standard suffixes that should be appended to
         # new prefixes to find pkg-config files
         def self.default_search_suffixes
-            if !@default_search_suffixes
-                output = `LANG=C PKG_CONFIG_PATH= pkg-config --debug 2>&1`.split("\n")
-                found_paths = output.grep(FOUND_PATH_RX).
-                    map { |l| l.gsub(FOUND_PATH_RX, '\2') }.
-                    to_set
-                not_found = output.grep(NONEXISTENT_PATH_RX).
-                    map { |l| l.gsub(NONEXISTENT_PATH_RX, '\1') }.
-                    to_set
-                @default_search_suffixes = found_paths | not_found
-            end
-            return @default_search_suffixes
+            @default_search_suffixes ||=
+                `LANG=C #{pkgconfig_tool_path} --variable pc_path pkg-config`
+                    .strip
+                    .split(":")
+                    .grep(PKGCONFIG_PATH_RX)
+                    .map { |l| l.gsub(PKGCONFIG_PATH_RX, '\1') }
+                    .to_set
         end
     end
 end
