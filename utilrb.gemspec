@@ -17,7 +17,7 @@ Gem::Specification.new do |s|
     s.extra_rdoc_files = ["License.txt"]
     s.files         = `git ls-files -z`.split("\x0").reject { |f| f.match(%r{^(test|spec|features)/}) }
 
-    s.add_runtime_dependency "facets", ">= 2.4.0"
+    s.add_runtime_dependency "facets", "< 3.2.0"
     s.add_runtime_dependency "rake", ">= 0.9"
     s.add_runtime_dependency "backports", "~> 3.11"
     s.add_development_dependency "flexmock", ">= 2.0.0"
